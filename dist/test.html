@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Snake parser</title>
+	<meta charset="UTF-8">
+
+<style>
+
+	textarea {
+		font-family: Consolas, 'Courier New', Courier, Monaco, monospace;
+	}
+
+	h4 {
+		margin: 4px 0px;
+	}
+
+	#syntaxMessage, #resultMessage {
+		background-color: #FE8;
+	}
+
+	p {
+		margin: 2px 0px;
+	}
+
+</style>
+
+</head>
+<body>
+
+	<h4>Examples :</h4>
+	<button onclick="example(0);">calculator</button>
+	<button onclick="example(1);">snake grammar</button>
+
+	<h4>Grammar :</h4>
+	<textarea id="grammar" style="width: 400px; height: 100px"></textarea>
+
+	<p id="syntaxMessage"></p>
+
+	<h4>Input text :</h4>
+	<textarea id="input_text" style="width: 400px; height: 100px"></textarea>
+
+	<p id="resultMessage"></p>
+	
+	<h4>Output :</h4>
+	<textarea id="result" style="width: 400px; height: 100px"></textarea>
+
+	<div>
+		<button onclick="toJS();">Generate parser</button>
+	</div>
+
+<script src="snakeParser.js"></script>
+<script>
+
+var parser = null;
+var grammarElem = document.getElementById("grammar"),
+inputTextElem = document.getElementById("input_text"),
+syntaxMessageElm = document.getElementById("syntaxMessage"),
+resultMessageElm = document.getElementById("resultMessage");
+var updateParserTime = new Date().getTime(),
+updateModifierTime = new Date().getTime(),
+updateInputTextTime = new Date().getTime();
+
+grammarElem.onkeyup = function() {
+	updateParserTime = new Date().getTime() + 500;
+};
+inputTextElem.onkeyup = function() {
+	updateInputTextTime = new Date().getTime() + 500;
+};
+
+window.setInterval(function() {
+	var now = new Date().getTime();
+	if (updateParserTime < now) {
+		updateParserTime = Infinity;
+		updateInputTextTime = Infinity;
+
+		buildParser();
+		parse();
+	} else if (updateInputTextTime < now) {
+		updateInputTextTime = Infinity;
+		
+		parse();
+	}
+}, 250);
+
+
+function buildParser() {
+	var grammar = grammarElem.value;
+
+	var t = new Date().getTime();
+	parser = SnakeParser.buildParser(grammar);
+	t = new Date().getTime() - t;
+
+	if (typeof(parser) === "string") {
+		syntaxMessageElm.innerHTML = (parser + "\n" + t + "ms").replace(/\n/g, "<br>");
+		parser = null;
+	} else {
+		syntaxMessageElm.innerHTML = ("Parser built successfully.\n" + t + "ms").replace(/\n/g, "<br>");
+	}
+
+	resultMessageElm.innerHTML = "";
+};
+
+
+function parse() {
+	if (parser === null)
+		return;
+
+	var resultElem = document.getElementById("result");
+	
+	resultElem.value = "";
+	
+	var inputText = inputTextElem.value;
+
+
+	var t = new Date().getTime();
+	var result = parser.parse(inputText);
+	t = new Date().getTime() - t;
+	console.dir(result);
+
+	if (result.success) {
+		resultMessageElm.innerHTML = ("Input parsed successfully.\n" + t + "ms").replace(/\n/g, "<br>");
+
+		resultElem.value = JSON.stringify(result.content, null, "  ");
+	} else {
+		resultMessageElm.innerHTML = (result.error + "\n" + t + "ms").replace(/\n/g, "<br>");
+
+		resultElem.value = "";
+	}
+};
+
+function toJS() {
+	if (parser === null)
+		return;
+
+	var resultElem = document.getElementById("result");
+
+	resultElem.value = parser.toJavascript();
+};
+
+function example(idx) {
+	document.getElementById("grammar").value = examples[idx].grammar;
+	document.getElementById("input_text").value = examples[idx].inputText;
+
+	updateParserTime = new Date().getTime();
+};
+
+var examples = [
+{
+	grammar: '{\n  additive: function($) {\n    return $.left + $.right;\n  },\n  multiplicative: function($) {\n    return $.left * $.right;\n  },\n  integer: function($) {\n    return +$;\n  }\n}\n\n\nstart =\n  additive\n\nadditive =\n  {left:multiplicative "+" right:additive}>additive\n  | multiplicative\n\nmultiplicative =\n  {left:primary "*" right:multiplicative}>multiplicative\n  | primary\n\nprimary =\n  integer\n  | "(" additive ")"\n\ninteger =\n  `+[0-9]>integer',
+	inputText: '1+2*(3+4)'
+}, {
+	grammar: "{\n  arrayToObject: function($) {\n    var res = {};\n    for (var i = 0, il = $.length; i < il; ++i)\n      res[$[i].symbol] = $[i].body;\n    return res;\n  },\n  omit: function($) {\n    if ($.arg.length === 1)\n      return $.arg[0];\n    return $;\n  },\n  eval: function($) {\n    return eval($);\n  },\n  characterClassChar: function($) {\n    var str = $,\n    len = str.length;\n    if (len === 1) {\n      return str.charCodeAt();\n    } else if (len === 6) {\n      return parseInt(str.substring(2), 16);\n    } else if (str === \"\\\\n\"){\n      return 10;\n    } else if (str === \"\\\\t\"){\n      return 9;\n    } else if (str === \"\\\\r\"){\n      return 13;\n    }\n    return str.charCodeAt(1);\n  },\n  nuturalNumber: function($) {\n    return parseInt($);\n  }\n}\n\n\n\nstart\n  = {__ ?(initializer:CodeBlock __) rules:@*Rule>arrayToObject}\n\nRule\n  = {symbol:Identifier __ '=' __ body:ChoiceExpression} __\n\nChoiceExpression\n  = {op:\\'|' arg:@(SequenceExpression __ *('|' __ SequenceExpression))}>omit __\n\nSequenceExpression\n  = {op:\\' ' arg:@(LabelExpression *(__ LabelExpression))}>omit __\n\nLabelExpression\n  = {op:\\':=' arg0:IdentifierOrStringLiteral __ ':=' __ arg1:IdentifierOrStringLiteral}\n  | {op:\\':' arg0:IdentifierOrStringLiteral __ ':' __ arg1:ModifyExpression}\n  | ModifyExpression\n\nModifyExpression\n  = {op:\\'>' arg0:ModifyExpression __ '>' __ (arg1:Identifier | arg2:CodeBlock)}\n  | OtherExpression\n\nOtherExpression\n  = '(' __ ChoiceExpression __ ')'\n  | {op:\\'\\'' arg:StringLiteral\n  | op:\\'[^' '[^' arg:CharacterClass ']'\n  | op:\\'[' '[' arg:CharacterClass ']'\n  | op:\\'\\\\' '\\\\' __ arg:(StringLiteral | NumericLiteral | BooleanLiteral | NullLiteral)\n  | op:\\'@' '@' __ arg:OtherExpression\n  | op:\\'#' '{' __ arg:ChoiceExpression __ '}'\n  | op:\\'`' '`' __ arg:OtherExpression\n  | op:\\'&' '&' __ arg:OtherExpression\n  | op:\\'!' '!' __ arg:OtherExpression\n  | op:\\'?' '?' __ arg:OtherExpression\n  | op:\\'*' '*' __ arg:OtherExpression\n  | op:\\'n' n:NaturalNumber __ '*' __ arg:OtherExpression\n  | op:\\'n-m' n:?NaturalNumber > {return $ || 0} ',' m:?NaturalNumber > {return $ || Infinity} __ '*' __ arg:OtherExpression\n  | op:\\'+' '+' __ arg:OtherExpression\n  | op:\\'.' '.'\n  | op:\\'$' arg:Identifier !(__ '=')}\n\n__\n  = ?+([ \\t\\r\\n] | Comment)\n\nComment\n  = '//' *[^\\n] ('\\n' | !.) | '/*' *([^*] | '*' [^/]) '*/'\n\nIdentifier\n  = `([a-zA-Z_] *[a-zA-Z0-9_])\n\nIdentifierOrStringLiteral\n  = StringLiteral | Identifier\n\nStringLiteral\n  = `(\n    ('\\'' *(+[^'\\\\] | '\\\\u' 4*[0-9a-fA-F] | '\\\\' [^u]) '\\'') |\n    ('\\\"' *(+[^\"\\\\] | '\\\\u' 4*[0-9a-fA-F] | '\\\\' [^u]) '\\\"') ) > eval\n\nCharacterClass\n  = @*{type:\\\"range\" start:CharacterClassChar '-' end:CharacterClassChar | type:\\\"single\" char:CharacterClassChar}\n\nCharacterClassChar\n  = `([^\\]\\\\]\n  | '\\\\u' 4*[0-9a-fA-F]\n  | '\\\\' [^u]) > characterClassChar\n\nCodeBlock\n  = \"{\" Code \"}\"\n\nCode\n  = `*(+(![{}] .) | \"{\" Code \"}\")\n\nNaturalNumber\n  = `([1-9] *[0-9] | '0') > nuturalNumber\n\n\nNullLiteral\n  = `\"null\" > eval\n\nBooleanLiteral\n  = `(\"true\" | \"false\") > eval\n\nNumericLiteral\n  = `(?\"-\" (HexIntegerLiteral | DecimalLiteral)) > eval\n\nDecimalLiteral\n  = DecimalIntegerLiteral \".\" *DecimalDigit ?ExponentPart\n  | \".\" +DecimalDigit ?ExponentPart\n  | DecimalIntegerLiteral ?ExponentPart\n\nDecimalIntegerLiteral\n  = \"0\"\n  | NonZeroDigit *DecimalDigit\n\nDecimalDigit\n  = [0-9]\n\nNonZeroDigit\n  = [1-9]\n\nExponentPart\n  = ExponentIndicator SignedInteger\n\nExponentIndicator\n  = \"e\" | \"E\"\n\nSignedInteger\n  = ?[+-] +DecimalDigit\n\nHexIntegerLiteral\n  = (\"0x\" | \"0X\") +HexDigit\n\nHexDigit\n  = [0-9a-fA-F]",
+	inputText: 'start = "hello world"'
+},
+];
+
+example(0);
+
+</script>
+</html>
