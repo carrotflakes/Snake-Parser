@@ -128,6 +128,7 @@
 	var buildAux = __webpack_require__(4);
 	var compose = buildAux.compose;
 	var collectSymbols = buildAux.collectSymbols;
+	var InfiniteLoopError = __webpack_require__(6);
 
 
 	var Parser = function(rules, modifier) {
@@ -139,7 +140,19 @@
 
 	Parser.prototype.parse = function(str) {
 		var memo = [];
-		var er = this.rules[""].f(this.rules[""].arg_, str, 0, memo);
+		var er;
+
+		try {
+			er = this.rules[""].f(this.rules[""].arg_, str, 0, memo);
+		} catch (e) {
+			if (e instanceof InfiniteLoopError) {
+				return {
+					success: false,
+					error: e.message,
+				};
+			}
+		}
+
 		if (er.nodes !== undefined) {
 			if (str.length !== er.ptr) {	// 成功したけどポインタが最後まで行ってない
 				er = er.error;
@@ -199,6 +212,7 @@
 		return "function(str) {\n" + states.join("\n\n") + "\n}\n";
 	};
 
+	// できてない
 	Parser.prototype.toSource = function() {
 		var f0 = function(d) {
 			var ret = "";
@@ -523,6 +537,8 @@
 /* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var InfiniteLoopError = __webpack_require__(6);
+
 	var functions = {};
 
 	// ordered choice
@@ -567,12 +583,10 @@
 		var nodes = [];
 		while (true) {
 			var tr = r.f(r.arg, str, ptr, memo);
-			if (tr.nodes === undefined)	// 失敗！
+			if (tr.nodes === undefined)
 				break;
-			if (ptr === tr.ptr) {	// XXX どうなのこれ 無限ループになるから例外にする？　エラーにする？
-				tr = {ptr: -1, nexts: []};
-				break;
-				//throw new Error("Detect infinite loop in *.");	// XXX
+			if (ptr === tr.ptr) {
+				throw new InfiniteLoopError();
 			}
 			nodes = nodes.concat(tr.nodes);
 			ptr = tr.ptr;
@@ -588,10 +602,8 @@
 			var tr = r.f(r.arg, str, ptr, memo);
 			if (tr.nodes === undefined)
 				break;
-			if (ptr === tr.ptr) {	// XXX どうなのこれ 無限ループになるから例外にする？　エラーにする？
-				tr = {ptr: -1, nexts: []};
-				break;
-				//throw new Error("Detect infinite loop in *.");	// XXX
+			if (ptr === tr.ptr) {
+				throw new InfiniteLoopError();
 			}
 			nodes = nodes.concat(tr.nodes);
 			ptr = tr.ptr;
@@ -834,6 +846,18 @@
 		mergeError: mergeError,
 		uniqueAppend: uniqueAppend,
 	};
+
+
+/***/ },
+/* 6 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var InfiniteLoopError = function(message) {
+		this.name = "InfiniteLoopError";
+		this.message = message || "Detected an infinite loop";
+	};
+
+	module.exports = InfiniteLoopError;
 
 
 /***/ }

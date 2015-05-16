@@ -5,6 +5,7 @@ var uniqueAppend = parserComponents.uniqueAppend;
 var buildAux = require("./buildAux");
 var compose = buildAux.compose;
 var collectSymbols = buildAux.collectSymbols;
+var InfiniteLoopError = require("./infiniteLoopError");
 
 
 var Parser = function(rules, modifier) {
@@ -16,7 +17,19 @@ var Parser = function(rules, modifier) {
 
 Parser.prototype.parse = function(str) {
 	var memo = [];
-	var er = this.rules[""].f(this.rules[""].arg_, str, 0, memo);
+	var er;
+
+	try {
+		er = this.rules[""].f(this.rules[""].arg_, str, 0, memo);
+	} catch (e) {
+		if (e instanceof InfiniteLoopError) {
+			return {
+				success: false,
+				error: e.message,
+			};
+		}
+	}
+
 	if (er.nodes !== undefined) {
 		if (str.length !== er.ptr) {	// 成功したけどポインタが最後まで行ってない
 			er = er.error;

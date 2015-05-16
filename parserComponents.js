@@ -1,3 +1,5 @@
+var InfiniteLoopError = require("./infiniteLoopError");
+
 var functions = {};
 
 // ordered choice
@@ -42,12 +44,10 @@ functions["*"] = function(r, str, ptr, memo) {
 	var nodes = [];
 	while (true) {
 		var tr = r.f(r.arg, str, ptr, memo);
-		if (tr.nodes === undefined)	// 失敗！
+		if (tr.nodes === undefined)
 			break;
-		if (ptr === tr.ptr) {	// XXX どうなのこれ 無限ループになるから例外にする？　エラーにする？
-			tr = {ptr: -1, nexts: []};
-			break;
-			//throw new Error("Detect infinite loop in *.");	// XXX
+		if (ptr === tr.ptr) {
+			throw new InfiniteLoopError();
 		}
 		nodes = nodes.concat(tr.nodes);
 		ptr = tr.ptr;
@@ -63,10 +63,8 @@ functions["+"] = function(r, str, ptr, memo) {
 		var tr = r.f(r.arg, str, ptr, memo);
 		if (tr.nodes === undefined)
 			break;
-		if (ptr === tr.ptr) {	// XXX どうなのこれ 無限ループになるから例外にする？　エラーにする？
-			tr = {ptr: -1, nexts: []};
-			break;
-			//throw new Error("Detect infinite loop in *.");	// XXX
+		if (ptr === tr.ptr) {
+			throw new InfiniteLoopError();
 		}
 		nodes = nodes.concat(tr.nodes);
 		ptr = tr.ptr;
