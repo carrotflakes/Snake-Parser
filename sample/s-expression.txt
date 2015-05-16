@@ -1,0 +1,22 @@
+start = ws sexp
+
+sexp
+  = '(' ws consList ws
+  | {type:=symbol  value:symbol} ws
+  | {type:=string  value:quotedText} ws
+  | {type:=integer value:integer} ws
+
+consList
+  = {type:=cons car:sexp ws cdr:consList}
+  | {type:=cons car:sexp ws '.' ws cdr:consList}
+  | {type:=nil  ')'}
+
+symbol = `([a-zA-Z_] *[a-zA-Z0-9_])
+
+quotedText
+  = '\'' *(`+[^'\\] | '\\t' \'\t' | '\\r' \'\r' | '\\n' \'\n' | '\\' `.) '\''
+  | '\"' *(`+[^"\\] | '\\t' \'\t' | '\\r' \'\r' | '\\n' \'\n' | '\\' `.) '\"'
+
+integer = `('0' | ?'-' [1-9] *[0-9])
+
+ws = *([ \t\r\n] | '//' *[^\n] '\n' | '/*' *([^*] | '*' [^/]) '*/')
