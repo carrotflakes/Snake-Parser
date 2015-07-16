@@ -89,65 +89,6 @@ Parser.prototype.toJavascript = function(str) {
 	return "function(str) {\n" + states.join("\n\n") + "\n}\n";
 };
 
-// できてない
-Parser.prototype.toSource = function() {
-	var f0 = function(d) {
-		var ret = "";
-		for (var k in d)
-			ret += k + " =\n" + f1(d[k]) + "\n\n";
-		return ret;
-	};
-	var f1 = function(d) {
-		switch(d.op) {
-		case ">":
-			return f2(d.arg0) + ">" + d.arg1;
-		case "|":
-			return "(" + d.arg.map(f2).join("|") + ")";
-		case " ":
-			return "(" + d.arg.map(f2).join(" ") + ")";
-		case "*":
-			return "*" + f2(d.arg);
-		case "+":
-			return "+" + f2(d.arg);
-		case "?":
-			return "?" + f2(d.arg);
-		case "c":
-			return f2(d.arg);// + " {" + d.code + "}";
-		case ":=":
-			return d.arg0 + ":=" + d.arg1;
-		case ":":
-			return d.arg0 + ":" + f2(d.arg1);
-		case "'":
-			return d.arg;
-		case "[^":
-			return "[^" + d.arg + "]" + (d.insensitive === "1" ? "i" : "");
-		case "[":
-			return "[" + d.arg + "]" + (d.insensitive === "1" ? "i" : "");
-		case "\\":
-			return "~" + d.arg;
-		case "@":
-			return "@" + f2(d.arg);
-		case "#":
-			return "{" + f2(d.arg) + "}";
-		case "`":
-			return "`" + f2(d.arg);
-		case "&":
-			return "&" + f2(d.arg);
-		case "!":
-			return "!" + f2(d.arg);
-		case "doll":
-			//return "$" + f2(d.arg);
-			return "`" + f2(d.arg);
-		case ".":
-			return ".";
-		case "$":
-			return d.arg;
-		}
-	};
-
-	return f0(this.rules);
-};
-
 var getLineAndColumn = function(str, ptr) {
 	return {
 		line: (str.slice(0, ptr).match(/\n/g) || []).length + 1,
