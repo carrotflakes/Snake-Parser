@@ -96,7 +96,57 @@ var compose = function(rules, modifier) {
 		traverse(rules[k]);
 };
 
+var decompose = function(rules) {
+	var traverse = function(r) {
+		switch (r.op) {
+		case "|":
+		case " ":
+			return "{op:" + JSON.stringify(r.op) + ",arg:[" + r.arg.map(traverse).join(",") + "]}";
+		case "?":
+		case "*":
+		case "+":
+		case "#":
+		case "@":
+		case "`":
+		case "&":
+		case "!":
+			return "{op:" + JSON.stringify(r.op) + ",arg:" + traverse(r.arg) + "}";
+		case "n":
+			return "{op:" + JSON.stringify(r.op) + ",arg:" + traverse(r.arg) + ",n:" + r.n + "}";
+		case "n-m":
+			return "{op:" + JSON.stringify(r.op) + ",arg:" + traverse(r.arg) + ",n:" + r.n + ",m:" + r.m + "}";
+		case "'":
+		case "[":
+		case "[^":
+		case "\\":
+			return "{op:" + JSON.stringify(r.op) + ",arg:" + JSON.stringify(r.arg) + "}";
+		case ".":
+			return "{op:" + JSON.stringify(r.op) + "}";
+		case ":":
+			return "{op:" + JSON.stringify(r.op) + ",arg0:" + JSON.stringify(r.arg0) + ",arg1:" + traverse(r.arg1) + "}";
+		case ":=":
+			return "{op:" + JSON.stringify(r.op) + ",arg0:" + JSON.stringify(r.arg0) + ",arg1:" + JSON.stringify(r.arg1) + "}";
+		case ">":
+			if (r.arg2 === undefined)
+				return "{op:" + JSON.stringify(r.op) + ",arg0:" + traverse(r.arg0) + ",arg1:" + JSON.stringify(r.arg1) + "}";
+			else
+				return "{op:" + JSON.stringify(r.op) + ",arg0:" + traverse(r.arg0) + ",arg2:" + JSON.stringify(r.arg2) + "}";
+		case "$":
+			return "{op:" + JSON.stringify(r.op) + ",arg:" + JSON.stringify(r.arg) + "}";
+		}
+	};
+
+	var us = [];
+
+	for (var k in rules)
+		if (k !== "")
+			us.push(k + ":" + traverse(rules[k]));
+
+	return "{" + us.join(",") + "}";
+};
+
 module.exports = {
 	collectSymbols: collectSymbols,
 	compose: compose,
+	decompose: decompose,
 };
