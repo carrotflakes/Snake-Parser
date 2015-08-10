@@ -1,7 +1,5 @@
 var grammarParse = require("./grammarParse");
 var Parser = require("./parserObject");
-var buildAux = require("./buildAux");
-var collectSymbols = buildAux.collectSymbols;
 
 var buildParser = function(grammarSource) {
 	var er = grammarParse.parse(grammarSource);
@@ -29,9 +27,9 @@ var buildParser = function(grammarSource) {
 		return "Undefined 'start' symbol.";
 
 	// ルールに使用されているシンボルを集める
-	var css = collectSymbols(rules),
-	ss = css.symbols,
-	mss = css.modifierSymbols;
+	var ss = [], mss = [];
+	for (var r in rules)
+		rules[r].collectSymbols(ss, mss);
 
 	// ルールが定義されているかチェック
 	for (var k in rules) {

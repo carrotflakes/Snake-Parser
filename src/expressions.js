@@ -5,23 +5,13 @@ var InfiniteLoopError = require("./infiniteLoopError");
 var Expression = function() {
 };
 
-Expression.prototype.collectSymbols = function(rules, modifiers) {
-};
 
-Expression.prototype.prepare = function(rules, modifiers) {
-};
-
-Expression.prototype.toString = function() {
-	return this._name + "()";
-};
-
-
-var expressions = [];
+var expressions = {};
 
 var extendsExpression = function(cls, name) {
 	cls.prototype = new Expression();
 	cls.prototype._name = name;
-	expressions.push(cls);
+	expressions[name] = cls;
 };
 
 
@@ -42,18 +32,32 @@ var MatchAnyCharactor = function() {
 extendsExpression(MatchAnyCharactor, "ac");
 
 var OrderedChoice = function(es) {
-	this.children = es;
+	if (es instanceof Array)
+		this.children = es;
+	else {
+		this.children = [].slice.call(arguments, 0, [].indexOf.call(arguments));
+	}
 };
 extendsExpression(OrderedChoice, "oc");
 
 var Sequence = function(es) {
-	this.children = es;
+	if (es instanceof Array)
+		this.children = es;
+	else {
+		this.children = [].slice.call(arguments, 0, [].indexOf.call(arguments));
+	}
 };
 extendsExpression(Sequence, "seq");
 
 var Repeat = function(min, max, e) {
-	this.min = min;
-	this.max = max;
+	this.min = min !== undefined ? min : 0;
+	this.max = max !== undefined ? (max === "min" ? min : max) : Infinity;
+//	this.min = min;
+//	this.max = max === "min" ? min : max;
+//	this.min = min !== undefined ? min : 0;
+//	this.max = max !== undefined ? max : Infinity;
+//	this.min = min;
+//	this.max = max !== undefined ? max : min;
 	this.child = e;
 };
 extendsExpression(Repeat, "rep");
@@ -115,9 +119,12 @@ extendsExpression(RuleReference, "rul");
 
 
 // collectSymbols
+Expression.prototype.collectSymbols = function(rules, modifiers) {
+};
+
 OrderedChoice.prototype.collectSymbols = function(rules, modifiers) {
-	for (var child of this.children)
-		child.collectSymbols(rules, modifiers);
+	for (var i in this.children)
+		this.children[i].collectSymbols(rules, modifiers);
 };
 
 Sequence.prototype.collectSymbols = OrderedChoice.prototype.collectSymbols;
@@ -129,27 +136,30 @@ Repeat.prototype.collectSymbols = function(rules, modifiers) {
 Objectize.prototype.collectSymbols = Repeat.prototype.collectSymbols;
 Arraying.prototype.collectSymbols = Repeat.prototype.collectSymbols;
 Tokenize.prototype.collectSymbols = Repeat.prototype.collectSymbols;
+Itemize.prototype.collectSymbols = Repeat.prototype.collectSymbols;
 PositiveLookaheadAssertion.prototype.collectSymbols = Repeat.prototype.collectSymbols;
 NegativeLookaheadAssertion.prototype.collectSymbols = Repeat.prototype.collectSymbols;
 
 Modify.prototype.collectSymbols = function(rules, modifiers) {
-	if (this.modifierSymbolOrFunction instanceof String)
-		if (modifiers.indexOf(this.modifierSymbol) == -1)
-			modifiers.push(this.modifierSymbol);
+	if (typeof(this.modifierSymbolOrFunction) === "string")
+		if (modifiers.indexOf(this.modifierSymbolOrFunction) == -1)
+			modifiers.push(this.modifierSymbolOrFunction);
 	this.child.collectSymbols(rules, modifiers);
 };
 
 RuleReference.prototype.collectSymbols = function(rules, modifiers) {
 	if (rules.indexOf(this.ruleSymbol) == -1)
 		rules.push(this.ruleSymbol);
-	this.child.collectSymbols(rules, modifiers);
 };
 
 
 // prepare
+Expression.prototype.prepare = function(rules, modifiers) {
+};
+
 OrderedChoice.prototype.prepare = function(rules, modifiers) {
-	for (var child of this.children)
-		child.prepare(rules, modifiers);
+	for (var i in this.children)
+		this.children[i].prepare(rules, modifiers);
 };
 
 Sequence.prototype.prepare = OrderedChoice.prototype.prepare;
@@ -161,11 +171,12 @@ Repeat.prototype.prepare = function(rules, modifiers) {
 Objectize.prototype.prepare = Repeat.prototype.prepare;
 Arraying.prototype.prepare = Repeat.prototype.prepare;
 Tokenize.prototype.prepare = Repeat.prototype.prepare;
+Itemize.prototype.prepare = Repeat.prototype.prepare;
 PositiveLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
 NegativeLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
 
 Modify.prototype.prepare = function(rules, modifiers) {
-	if (this.modifierSymbolOrFunction instanceof String) {
+	if (this.modifierSymbolOrFunction.constructor === String) {
 		this.modifier = modifiers[this.modifierSymbolOrFunction];
 	} else if (this.modifierSymbolOrFunction instanceof Function) {
 		this.modifier = this.modifierSymbolOrFunction;
@@ -175,29 +186,32 @@ Modify.prototype.prepare = function(rules, modifiers) {
 
 RuleReference.prototype.prepare = function(rules, modifiers) {
 	this.rule = rules[this.ruleSymbol];
-	this.child.prepare(rules, modifiers);
 };
 
 // toString
+Expression.prototype.toString = function() {
+	return this._name + "()";
+};
+
 OrderedChoice.prototype.toString = function() {
 	var ss = [];
-	for (var child of this.children)
-		ss.push(child.toString());
+	for (var i in this.children)
+		ss.push(this.children[i].toString());
 	return this._name + "(" + ss.join(",") + ")";
 };
 
 Sequence.prototype.toString = OrderedChoice.prototype.toString;
 
 MatchString.prototype.toString = function() {
-	return this._name + "(" + JSON.toString(this.string) + ")";
+	return this._name + "(" + JSON.stringify(this.string) + ")";
 };
 
 MatchCharactorClass.prototype.toString = function() {
-	return this._name + "(" + JSON.toString(this.charactorClass) + "," + +this.invert + ")";
+	return this._name + "(" + JSON.stringify(this.charactorClass) + "," + +this.invert + ")";
 };
 
 Repeat.prototype.toString = function() {
-	return this._name + "(" + this.min "," + this.max + "," + this.child.toString() + ")";
+	return this._name + "(" + this.min + "," + this.max + "," + this.child.toString() + ")";
 };
 
 Objectize.prototype.toString = function() {
@@ -210,21 +224,21 @@ PositiveLookaheadAssertion.prototype.toString = Objectize.prototype.toString;
 NegativeLookaheadAssertion.prototype.toString = Objectize.prototype.toString;
 
 Itemize.prototype.toString = function() {
-	return this._name + "(" + JSON.toString(this.key) + "," + this.child.toString() + ")";
+	return this._name + "(" + JSON.stringify(this.key) + "," + this.child.toString() + ")";
 };
 
 ConstItem.prototype.toString = function() {
-	return this._name + "(" + JSON.toString(this.key) + "," + JSON.toString(this.value) + ")";
+	return this._name + "(" + JSON.stringify(this.key) + "," + JSON.stringify(this.value) + ")";
 };
 
 Literal.prototype.toString = function() {
-	return this._name + "(" + JSON.toString(this.value) + ")";
+	return this._name + "(" + JSON.stringify(this.value) + ")";
 };
 
 Modify.prototype.toString = function() {
 	var modifier;
-	if (this.modifierSymbolOrFunction instanceof String) {
-		modifier = JSON.toString(this.modifierSymbolOrFunction);
+	if (typeof(this.modifierSymbolOrFunction) === "string") {
+		modifier = JSON.stringify(this.modifierSymbolOrFunction);
 	} else if (this.modifierSymbolOrFunction instanceof Function) {
 		modifier = this.modifierSymbolOrFunction.toString();
 	}
@@ -232,14 +246,14 @@ Modify.prototype.toString = function() {
 };
 
 RuleReference.prototype.toString = function() {
-	return this._name + "(" + JSON.toString(modifier) + ")";
+	return this._name + "(" + JSON.stringify(this.ruleSymbol) + ")";
 };
 
 // match
-OrderedMatch.prototype.match = function(str, ptr, memo) {
+OrderedChoice.prototype.match = function(str, ptr, memo) {
 	var error = {ptr: -1, nexts: []};
-	for (var child of this.children) {
-		var tr = child.match(str, ptr, memo);
+	for (var i in this.children) {
+		var tr = this.children[i].match(str, ptr, memo);
 		if (tr.nodes !== undefined) {
 			tr.error = mergeError(tr.error, error);
 			return tr;
@@ -252,8 +266,8 @@ OrderedMatch.prototype.match = function(str, ptr, memo) {
 Sequence.prototype.match = function(str, ptr, memo) {
 	var nodes = [],
 	error = {ptr: -1, nexts: []};
-	for (var child of this.children) {
-		var tr = child.match(str, ptr, memo);
+	for (var i in this.children) {
+		var tr = this.children[i].match(str, ptr, memo);
 		if (tr.nodes === undefined)
 			return mergeError(tr, error);
 		nodes = nodes.concat(tr.nodes);
@@ -266,7 +280,7 @@ Sequence.prototype.match = function(str, ptr, memo) {
 Repeat.prototype.match = function(str, ptr, memo) {
 	var nodes = [];
 	for (var i = 0; i < this.max; ++i) {
-		var tr = this.child(str, ptr, memo);
+		var tr = this.child.match(str, ptr, memo);
 		if (tr.nodes === undefined) {
 			if (i < this.min)
 				return tr;
@@ -292,14 +306,18 @@ MatchCharactorClass.prototype.match = function(str, ptr, memo) {
 		return this.error(ptr);
 	var cc = str[ptr].charCodeAt();
 	if (!this.invert) {
-		for (var c of this.charactorClass)
+		for (var i in this.charactorClass) {
+			var c = this.charactorClass[i];
 			if (c.type === "range" ? c.start <= cc && cc <= c.end : cc === c.char)
 				return {nodes: [], ptr: ptr + 1, error: {ptr: -1, nexts: []}};
+		}
 		return this.error(ptr);
 	} else {
-		for (var c of this.charactorClass)
+		for (var i in this.charactorClass) {
+			var c = this.charactorClass[i];
 			if (c.type === "range" ? c.start <= cc && cc <= c.end : cc === c.char)
 				return this.error(ptr);
+		}
 		return {nodes: [], ptr: ptr + 1, error: {ptr: -1, nexts: []}};
 	}
 };
@@ -324,17 +342,17 @@ MatchAnyCharactor.prototype.match = function(str, ptr, memo) {
 };
 
 Objectize.prototype.match = function(str, ptr, memo) {
-	var tr = this.child(str, ptr, memo);
+	var tr = this.child.match(str, ptr, memo);
 	if (tr.nodes === undefined)
 		return tr;
 	var obj = {};
-	for (var node of tr.nodes)
-		obj[node.key] = node.value;
+	for (var i in tr.nodes)
+		obj[tr.nodes[i].key] = tr.nodes[i].value;
 	return {nodes: [obj], ptr: tr.ptr, error: tr.error};
 };
 
 Itemize.prototype.match = function(str, ptr, memo) {
-	var tr = this.child(str, ptr, memo);
+	var tr = this.child.match(str, ptr, memo);
 	if (tr.nodes === undefined)
 		return tr;
 	if (typeof(tr.nodes[0]) === "string")
@@ -347,14 +365,14 @@ ConstItem.prototype.match = function(str, ptr, memo) {
 };
 
 Arraying.prototype.match = function(str, ptr, memo) {
-	var tr = this.child(str, ptr, memo);
+	var tr = this.child.match(str, ptr, memo);
 	if (tr.nodes === undefined)
 		return tr;
 	return {nodes: [tr.nodes], ptr: tr.ptr, error: tr.error};
 };
 
 Tokenize.prototype.match = function(str, ptr, memo) {
-	var tr = this.child(str, ptr, memo);
+	var tr = this.child.match(str, ptr, memo);
 	if (tr.nodes === undefined) {
 		return tr;
 	}
@@ -367,7 +385,7 @@ Literal.prototype.match = function(str, ptr, memo) {
 };
 
 PositiveLookaheadAssertion.prototype.match = function(str, ptr, memo) {
-	var tr = this.child(str, ptr, memo);
+	var tr = this.child.match(str, ptr, memo);
 	if (tr.nodes === undefined) {
 		return tr;
 	}
@@ -375,7 +393,7 @@ PositiveLookaheadAssertion.prototype.match = function(str, ptr, memo) {
 };
 
 NegativeLookaheadAssertion.prototype.match = function(str, ptr, memo) {
-	var tr = this.child(str, ptr, memo);
+	var tr = this.child.match(str, ptr, memo);
 	if (tr.nodes === undefined) {
 		return {nodes: [], ptr: ptr, error: {ptr: -1, nexts: []}};	// おっ？
 	}
@@ -383,7 +401,7 @@ NegativeLookaheadAssertion.prototype.match = function(str, ptr, memo) {
 };
 
 Modify.prototype.match = function(str, ptr, memo) {
-	var tr = this.child(str, ptr, memo);
+	var tr = this.child.match(str, ptr, memo);
 	if (tr.nodes === undefined) {
 		return tr;
 	}
@@ -410,7 +428,7 @@ RuleReference.prototype.match = function(str, ptr, memo) {
 	memo_[sym] = "recursive?";
 	///////////////////////////////////////
 
-	var tr = r.f(r.arg_, str, ptr, memo),
+	var tr = this.rule.match(str, ptr, memo),
 	error = tr.nodes === undefined ? tr : tr.error;
 
 	///////////////////////////////////////
@@ -419,7 +437,7 @@ RuleReference.prototype.match = function(str, ptr, memo) {
 		memo[ptr] = {};
 		memo[ptr][sym] = tr;
 		while (true) {
-			tr = this.rule(str, ptr, memo);
+			tr = this.rule.match(str, ptr, memo);
 			if (tr.nodes === undefined || tr.ptr <= p) {
 				break;
 			}
@@ -451,12 +469,101 @@ RuleReference.prototype.match = function(str, ptr, memo) {
 };
 
 
+Expression.prototype.traverse = function(func) {
+	func(this);
+};
+
+OrderedChoice.prototype.traverse = function(func) {
+	func(this);
+	for (var i in this.children)
+		this.children[i].traverse(func);
+};
+
+Sequence.prototype.traverse = OrderedChoice.prototype.traverse;
+
+Repeat.prototype.traverse = function(func) {
+	func(this);
+	this.child.traverse(func);
+};
+
+Objectize.prototype.traverse = Repeat.prototype.traverse;
+Arraying.prototype.traverse = Repeat.prototype.traverse;
+Tokenize.prototype.traverse = Repeat.prototype.traverse;
+Itemize.prototype.traverse = Repeat.prototype.traverse;
+PositiveLookaheadAssertion.prototype.traverse = Repeat.prototype.traverse;
+NegativeLookaheadAssertion.prototype.traverse = Repeat.prototype.traverse;
+Modify.prototype.traverse = Repeat.prototype.traverse;
+
+RuleReference.prototype.traverse = function(func) {
+	func(this);
+};
+
+
+//////////////////////////////////////////////////////////
+// -1 必ず進む 0 進まない可能性がある　1 左再帰する可能性がある
+Expression.prototype.isLeftRecursion = function(rule, passedRules) {
+	return 0;
+};
+
+OrderedChoice.prototype.isLeftRecursion = function(rule, passedRules) {
+	var res = -1;
+	for (var i in this.children)
+		res = Math.max(res, this.children[i].isLeftRecursion(rule, passedRules));
+	return res;
+};
+
+Sequence.prototype.isLeftRecursion = function(rule, passedRules) {
+	for (var i in this.children) {
+		var r = this.children[i].isLeftRecursion(rule, passedRules);
+		if (r === -1)
+			return -1;
+		else if (r === 1)
+			return 1;
+	}
+	return 0;
+};
+
+MatchString.prototype.isLeftRecursion = function(rule, passedRules) {
+	return -1;
+};
+
+MatchCharactorClass.prototype.isLeftRecursion = MatchString.prototype.isLeftRecursion;
+MatchAnyCharactor.prototype.isLeftRecursion = MatchString.prototype.isLeftRecursion;
+
+Repeat.prototype.isLeftRecursion = function(rule, passedRules) {
+	if (this.min === 0) {
+		return Math.max(0, this.child.isLeftRecursion(rule, passedRules));
+	} else {
+		return this.child.isLeftRecursion(rule, passedRules);
+	}
+};
+
+Objectize.prototype.isLeftRecursion = function(rule, passedRules) {
+	return this.child.isLeftRecursion(rule, passedRules);
+};
+
+Arraying.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
+Tokenize.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
+Itemize.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
+PositiveLookaheadAssertion.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
+NegativeLookaheadAssertion.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
+Modify.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
+
+RuleReference.prototype.isLeftRecursion = function(rule, passedRules) {
+	if (rule === this.ruleSymbol)
+		return 1;
+	if (passedRules.indexOf(this.ruleSymbol) !== -1)
+		return 0; // 別ルールの左再帰を検出した。　0を返すのは怪しい
+	return this.rule.isLeftRecursion(rule, passedRules.concat([this.ruleSymbol]));
+};
+
+
 var mergeError = function(e1, e2) {
 	if (e1.ptr < e2.ptr) {
 		e1.ptr = e2.ptr;
 		e1.nexts = e2.nexts;
 	} else if (e1.ptr === e2.ptr) {
-		uniqueAppend(e1.nexts, e2.nexts);
+		union(e1.nexts, e2.nexts);
 	}
 	return e1;
 };
@@ -469,6 +576,7 @@ var union = function(a1, a2) {
 };
 
 module.exports = {
+	Expression: Expression,
 	expressions: expressions,
 	mergeError: mergeError,
 	union: union,
