@@ -95,7 +95,7 @@ function buildParser() {
 		parser = null;
 	} else {
 		syntaxMessageElm.innerHTML = ("Parser built successfully.\n" + t + "ms").replace(/\n/g, "<br>");
-		eval(parser.toJavascript("parse"));
+		eval(parser.toJavascript("parserParse"));
 	}
 
 	resultMessageElm.innerHTML = "";
@@ -114,7 +114,7 @@ function parse() {
 
 
 	var t = new Date().getTime();
-	var result = parse(inputText);
+	var result = parserParse(inputText);
 	t = new Date().getTime() - t;
 
 	console.dir(result);

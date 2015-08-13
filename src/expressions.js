@@ -53,12 +53,6 @@ extendsExpression(Sequence, "seq");
 var Repeat = function(min, max, e) {
 	this.min = min !== undefined ? min : 0;
 	this.max = max !== undefined ? (max === "min" ? min : max) : Infinity;
-//	this.min = min;
-//	this.max = max === "min" ? min : max;
-//	this.min = min !== undefined ? min : 0;
-//	this.max = max !== undefined ? max : Infinity;
-//	this.min = min;
-//	this.max = max !== undefined ? max : min;
 	this.child = e;
 };
 extendsExpression(Repeat, "rep");

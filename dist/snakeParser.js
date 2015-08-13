@@ -1132,14 +1132,6 @@ var genRule = function(ruleSymbol, expression, indentLevel) {
 			"else\n" +
 			indentStr + "delete memo[" + memoKey + "];\n" +
 			"return " + obj1 + ";\n";
-//		var fail = "if (memo[" + memoKey + "] instanceof Object)\n" + // TODO ここでdeterminateを強制的にtrueにするのがまずい
-//			indentStr + "memo[" + memoKey + "].undeterminate -= 1;\n" +
-//			"else\n" +
-//			indentStr + "memo[" + memoKey + "] -= 1;\n" +
-//			"return memo[" + memoKey + "];\n";
-//		var fail = "var m = memo[" + memoKey + "];\n" +
-//			"delete memo[" + memoKey + "];\n" +
-//			"return m;\n";
 		var pass = "if (" + ptr1 + " <= rptr) {\n" +
 			addIndent(fail, 1) +
 			"}\n" +
@@ -1200,7 +1192,7 @@ while (true) {
 	rptr = ptr1;
 	memo[key] = {hoge:hoge, determinate: false};
 	continue rec;
-	// failなら・・memoを返すdetをtrueにしてね。
+	// failなら・・memoを返す detをtrueにしてね。
 }
 //*/
 
@@ -1216,7 +1208,6 @@ var genjs = function(parser) {
 		states.push(indentStr + "var mod$" + key + " = " + parser.modifier[key].toString() + ";\n\n");
 	}
 
-//matchsじゃなくてもいいんじゃない？
 	states.push(addIndent('var matchingFail = function(ptr, match) {\n\
 	if (errorMask === 0 && failPtr <= ptr) {\n\
 		match = matchTable[ptr] ? matchTable[ptr] : match;\n\
@@ -1229,6 +1220,9 @@ var genjs = function(parser) {
 		}\n\
 	}\n\
 };', 1) + "\n\n");
+
+	states.push(addIndent("var joinByOr = " + joinByOr.toString() + ";", 1) + "\n\n");
+
 	states.push(addIndent('var $parse = function(string) {\n\
 	str = string;\n\
 	strLength = string.length;\n\
@@ -1264,6 +1258,13 @@ var genjs = function(parser) {
 	return states.join("");
 };
 
+var joinByOr = function(strs) {
+	if (strs.length === 0)
+		return "";
+	if (strs.length === 1)
+		return strs[0];
+	return strs.slice(0, strs.length - 1).join(", ") + " or " + strs[strs.length - 1];
+};
 
 module.exports = genjs;
 
