@@ -1,51 +1,17 @@
 # Snake Parser
 
-JavaScript製のパーサジェネレータです。
+Snake ParserはJavaScript製のパーサジェネレータです。
+構造を持ったテキストを入力としてJavaScript上でデータを得たいときに使います。
+テキストからデータを取り出すためには、どのように取り出すかを記述した*文法*が必要です。
+Snake Parserは文法を入力として、パースするためのJavaScriptコードを出力します。
 
+
+実行はこちら。  
 https://carrotflakes.github.io/Snake-Parser/
 
 ## 特徴
-- PEGのような文法記述
+- PEGっぽい文法
 - 左再帰に対応
-- パーサはJavaScriptの関数として出力
-
-## 文法記述例
-次の文法は `+` と `*` と整数を使った数式を計算する関数を生成します。
-`1+2*3` を入力すると `7` が出力されることを期待します。
-
-```
-// モディファイア定義
-{
-  additive: function($) {
-    return $.left + $.right;
-  },
-  multiplicative: function($) {
-    return $.left * $.right;
-  },
-  integer: function($) {
-    return +$;
-  }
-}
-
-// ルール定義
-start =
-  additive
-
-additive =
-  {left:multiplicative "+" right:additive}>additive
-  | multiplicative
-
-multiplicative =
-  {left:primary "*" right:multiplicative}>multiplicative
-  | primary
-
-primary =
-  integer
-  | "(" additive ")"
-
-integer =
-  `+[0-9]>integer
-```
 
 ## 文法記述法
 ### 基本
@@ -68,7 +34,7 @@ rule1 = ...
 
 最初にモディファイアを定義します。関数を格納したオブジェクトのように書きます。モディファイアが不要であれば `{}` ごと省略することができます。
 次にルールを `ルール名 = パージング表現` の形で定義します。ルール名は `[a-zA-Z_][a-zA-Z0-9_]*` の正規表現を満たすものが使えます。`start` は最初に呼び出されるルールです。
-文法記述の中にはJavaScriptのようにコメントを書き込むこともできます。
+文法記述の中にはJavaScriptのように、`//`, `/* */`でコメントを書き込むこともできます。
 
 ### パージング表現
 [TODO]
@@ -91,13 +57,13 @@ rule1 = ...
 
 #### 量化
     ?A
-パージング表現 `A` のパースに成功すればこのパースは成功ですが、そうでなくても成功になります。
+パージング表現 `A` でのパースを試行します。パースに成功しても失敗しても `?A` は成功です。
 
     *A
 パージング表現 `A` を失敗するまで繰り返します。
 
     +A
-パージング表現 `A` を失敗するまで繰り返します。１回以上成功しないとこのパースは失敗になります。
+パージング表現 `A` を失敗するまで繰り返します。１回以上成功しないと `+A` は失敗になります。
 
     n*A
 `A` を `n` 回繰り返したものと同値です。
@@ -117,10 +83,10 @@ rule1 = ...
 パージング表現 `A` でパースを試み、成功すればこのパースは失敗です。失敗すればこのパースは成功になります。
 
     A|B
-パージング表現 `A` でパースします。それが失敗ならば、 パージング表現 `B` でパースをします。
+パージング表現 `A` でパースします。`A` が失敗ならば、 パージング表現 `B` でパースをします。
 
     A B
-パージング表現 `A` でパースします。それが成功すれば、次にパージング表現 `B` でパースをします。
+パージング表現 `A` でパースします。`A` 成功すれば、次にパージング表現 `B` でパースをします。
 
     (...)
 括弧の中をひとまとまりに扱います
@@ -144,8 +110,9 @@ rule1 = ...
     A>M
 `M` はモディファイア名です。パージング表現 `A` の返り値をモディファイア `M` で加工して返り値とします。
 
-    A>{E}
-[TODO]
+    A>{M}
+モディファイアの別の表記法です。モディファイアの定義で定義していない関数が使用できます。`M` には引数が `$` の関数のボディ部分を与えて下さい。
+e.g. `A>{return parseInt($);}`
 
     \123
     \"Hello"
@@ -154,8 +121,47 @@ rule1 = ...
 numeric や string 、 boolean 、 null などの値をそのまま返り値とします。
 
 #### その他
-    $ptr
-    $src
-    $line
+    $pos
+    $input
+    $row
     $column
 未実装[TODO]
+
+
+## 文法記述例
+次の文法は `+` と `*` と整数を使った数式を計算する関数を生成します。
+`1+2*3` を入力すると `7` が出力されます。
+
+```
+// モディファイア定義
+{
+  additive: function($) {
+    return $.left + $.right;
+  },
+  multiplicative: function($) {
+    return $.left * $.right;
+  },
+  integer: function($) {
+    return +$;
+  }
+}
+
+// ルール定義
+start =
+  additive
+
+additive =
+  {left:multiplicative "+" right:additive} > additive
+  | multiplicative
+
+multiplicative =
+  {left:primary "*" right:multiplicative} > multiplicative
+  | primary
+
+primary =
+  integer
+  | "(" additive ")"
+
+integer =
+  `+[0-9]>integer
+```
