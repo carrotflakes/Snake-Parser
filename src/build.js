@@ -1,8 +1,10 @@
 var grammarParse = require("./grammarParse");
 var Parser = require("./parserObject");
 
+var parse = eval(grammarParse.toJavascript());
+
 var buildParser = function(grammarSource) {
-	var er = grammarParse.parse(grammarSource);
+	var er = parse(grammarSource);
 
 	if (!er.success)
 		return er.error;

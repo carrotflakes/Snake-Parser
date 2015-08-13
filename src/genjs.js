@@ -30,22 +30,11 @@ var newId = function(ids, name) {
 var makeErrorLogging = function(ptr, match, indentLevel) {
 	var matchStr = JSON.stringify(match);
 	var indent = makeIndent(indentLevel);
-	return indent + "matchingFail(" + ptr + ", " + matchStr + ");";
-
-	var states = [];
-	states.push(indent + "if (errorMask === 0 && failPtr <= " + ptr + ") {\n");
-	states.push(indent + indentStr + "if (failPtr === " + ptr + ") {\n");
-	states.push(indent + indentStr + indentStr + "failMatchs.push(" + matchsStr.substr(1, matchsStr.length - 2) + ");\n");
-	states.push(indent + indentStr + "} else {\n");
-	states.push(indent + indentStr + indentStr + "failMatchs = " + matchsStr + ";\n");
-	states.push(indent + indentStr + indentStr + "failPtr = " + ptr + ";\n");
-	states.push(indent + indentStr + "}\n");
-	states.push(indent + "}\n");
-	return states.join("");
+	return indent + "matchingFail(" + ptr + ", " + matchStr + ");\n";
 };
 
-Expression.prototype.gen = function() {
-	throw new Error("undefined gen");
+expressions.nop.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel) {
+	return addIndent(pass, indentLevel);
 };
 
 expressions.oc.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel) {
@@ -202,9 +191,15 @@ if (flag) {
 */
 
 expressions.str.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel) {
+	if (this.string.length === 0)
+		return addIndent(pass, indentLevel);
+
 	var indent = makeIndent(indentLevel);
 	var states = [];
-	states.push(indent + "if (str.substr(" + ptr + ", " + this.string.length + ") === " + JSON.stringify(this.string) + ") {\n");
+	if (this.string.length !== 1)
+		states.push(indent + "if (str.substr(" + ptr + ", " + this.string.length + ") === " + JSON.stringify(this.string) + ") {\n");
+	else
+		states.push(indent + "if (str.charCodeAt(" + ptr + ") === " + this.string.charCodeAt() + ") {\n");
 	states.push(indent + indentStr + ptr + " += " + this.string.length + ";\n");
 	states.push(addIndent(pass, indentLevel + 1));
 	states.push(indent + "} else {\n");
@@ -227,10 +222,17 @@ expressions.cc.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel)
 	}
 	var states = [];
 	states.push(indent + "var " + c + " = str.charCodeAt(" + ptr + ");\n");
-	if (!this.invert)
-		states.push(indent + "if (" + conds.join(" || ") + ") {\n");
-	else
-		states.push(indent + "if (!isNaN(" + c + ") && !(" + conds.join(" || ") + ")) {\n");
+	if (!this.invert) {
+		if (conds.length === 0)
+			states.push(indent + "if (false) {\n");
+		else
+			states.push(indent + "if (" + conds.join(" || ") + ") {\n");
+	} else {
+		if (conds.length === 0)
+			states.push(indent + "if (true) {\n");
+		else
+			states.push(indent + "if (!isNaN(" + c + ") && !(" + conds.join(" || ") + ")) {\n");
+	}
 	states.push(indent + indentStr + ptr + " += 1;\n");
 	states.push(addIndent(pass, indentLevel + 1));
 	states.push(indent + "} else {\n");
@@ -549,8 +551,8 @@ var genjs = function(parser) {
 		matchingFail(mr.pointer, "end of input");\n\
 	}\n\
 	if (!ret) {\n\
-		var line = (str.slice(0, failPtr).match(/\\n/g) || []).length + 1;\n\
-		var column = failPtr - str.lastIndexOf("\\n", failPtr - 1);\n\
+		var line = (str.slice(0, failPtr).match(/\\n/g) || []).length;\n\
+		var column = failPtr - str.lastIndexOf("\\n", failPtr - 1) - 1;\n\
 		ret = {success: false, error: "Line " + line + ", column " + column + ": Expected " + failMatchs.join(", ") + " but " + (JSON.stringify(str[failPtr]) || "end of input") + " found."};\n\
 	}\n\
 	str = memo = matchTable = undefined;\n\
@@ -560,66 +562,6 @@ var genjs = function(parser) {
 	states.push("})();\n");
 	return states.join("");
 };
-
-/*
-parser = (function() {
-	var str, memo, errorMask, failMatchs, failPtr;
-	var rule_additive = function(ptr) {
-		..
-	};
-	var parse = function(string) {
-		str = string;
-		memo = [];
-		errorMask = 0;
-		failMatchs = [];
-		failPtr = 0;
-		var mr = start(0);
-		if (mr !== null) {
-			if (mr.pointer == string.length) {
-				return {success: true, content: mr.objects[0]};
-			}
-			nexts.push("end of input");
-		}
-		return {success: false, error: "failed"};
-	};
-	return parse;
-})();
-*/
-
-/*
-// undetermined 一時的なresult
-// failResult = {}
-
-if (key in memo) {
-	var res = memo[key];
-	if (res === "recurs?") {
-		memo[key] = "recurs!";
-		return null; // 再帰検出!
-	}
-	return res;
-}
-memo[key] = "recurs?;"
-{{...}}
-if (memo[key] === "recurs!") { // 再帰したよ
-	return leftRecurs(this, res, key);
-}
-memo[key] = res;
-return res;
-
-var leftRecurs = function(rule, res, key) {
-	var ptr = res.pointer;
-		memo[key] = res;
-		while (true) {
-			res = rule(ptr);
-			if (res === null || res.pointer === ptr) { // 失敗するまでマッチをトライ
-				break;
-			}
-			ptr = res.pointer;
-			memo[key] = res;
-		}
-		res = memo[key];
-	return res;
-};//*/
 
 
 module.exports = genjs;

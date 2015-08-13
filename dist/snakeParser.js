@@ -46,12 +46,13 @@
 
 var buildParser = __webpack_require__(1);
 var Parser = __webpack_require__(2);
-var genjs = __webpack_require__(3);
+var expressions = __webpack_require__(3);
+expressions = expressions.expressions;
 
 window.SnakeParser = {
 	buildParser: buildParser,
 	Parser: Parser,
-	genjs: genjs,
+	expressions: expressions,
 };
 
 
@@ -62,8 +63,10 @@ window.SnakeParser = {
 var grammarParse = __webpack_require__(4);
 var Parser = __webpack_require__(2);
 
+var parse = eval(grammarParse.toJavascript());
+
 var buildParser = function(grammarSource) {
-	var er = grammarParse.parse(grammarSource);
+	var er = parse(grammarSource);
 
 	if (!er.success)
 		return er.error;
@@ -121,24 +124,21 @@ module.exports = buildParser;
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
-var expressions = __webpack_require__(5);
-var mergeError = expressions.mergeError;
-var union = expressions.union;
+var expressions = __webpack_require__(3);
 expressions = expressions.expressions;
-var InfiniteLoopError = __webpack_require__(6);
-var genjs = __webpack_require__(3);
+var genjs = __webpack_require__(5);
 
 
 var Parser = function(rules, modifier) {
 	this.rules = rules;
 	this.modifier = modifier;
 
-	rules[""] = new expressions.rul("start");
+//	rules[""] = new expressions.rul("start");
 
 	for (var r in rules)
 		rules[r].prepare(rules, modifier);
 };
-
+/*
 Parser.prototype.parse = function(str) {
 	var memo = [];
 	var er;
@@ -181,10 +181,12 @@ Parser.prototype.parse = function(str) {
 		success: true,
 		content: er.nodes[0],
 	};
-};
+};*/
 
 
 Parser.prototype.toJavascript = function(exportVariable) {
+	if (exportVariable === undefined)
+		return genjs(this);
 	return exportVariable + " = " + genjs(this);
 };
 
@@ -202,7 +204,502 @@ module.exports = Parser;
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-var expressions = __webpack_require__(5);
+// Expression Class
+var Expression = function() {
+};
+
+
+var expressions = {};
+
+var extendsExpression = function(cls, name) {
+	cls.prototype = new Expression();
+	cls.prototype._name = name;
+	expressions[name] = cls;
+};
+
+
+// Classes extends Expression
+var Nop = function() {
+};
+extendsExpression(Nop, "nop");
+
+var MatchString = function(s) {
+	this.string = s;
+};
+extendsExpression(MatchString, "str");
+
+var MatchCharactorClass = function(cc, i) {
+	this.charactorClass = cc;
+	this.invert = !!i;
+};
+extendsExpression(MatchCharactorClass, "cc");
+
+var MatchAnyCharactor = function() {
+};
+extendsExpression(MatchAnyCharactor, "ac");
+
+var OrderedChoice = function(es) {
+	if (es instanceof Array)
+		this.children = es;
+	else {
+		this.children = [].slice.call(arguments, 0, [].indexOf.call(arguments));
+	}
+};
+extendsExpression(OrderedChoice, "oc");
+
+var Sequence = function(es) {
+	if (es instanceof Array)
+		this.children = es;
+	else {
+		this.children = [].slice.call(arguments, 0, [].indexOf.call(arguments));
+	}
+};
+extendsExpression(Sequence, "seq");
+
+var Repeat = function(min, max, e) {
+	this.min = min !== undefined ? min : 0;
+	this.max = max !== undefined ? (max === "min" ? min : max) : Infinity;
+//	this.min = min;
+//	this.max = max === "min" ? min : max;
+//	this.min = min !== undefined ? min : 0;
+//	this.max = max !== undefined ? max : Infinity;
+//	this.min = min;
+//	this.max = max !== undefined ? max : min;
+	this.child = e;
+};
+extendsExpression(Repeat, "rep");
+
+var Objectize = function(e) {
+	this.child = e;
+};
+extendsExpression(Objectize, "obj");
+
+var Arraying = function(e) {
+	this.child = e;
+};
+extendsExpression(Arraying, "arr");
+
+var Itemize = function(k, e) {
+	this.key = k;
+	this.child = e;
+};
+extendsExpression(Itemize, "itm");
+
+var ConstItem = function(k, v) {
+	this.key = k;
+	this.value = v;
+};
+extendsExpression(ConstItem, "ci");
+
+var Tokenize = function(e) {
+	this.child = e;
+};
+extendsExpression(Tokenize, "tkn");
+
+var Literal = function(v) {
+	this.value = v;
+};
+extendsExpression(Literal, "ltr");
+
+var PositiveLookaheadAssertion = function(e) {
+	this.child = e;
+};
+extendsExpression(PositiveLookaheadAssertion, "pla");
+
+var NegativeLookaheadAssertion = function(e) {
+	this.child = e;
+};
+extendsExpression(NegativeLookaheadAssertion, "nla");
+
+var Modify = function(m, e) {
+	this.modifierSymbolOrFunction = m;
+	this.child = e;
+	this.modifier = null;
+};
+extendsExpression(Modify, "mod");
+
+var RuleReference = function(r) {
+	this.ruleSymbol = r;
+	this.rule = null;
+};
+extendsExpression(RuleReference, "rul");
+
+
+// collectSymbols
+Expression.prototype.collectSymbols = function(rules, modifiers) {
+};
+
+OrderedChoice.prototype.collectSymbols = function(rules, modifiers) {
+	for (var i in this.children)
+		this.children[i].collectSymbols(rules, modifiers);
+};
+
+Sequence.prototype.collectSymbols = OrderedChoice.prototype.collectSymbols;
+
+Repeat.prototype.collectSymbols = function(rules, modifiers) {
+	this.child.collectSymbols(rules, modifiers);
+};
+
+Objectize.prototype.collectSymbols = Repeat.prototype.collectSymbols;
+Arraying.prototype.collectSymbols = Repeat.prototype.collectSymbols;
+Tokenize.prototype.collectSymbols = Repeat.prototype.collectSymbols;
+Itemize.prototype.collectSymbols = Repeat.prototype.collectSymbols;
+PositiveLookaheadAssertion.prototype.collectSymbols = Repeat.prototype.collectSymbols;
+NegativeLookaheadAssertion.prototype.collectSymbols = Repeat.prototype.collectSymbols;
+
+Modify.prototype.collectSymbols = function(rules, modifiers) {
+	if (typeof(this.modifierSymbolOrFunction) === "string")
+		if (modifiers.indexOf(this.modifierSymbolOrFunction) == -1)
+			modifiers.push(this.modifierSymbolOrFunction);
+	this.child.collectSymbols(rules, modifiers);
+};
+
+RuleReference.prototype.collectSymbols = function(rules, modifiers) {
+	if (rules.indexOf(this.ruleSymbol) == -1)
+		rules.push(this.ruleSymbol);
+};
+
+
+// prepare
+Expression.prototype.prepare = function(rules, modifiers) {
+};
+
+OrderedChoice.prototype.prepare = function(rules, modifiers) {
+	for (var i in this.children)
+		this.children[i].prepare(rules, modifiers);
+};
+
+Sequence.prototype.prepare = OrderedChoice.prototype.prepare;
+
+Repeat.prototype.prepare = function(rules, modifiers) {
+	this.child.prepare(rules, modifiers);
+};
+
+Objectize.prototype.prepare = Repeat.prototype.prepare;
+Arraying.prototype.prepare = Repeat.prototype.prepare;
+Tokenize.prototype.prepare = Repeat.prototype.prepare;
+Itemize.prototype.prepare = Repeat.prototype.prepare;
+PositiveLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
+NegativeLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
+
+Modify.prototype.prepare = function(rules, modifiers) {
+	if (this.modifierSymbolOrFunction.constructor === String) {
+		this.modifier = modifiers[this.modifierSymbolOrFunction];
+	} else if (this.modifierSymbolOrFunction instanceof Function) {
+		this.modifier = this.modifierSymbolOrFunction;
+	}
+	this.child.prepare(rules, modifiers);
+};
+
+RuleReference.prototype.prepare = function(rules, modifiers) {
+	this.rule = rules[this.ruleSymbol];
+};
+
+// toString
+Expression.prototype.toString = function() {
+	return this._name + "()";
+};
+
+OrderedChoice.prototype.toString = function() {
+	var ss = [];
+	for (var i in this.children)
+		ss.push(this.children[i].toString());
+	return this._name + "(" + ss.join(",") + ")";
+};
+
+Sequence.prototype.toString = OrderedChoice.prototype.toString;
+
+MatchString.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.string) + ")";
+};
+
+MatchCharactorClass.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.charactorClass) + "," + +this.invert + ")";
+};
+
+Repeat.prototype.toString = function() {
+	return this._name + "(" + this.min + "," + this.max + "," + this.child.toString() + ")";
+};
+
+Objectize.prototype.toString = function() {
+	return this._name + "(" + this.child.toString() + ")";
+};
+
+Arraying.prototype.toString = Objectize.prototype.toString;
+Tokenize.prototype.toString = Objectize.prototype.toString;
+PositiveLookaheadAssertion.prototype.toString = Objectize.prototype.toString;
+NegativeLookaheadAssertion.prototype.toString = Objectize.prototype.toString;
+
+Itemize.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.key) + "," + this.child.toString() + ")";
+};
+
+ConstItem.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.key) + "," + JSON.stringify(this.value) + ")";
+};
+
+Literal.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.value) + ")";
+};
+
+Modify.prototype.toString = function() {
+	var modifier;
+	if (typeof(this.modifierSymbolOrFunction) === "string") {
+		modifier = JSON.stringify(this.modifierSymbolOrFunction);
+	} else if (this.modifierSymbolOrFunction instanceof Function) {
+		modifier = this.modifierSymbolOrFunction.toString();
+	}
+	return this._name + "(" + modifier + "," + this.child.toString() + ")";
+};
+
+RuleReference.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.ruleSymbol) + ")";
+};
+
+
+Expression.prototype.traverse = function(func) {
+	func(this);
+};
+
+OrderedChoice.prototype.traverse = function(func) {
+	func(this);
+	for (var i in this.children)
+		this.children[i].traverse(func);
+};
+
+Sequence.prototype.traverse = OrderedChoice.prototype.traverse;
+
+Repeat.prototype.traverse = function(func) {
+	func(this);
+	this.child.traverse(func);
+};
+
+Objectize.prototype.traverse = Repeat.prototype.traverse;
+Arraying.prototype.traverse = Repeat.prototype.traverse;
+Tokenize.prototype.traverse = Repeat.prototype.traverse;
+Itemize.prototype.traverse = Repeat.prototype.traverse;
+PositiveLookaheadAssertion.prototype.traverse = Repeat.prototype.traverse;
+NegativeLookaheadAssertion.prototype.traverse = Repeat.prototype.traverse;
+Modify.prototype.traverse = Repeat.prototype.traverse;
+
+RuleReference.prototype.traverse = function(func) {
+	func(this);
+};
+
+
+//////////////////////////////////////////////////////////
+// -1 必ず進む 0 進まない可能性がある　1 左再帰する可能性がある
+Expression.prototype.isLeftRecursion = function(rule, passedRules) {
+	return 0;
+};
+
+OrderedChoice.prototype.isLeftRecursion = function(rule, passedRules) {
+	var res = -1;
+	for (var i in this.children)
+		res = Math.max(res, this.children[i].isLeftRecursion(rule, passedRules));
+	return res;
+};
+
+Sequence.prototype.isLeftRecursion = function(rule, passedRules) {
+	for (var i in this.children) {
+		var r = this.children[i].isLeftRecursion(rule, passedRules);
+		if (r === -1)
+			return -1;
+		else if (r === 1)
+			return 1;
+	}
+	return 0;
+};
+
+MatchString.prototype.isLeftRecursion = function(rule, passedRules) {
+	return -1;
+};
+
+MatchCharactorClass.prototype.isLeftRecursion = MatchString.prototype.isLeftRecursion;
+MatchAnyCharactor.prototype.isLeftRecursion = MatchString.prototype.isLeftRecursion;
+
+Repeat.prototype.isLeftRecursion = function(rule, passedRules) {
+	if (this.min === 0) {
+		return Math.max(0, this.child.isLeftRecursion(rule, passedRules));
+	} else {
+		return this.child.isLeftRecursion(rule, passedRules);
+	}
+};
+
+Objectize.prototype.isLeftRecursion = function(rule, passedRules) {
+	return this.child.isLeftRecursion(rule, passedRules);
+};
+
+Arraying.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
+Tokenize.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
+Itemize.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
+PositiveLookaheadAssertion.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
+NegativeLookaheadAssertion.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
+Modify.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
+
+RuleReference.prototype.isLeftRecursion = function(rule, passedRules) {
+	if (rule === this.ruleSymbol)
+		return 1;
+	if (passedRules.indexOf(this.ruleSymbol) !== -1)
+		return 0; // 別ルールの左再帰を検出した。　0を返すのは怪しい
+	return this.rule.isLeftRecursion(rule, passedRules.concat([this.ruleSymbol]));
+};
+
+
+
+module.exports = {
+	Expression: Expression,
+	expressions: expressions,
+};
+
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+var expressions = __webpack_require__(3);
+expressions = expressions.expressions;
+
+var snakeModifiers = {
+	arrayToObject: function($) {
+		var res = {};
+		for (var i = 0, il = $.length; i < il; ++i)
+			res[$[i].symbol] = $[i].body;
+		return res;
+	},
+	eval: function($) {
+		return eval($);
+	},
+  ensureMin: function($) {
+    return $ === undefined ? 0 : $;
+  },
+  ensureMax: function($) {
+    return $ === undefined ? Infinity : $;
+  },
+	characterClassChar: function($) {
+		var str = $,
+		len = str.length;
+		if (len === 1)
+			return str.charCodeAt();
+		if (len === 4 || len === 6)
+			return parseInt(str.substring(2), 16);
+		if (str === "\\b")
+			return "\b".charCodeAt();
+		if (str === "\\t")
+			return "\t".charCodeAt();
+		if (str === "\\v")
+			return "\v".charCodeAt();
+		if (str === "\\n")
+			return "\n".charCodeAt();
+		if (str === "\\r")
+			return "\r".charCodeAt();
+		if (str === "\\f")
+			return "\f".charCodeAt();
+		return str.charCodeAt(1);	// \0 とかの場合 0 を返すんだけど、これいらないかも。
+	},
+	nuturalNumber: function($) {
+		return parseInt($);
+	},
+  expr: function($) {
+    return new (SnakeParser.expressions[$.op])($.a, $.b, $.c);
+  }
+};
+
+
+var nop = function() {
+	return new expressions.nop();
+};
+var str = function(a) {
+	return new expressions.str(a);
+};
+var cc = function(a, b) {
+	return new expressions.cc(a, b);
+};
+var ac = function() {
+	return new expressions.ac();
+};
+var oc = function(a) {
+	return new expressions.oc(a);
+};
+var seq = function(a) {
+	return new expressions.seq(a);
+};
+var rep = function(a, b, c) {
+	return new expressions.rep(a, b, c);
+};
+var obj = function(a) {
+	return new expressions.obj(a);
+};
+var arr = function(a) {
+	return new expressions.arr(a);
+};
+var itm = function(a, b) {
+	return new expressions.itm(a, b);
+};
+var ci = function(a, b) {
+	return new expressions.ci(a, b);
+};
+var tkn = function(a) {
+	return new expressions.tkn(a);
+};
+var ltr = function(a) {
+	return new expressions.ltr(a);
+};
+var pla = function(a) {
+	return new expressions.pla(a);
+};
+var nla = function(a) {
+	return new expressions.nla(a);
+};
+var mod = function(a, b) {
+	return new expressions.mod(a, b);
+};
+var rul = function(a) {
+	return new expressions.rul(a);
+};
+
+var snakeGrammarRules = {
+	BooleanLiteral: oc([seq([str("true"),ltr(true)]),seq([str("false"),ltr(false)])]),
+	CharacterClass: arr(rep(0,Infinity,obj(oc([seq([itm("type",ltr("range")),itm("start",rul("CharacterClassChar")),str("-"),itm("end",rul("CharacterClassChar"))]),seq([itm("type",ltr("single")),itm("char",rul("CharacterClassChar"))])])))),
+	CharacterClassChar: mod("characterClassChar",tkn(oc([cc([{"type":"single","char":93},{"type":"single","char":92}],true),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])]))),
+	ChoiceExpression: oc([seq([mod("expr",obj(seq([ci("op","oc"),itm("a",arr(seq([rul("SequenceExpression"),rul("__"),rep(1,Infinity,seq([str("|"),rul("__"),rul("SequenceExpression")]))])))]))),rul("__")]),seq([rul("SequenceExpression"),rul("__")]),mod("expr",obj(ci("op","nop")))]),
+	Code: rep(0,Infinity,oc([rep(1,Infinity,cc([{"type":"single","char":123},{"type":"single","char":125}],true)),seq([str("{"),rul("Code"),str("}")])])),
+	CodeBlock: seq([str("{"),tkn(rul("Code")),str("}")]),
+	Comment: oc([seq([str("//"),rep(0,Infinity,cc([{"type":"single","char":10}],true)),oc([str("\n"),nla(ac())])]),seq([str("/*"),rep(0,Infinity,oc([cc([{"type":"single","char":42}],true),seq([str("*"),cc([{"type":"single","char":47}],true)])])),str("*/")])]),
+	DecimalDigit: cc([{"type":"range","start":48,"end":57}],false),
+	DecimalIntegerLiteral: oc([str("0"),seq([rul("NonZeroDigit"),rep(0,Infinity,rul("DecimalDigit"))])]),
+	DecimalLiteral: oc([seq([rul("DecimalIntegerLiteral"),str("."),rep(0,Infinity,rul("DecimalDigit")),rep(0,1,rul("ExponentPart"))]),seq([str("."),rep(1,Infinity,rul("DecimalDigit")),rep(0,1,rul("ExponentPart"))]),seq([rul("DecimalIntegerLiteral"),rep(0,1,rul("ExponentPart"))])]),
+	ExponentIndicator: oc([str("e"),str("E")]),
+	ExponentPart: seq([rul("ExponentIndicator"),rul("SignedInteger")]),
+	HexDigit: cc([{"type":"range","start":48,"end":57},{"type":"range","start":97,"end":102},{"type":"range","start":65,"end":70}],false),
+	HexIntegerLiteral: seq([oc([str("0x"),str("0X")]),rep(1,Infinity,rul("HexDigit"))]),
+	Identifier: tkn(seq([cc([{"type":"range","start":97,"end":122},{"type":"range","start":65,"end":90},{"type":"single","char":95}],false),rep(0,Infinity,cc([{"type":"range","start":97,"end":122},{"type":"range","start":65,"end":90},{"type":"range","start":48,"end":57},{"type":"single","char":95}],false))])),
+	IdentifierOrStringLiteral: oc([rul("StringLiteral"),rul("Identifier")]),
+	LabelExpression: oc([mod("expr",obj(seq([itm("op",ltr("ci")),itm("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":="),rul("__"),itm("b",rul("IdentifierOrStringLiteral"))]))),mod("expr",obj(seq([itm("op",ltr("itm")),itm("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":"),rul("__"),itm("b",rul("ModifyExpression"))]))),rul("ModifyExpression")]),
+	ModifyExpression: oc([mod("expr",obj(seq([itm("op",ltr("mod")),itm("b",rul("ModifyExpression")),rul("__"),str(">"),rul("__"),itm("a",oc([rul("Identifier"),mod(function($) { return new Function("$", $); },rul("CodeBlock"))]))]))),rul("OtherExpression")]),
+	NaturalNumber: mod("nuturalNumber",tkn(oc([seq([cc([{"type":"range","start":49,"end":57}],false),rep(0,Infinity,cc([{"type":"range","start":48,"end":57}],false))]),str("0")]))),
+	NonZeroDigit: cc([{"type":"range","start":49,"end":57}],false),
+	NullLiteral: seq([str("null"),ltr(null)]),
+	NumericLiteral: mod("eval",tkn(seq([rep(0,1,str("-")),oc([rul("HexIntegerLiteral"),rul("DecimalLiteral")])]))),
+	OtherExpression: oc([seq([str("("),rul("__"),rul("ChoiceExpression"),rul("__"),str(")")]),mod("expr",obj(oc([seq([ci("op","str"),itm("a",rul("StringLiteral"))]),seq([ci("op","cc"),str("["),itm("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),itm("a",rul("CharacterClass")),str("]")]),seq([ci("op","ltr"),str("\\"),rul("__"),itm("a",oc([rul("StringLiteral"),rul("NumericLiteral"),rul("BooleanLiteral"),rul("NullLiteral")]))]),seq([ci("op","arr"),str("@"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","obj"),str("{"),rul("__"),itm("a",rul("ChoiceExpression")),rul("__"),str("}")]),seq([ci("op","tkn"),str("`"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","pla"),str("&"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","nla"),str("!"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","rep"),str("?"),rul("__"),itm("c",rul("OtherExpression")),itm("a",ltr(0)),itm("b",ltr(1))]),seq([ci("op","rep"),str("*"),rul("__"),itm("c",rul("OtherExpression")),itm("a",ltr(0)),itm("b",mod(function($) {return Infinity},ltr(0)))]),seq([ci("op","rep"),itm("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),itm("c",rul("OtherExpression")),itm("b",ltr("min"))]),seq([ci("op","rep"),itm("a",mod("ensureMin",rep(0,1,rul("NaturalNumber")))),str(","),itm("b",mod("ensureMax",rep(0,1,rul("NaturalNumber")))),rul("__"),str("*"),rul("__"),itm("c",rul("OtherExpression"))]),seq([ci("op","rep"),str("+"),rul("__"),itm("c",rul("OtherExpression")),itm("a",ltr(1)),itm("b",mod(function($) {return Infinity},ltr(0)))]),seq([ci("op","ac"),str(".")]),seq([ci("op","pi"),str("$"),itm("a",rul("Identifier"))]),seq([ci("op","rul"),itm("a",rul("Identifier")),nla(seq([rul("__"),str("=")]))])])))]),
+	Rule: seq([obj(seq([itm("symbol",rul("Identifier")),rul("__"),str("="),rul("__"),itm("body",rul("ChoiceExpression"))])),rul("__")]),
+	SequenceExpression: oc([seq([mod("expr",obj(seq([itm("op",ltr("seq")),itm("a",arr(seq([rul("LabelExpression"),rep(1,Infinity,seq([rul("__"),rul("LabelExpression")]))])))]))),rul("__")]),seq([rul("LabelExpression"),rul("__")])]),
+	SignedInteger: seq([rep(0,1,cc([{"type":"single","char":43},{"type":"single","char":45}],false)),rep(1,Infinity,rul("DecimalDigit"))]),
+	StringLiteral: mod("eval",tkn(oc([seq([str("'"),rep(0,Infinity,oc([cc([{"type":"single","char":39},{"type":"single","char":92},{"type":"range","start":0,"end":31}],true),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])])),str("'")]),seq([str("\""),rep(0,Infinity,oc([cc([{"type":"single","char":34},{"type":"single","char":92},{"type":"range","start":0,"end":31}],true),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])])),str("\"")])]))),
+	__: rep(0,1,rep(1,Infinity,oc([cc([{"type":"single","char":32},{"type":"single","char":9},{"type":"single","char":13},{"type":"single","char":10}],false),rul("Comment")]))),
+	start: seq([rul("__"),obj(seq([rep(0,1,seq([itm("initializer",rul("CodeBlock")),rul("__")])),itm("rules",mod("arrayToObject",arr(rep(0,Infinity,rul("Rule")))))]))]),
+};
+
+var Parser = __webpack_require__(2);
+
+module.exports = new Parser(snakeGrammarRules, snakeModifiers);
+
+
+/***/ },
+/* 5 */
+/***/ function(module, exports, __webpack_require__) {
+
+var expressions = __webpack_require__(3);
 var Expression = expressions.Expression;
 expressions = expressions.expressions;
 
@@ -234,22 +731,11 @@ var newId = function(ids, name) {
 var makeErrorLogging = function(ptr, match, indentLevel) {
 	var matchStr = JSON.stringify(match);
 	var indent = makeIndent(indentLevel);
-	return indent + "matchingFail(" + ptr + ", " + matchStr + ");";
-
-	var states = [];
-	states.push(indent + "if (errorMask === 0 && failPtr <= " + ptr + ") {\n");
-	states.push(indent + indentStr + "if (failPtr === " + ptr + ") {\n");
-	states.push(indent + indentStr + indentStr + "failMatchs.push(" + matchsStr.substr(1, matchsStr.length - 2) + ");\n");
-	states.push(indent + indentStr + "} else {\n");
-	states.push(indent + indentStr + indentStr + "failMatchs = " + matchsStr + ";\n");
-	states.push(indent + indentStr + indentStr + "failPtr = " + ptr + ";\n");
-	states.push(indent + indentStr + "}\n");
-	states.push(indent + "}\n");
-	return states.join("");
+	return indent + "matchingFail(" + ptr + ", " + matchStr + ");\n";
 };
 
-Expression.prototype.gen = function() {
-	throw new Error("undefined gen");
+expressions.nop.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel) {
+	return addIndent(pass, indentLevel);
 };
 
 expressions.oc.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel) {
@@ -406,9 +892,15 @@ if (flag) {
 */
 
 expressions.str.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel) {
+	if (this.string.length === 0)
+		return addIndent(pass, indentLevel);
+
 	var indent = makeIndent(indentLevel);
 	var states = [];
-	states.push(indent + "if (str.substr(" + ptr + ", " + this.string.length + ") === " + JSON.stringify(this.string) + ") {\n");
+	if (this.string.length !== 1)
+		states.push(indent + "if (str.substr(" + ptr + ", " + this.string.length + ") === " + JSON.stringify(this.string) + ") {\n");
+	else
+		states.push(indent + "if (str.charCodeAt(" + ptr + ") === " + this.string.charCodeAt() + ") {\n");
 	states.push(indent + indentStr + ptr + " += " + this.string.length + ";\n");
 	states.push(addIndent(pass, indentLevel + 1));
 	states.push(indent + "} else {\n");
@@ -431,10 +923,17 @@ expressions.cc.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel)
 	}
 	var states = [];
 	states.push(indent + "var " + c + " = str.charCodeAt(" + ptr + ");\n");
-	if (!this.invert)
-		states.push(indent + "if (" + conds.join(" || ") + ") {\n");
-	else
-		states.push(indent + "if (!isNaN(" + c + ") && !(" + conds.join(" || ") + ")) {\n");
+	if (!this.invert) {
+		if (conds.length === 0)
+			states.push(indent + "if (false) {\n");
+		else
+			states.push(indent + "if (" + conds.join(" || ") + ") {\n");
+	} else {
+		if (conds.length === 0)
+			states.push(indent + "if (true) {\n");
+		else
+			states.push(indent + "if (!isNaN(" + c + ") && !(" + conds.join(" || ") + ")) {\n");
+	}
 	states.push(indent + indentStr + ptr + " += 1;\n");
 	states.push(addIndent(pass, indentLevel + 1));
 	states.push(indent + "} else {\n");
@@ -753,8 +1252,8 @@ var genjs = function(parser) {
 		matchingFail(mr.pointer, "end of input");\n\
 	}\n\
 	if (!ret) {\n\
-		var line = (str.slice(0, failPtr).match(/\\n/g) || []).length + 1;\n\
-		var column = failPtr - str.lastIndexOf("\\n", failPtr - 1);\n\
+		var line = (str.slice(0, failPtr).match(/\\n/g) || []).length;\n\
+		var column = failPtr - str.lastIndexOf("\\n", failPtr - 1) - 1;\n\
 		ret = {success: false, error: "Line " + line + ", column " + column + ": Expected " + failMatchs.join(", ") + " but " + (JSON.stringify(str[failPtr]) || "end of input") + " found."};\n\
 	}\n\
 	str = memo = matchTable = undefined;\n\
@@ -765,836 +1264,8 @@ var genjs = function(parser) {
 	return states.join("");
 };
 
-/*
-parser = (function() {
-	var str, memo, errorMask, failMatchs, failPtr;
-	var rule_additive = function(ptr) {
-		..
-	};
-	var parse = function(string) {
-		str = string;
-		memo = [];
-		errorMask = 0;
-		failMatchs = [];
-		failPtr = 0;
-		var mr = start(0);
-		if (mr !== null) {
-			if (mr.pointer == string.length) {
-				return {success: true, content: mr.objects[0]};
-			}
-			nexts.push("end of input");
-		}
-		return {success: false, error: "failed"};
-	};
-	return parse;
-})();
-*/
-
-/*
-// undetermined 一時的なresult
-// failResult = {}
-
-if (key in memo) {
-	var res = memo[key];
-	if (res === "recurs?") {
-		memo[key] = "recurs!";
-		return null; // 再帰検出!
-	}
-	return res;
-}
-memo[key] = "recurs?;"
-{{...}}
-if (memo[key] === "recurs!") { // 再帰したよ
-	return leftRecurs(this, res, key);
-}
-memo[key] = res;
-return res;
-
-var leftRecurs = function(rule, res, key) {
-	var ptr = res.pointer;
-		memo[key] = res;
-		while (true) {
-			res = rule(ptr);
-			if (res === null || res.pointer === ptr) { // 失敗するまでマッチをトライ
-				break;
-			}
-			ptr = res.pointer;
-			memo[key] = res;
-		}
-		res = memo[key];
-	return res;
-};//*/
-
 
 module.exports = genjs;
-
-
-/***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
-
-var expressions = __webpack_require__(5);
-expressions = expressions.expressions;
-
-var snakeModifiers = {
-	arrayToObject: function($) {
-		var res = {};
-		for (var i = 0, il = $.length; i < il; ++i)
-			res[$[i].symbol] = $[i].body;
-		return res;
-	},
-	eval: function($) {
-		return eval($);
-	},
-  ensureMin: function($) {
-    return $ === undefined ? 0 : $;
-  },
-  ensureMax: function($) {
-    return $ === undefined ? Infinity : $;
-  },
-	characterClassChar: function($) {
-		var str = $,
-		len = str.length;
-		if (len === 1) {
-			return str.charCodeAt();
-		} else if (len === 6) {
-			return parseInt(str.substring(2), 16);
-		} else if (str === "\\n") {
-			return 10;
-		} else if (str === "\\t") {
-			return 9;
-		} else if (str === "\\r") {
-			return 13;
-		}
-		return str.charCodeAt(1);	// \0 とかの場合 0 を返すんだけど、これいらないかも。
-	},
-	nuturalNumber: function($) {
-		return parseInt($);
-	},
-  expr: function($) {
-    return new (expressions[$.op])($.a, $.b, $.c);
-  }
-};
-
-
-var str = function(a) {
-	return new expressions.str(a);
-};
-var cc = function(a, b) {
-	return new expressions.cc(a, b);
-};
-var ac = function() {
-	return new expressions.ac();
-};
-var oc = function(a) {
-	return new expressions.oc(a);
-};
-var seq = function(a) {
-	return new expressions.seq(a);
-};
-var rep = function(a, b, c) {
-	return new expressions.rep(a, b, c);
-};
-var obj = function(a) {
-	return new expressions.obj(a);
-};
-var arr = function(a) {
-	return new expressions.arr(a);
-};
-var itm = function(a, b) {
-	return new expressions.itm(a, b);
-};
-var ci = function(a, b) {
-	return new expressions.ci(a, b);
-};
-var tkn = function(a) {
-	return new expressions.tkn(a);
-};
-var ltr = function(a) {
-	return new expressions.ltr(a);
-};
-var pla = function(a) {
-	return new expressions.pla(a);
-};
-var nla = function(a) {
-	return new expressions.nla(a);
-};
-var mod = function(a, b) {
-	return new expressions.mod(a, b);
-};
-var rul = function(a) {
-	return new expressions.rul(a);
-};
-
-var snakeGrammarRules = {
-	"start": obj(seq([rul("__"),rep(0,1,seq([itm("initializer",rul("CodeBlock")),rul("__")])),itm("rules",mod("arrayToObject",arr(rep(0,Infinity,rul("Rule")))))])),
-  "Rule": seq([obj(seq([itm("symbol",rul("Identifier")),rul("__"),str("="),rul("__"),itm("body",rul("ChoiceExpression"))])),rul("__")]),
-  "ChoiceExpression": seq([mod("expr",obj(seq([itm("op",ltr("oc")),itm("a",arr(seq([rul("SequenceExpression"),rul("__"),rep(0,Infinity,seq([str("|"),rul("__"),rul("SequenceExpression")]))])))]))),rul("__")]),
-  "SequenceExpression": seq([mod("expr",obj(seq([itm("op",ltr("seq")),itm("a",arr(seq([rul("LabelExpression"),rep(0,Infinity,seq([rul("__"),rul("LabelExpression")]))])))]))),rul("__")]),
-  "LabelExpression": oc([mod("expr",obj(seq([itm("op",ltr("ci")),itm("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":="),rul("__"),itm("b",rul("IdentifierOrStringLiteral"))]))),mod("expr",obj(seq([itm("op",ltr("itm")),itm("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":"),rul("__"),itm("b",rul("ModifyExpression"))]))),rul("ModifyExpression")]),
-  "ModifyExpression": oc([mod("expr",obj(seq([itm("op",ltr("mod")),itm("b",rul("ModifyExpression")),rul("__"),str(">"),rul("__"),itm("a",oc([rul("Identifier"),mod(function($) {return new Function("$", $); },rul("CodeBlock"))]))]))),rul("OtherExpression")]),
-  "OtherExpression": oc([seq([str("("),rul("__"),rul("ChoiceExpression"),rul("__"),str(")")]),mod("expr",obj(oc([seq([ci("op","str"),itm("a",rul("StringLiteral"))]),seq(ci("op","cc"),str("["),itm("b",oc(seq(str("^"),ltr(true)),seq(ltr(false)))),itm("a",rul("CharacterClass")),str("]")),seq(ci("op","ltr"),str("\\"),rul("__"),itm("a",oc(seq(rul("StringLiteral")),seq(rul("NumericLiteral")),seq(rul("BooleanLiteral")),seq(rul("NullLiteral"))))),seq(ci("op","arr"),str("@"),rul("__"),itm("a",rul("OtherExpression"))),seq(ci("op","obj"),str("{"),rul("__"),itm("a",rul("ChoiceExpression")),rul("__"),str("}")),seq(ci("op","tkn"),str("`"),rul("__"),itm("a",rul("OtherExpression"))),seq(ci("op","pla"),str("&"),rul("__"),itm("a",rul("OtherExpression"))),seq(ci("op","nla"),str("!"),rul("__"),itm("a",rul("OtherExpression"))),seq(ci("op","rep"),str("?"),rul("__"),itm("c",rul("OtherExpression")),itm("b",ltr(1))),seq(ci("op","rep"),str("*"),rul("__"),itm("c",rul("OtherExpression"))),seq(ci("op","rep"),itm("a",rul("NaturalNumber")),itm("b",ltr("min")),rul("__"),str("*"),rul("__"),itm("c",rul("OtherExpression"))),seq(ci("op","rep"),itm("a",rep(0,1,rul("NaturalNumber"))),str(","),itm("b",rep(0,1,rul("NaturalNumber"))),rul("__"),str("*"),rul("__"),itm("c",rul("OtherExpression"))),seq(ci("op","rep"),str("+"),rul("__"),itm("c",rul("OtherExpression")),itm("a",ltr(1))),seq(ci("op","ac"),str(".")),seq(ci("op","rul"),itm("a",rul("Identifier")),nla(oc(seq(rul("__"),str("=")))))])))]),
-  "__": oc(seq(rep(0,1,rep(1,Infinity,oc(seq(cc([{"type":"single","char":32},{"type":"single","char":9},{"type":"single","char":13},{"type":"single","char":10}],false)),seq(rul("Comment"))))))),
-  "Comment": oc(seq(str("//"),rep(0,Infinity,cc([{"type":"single","char":10}],true)),oc(seq(str("\n")),seq(nla(ac())))),seq(str("/*"),rep(0,Infinity,oc(seq(cc([{"type":"single","char":42}],true)),seq(str("*"),cc([{"type":"single","char":47}],true)))),str("*/"))),
-  "Identifier": oc(seq(tkn(oc(seq(cc([{"type":"range","start":97,"end":122},{"type":"range","start":65,"end":90},{"type":"single","char":95}],false),rep(0,Infinity,cc([{"type":"range","start":97,"end":122},{"type":"range","start":65,"end":90},{"type":"range","start":48,"end":57},{"type":"single","char":95}],false))))))),
-	"IdentifierOrStringLiteral": oc(seq(rul("StringLiteral")),seq(rul("Identifier"))),
-  "StringLiteral": oc(seq(mod("eval",tkn(oc(seq(oc(seq(str("'"),rep(0,Infinity,oc(seq(rep(1,Infinity,cc([{"type":"single","char":39},{"type":"single","char":92}],true))),seq(str("\\u"),rep(4,4,cc([{"type":"range","start":48,"end":57},{"type":"range","start":97,"end":102},{"type":"range","start":65,"end":70}],false))),seq(str("\\"),cc([{"type":"single","char":117}],true)))),str("'")))),seq(oc(seq(str("\""),rep(0,Infinity,oc(seq(rep(1,Infinity,cc([{"type":"single","char":34},{"type":"single","char":92}],true))),seq(str("\\u"),rep(4,4,cc([{"type":"range","start":48,"end":57},{"type":"range","start":97,"end":102},{"type":"range","start":65,"end":70}],false))),seq(str("\\"),cc([{"type":"single","char":117}],true)))),str("\""))))))))),
-  "CharacterClass": oc(seq(arr(rep(0,Infinity,obj(oc(seq(itm("type",ltr("range")),itm("start",rul("CharacterClassChar")),str("-"),itm("end",rul("CharacterClassChar"))),seq(itm("type",ltr("single")),itm("char",rul("CharacterClassChar"))))))))),
-  "CharacterClassChar": oc(seq(mod("characterClassChar",tkn(oc(seq(cc([{"type":"single","char":93},{"type":"single","char":92}],true)),seq(str("\\u"),rep(4,4,cc([{"type":"range","start":48,"end":57},{"type":"range","start":97,"end":102},{"type":"range","start":65,"end":70}],false))),seq(str("\\"),cc([{"type":"single","char":117}],true))))))),
-  "CodeBlock": seq(str("{"),rul("Code"),str("}")),
-  "Code": oc(seq(tkn(rep(0,Infinity,oc(seq(rep(1,Infinity,oc(seq(nla(cc([{"type":"single","char":123},{"type":"single","char":125}],false)),ac())))),seq(str("{"),rul("Code"),str("}"))))))),
-  "NaturalNumber": oc(seq(mod("nuturalNumber",tkn(oc(seq(cc([{"type":"range","start":49,"end":57}],false),rep(0,Infinity,cc([{"type":"range","start":48,"end":57}],false))),seq(str("0"))))))),
-  "NullLiteral": oc(seq(mod("eval",tkn(str("null"))))),
-  "BooleanLiteral": oc(seq(mod("eval",tkn(oc(seq(str("true")),seq(str("false"))))))),
-  "NumericLiteral": oc(seq(mod("eval",tkn(oc(seq(rep(0,1,str("-")),oc(seq(rul("HexIntegerLiteral")),seq(rul("DecimalLiteral"))))))))),
-  "DecimalLiteral": oc(seq(rul("DecimalIntegerLiteral"),str("."),rep(0,Infinity,rul("DecimalDigit")),rep(0,1,rul("ExponentPart"))),seq(str("."),rep(1,Infinity,rul("DecimalDigit")),rep(0,1,rul("ExponentPart"))),seq(rul("DecimalIntegerLiteral"),rep(0,1,rul("ExponentPart")))),
-  "DecimalIntegerLiteral": oc(seq(str("0")),seq(rul("NonZeroDigit"),rep(0,Infinity,rul("DecimalDigit")))),
-  "DecimalDigit": oc(seq(cc([{"type":"range","start":48,"end":57}],false))),
-  "NonZeroDigit": oc(seq(cc([{"type":"range","start":49,"end":57}],false))),
-  "ExponentPart": oc(seq(rul("ExponentIndicator"),rul("SignedInteger"))),
-  "ExponentIndicator": oc(seq(str("e")),seq(str("E"))),
-  "SignedInteger": oc(seq(rep(0,1,cc([{"type":"single","char":43},{"type":"single","char":45}],false)),rep(1,Infinity,rul("DecimalDigit")))),
-  "HexIntegerLiteral": oc(seq(oc(seq(str("0x")),seq(str("0X"))),rep(1,Infinity,rul("HexDigit")))),
-  "HexDigit": oc(seq(cc([{"type":"range","start":48,"end":57},{"type":"range","start":97,"end":102},{"type":"range","start":65,"end":70}],false))),
-};
-
-
-var snakeGrammarRules = {
-	BooleanLiteral: oc([seq([str("true"),ltr(true)]),seq([str("false"),ltr(false)])]),
-	CharacterClass: arr(rep(0,Infinity,obj(oc([seq([itm("type",ltr("range")),itm("start",rul("CharacterClassChar")),str("-"),itm("end",rul("CharacterClassChar"))]),seq([itm("type",ltr("single")),itm("char",rul("CharacterClassChar"))])])))),
-	CharacterClassChar: mod("characterClassChar",tkn(oc([cc([{"type":"single","char":93},{"type":"single","char":92}],true),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])]))),
-	ChoiceExpression: oc([seq([mod("expr",obj(seq([itm("op",ltr("oc")),itm("a",arr(seq([rul("SequenceExpression"),rul("__"),rep(1,Infinity,seq([str("|"),rul("__"),rul("SequenceExpression")]))])))]))),rul("__")]),seq([rul("SequenceExpression"),rul("__")])]),
-	Code: tkn(rep(0,Infinity,oc([rep(1,Infinity,cc([{"type":"single","char":123},{"type":"single","char":125}],true)),seq([str("{"),rul("Code"),str("}")])]))),
-	CodeBlock: seq([str("{"),rul("Code"),str("}")]),
-	Comment: oc([seq([str("//"),rep(0,Infinity,cc([{"type":"single","char":10}],true)),oc([str("\n"),nla(ac())])]),seq([str("/*"),rep(0,Infinity,oc([cc([{"type":"single","char":42}],true),seq([str("*"),cc([{"type":"single","char":47}],true)])])),str("*/")])]),
-	DecimalDigit: cc([{"type":"range","start":48,"end":57}],false),
-	DecimalIntegerLiteral: oc([str("0"),seq([rul("NonZeroDigit"),rep(0,Infinity,rul("DecimalDigit"))])]),
-	DecimalLiteral: oc([seq([rul("DecimalIntegerLiteral"),str("."),rep(0,Infinity,rul("DecimalDigit")),rep(0,1,rul("ExponentPart"))]),seq([str("."),rep(1,Infinity,rul("DecimalDigit")),rep(0,1,rul("ExponentPart"))]),seq([rul("DecimalIntegerLiteral"),rep(0,1,rul("ExponentPart"))])]),
-	ExponentIndicator: oc([str("e"),str("E")]),
-	ExponentPart: seq([rul("ExponentIndicator"),rul("SignedInteger")]),
-	HexDigit: cc([{"type":"range","start":48,"end":57},{"type":"range","start":97,"end":102},{"type":"range","start":65,"end":70}],false),
-	HexIntegerLiteral: seq([oc([str("0x"),str("0X")]),rep(1,Infinity,rul("HexDigit"))]),
-	Identifier: tkn(seq([cc([{"type":"range","start":97,"end":122},{"type":"range","start":65,"end":90},{"type":"single","char":95}],false),rep(0,Infinity,cc([{"type":"range","start":97,"end":122},{"type":"range","start":65,"end":90},{"type":"range","start":48,"end":57},{"type":"single","char":95}],false))])),
-	IdentifierOrStringLiteral: oc([rul("StringLiteral"),rul("Identifier")]),
-	LabelExpression: oc([mod("expr",obj(seq([itm("op",ltr("ci")),itm("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":="),rul("__"),itm("b",rul("IdentifierOrStringLiteral"))]))),mod("expr",obj(seq([itm("op",ltr("itm")),itm("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":"),rul("__"),itm("b",rul("ModifyExpression"))]))),rul("ModifyExpression")]),
-	ModifyExpression: oc([mod("expr",obj(seq([itm("op",ltr("mod")),itm("b",rul("ModifyExpression")),rul("__"),str(">"),rul("__"),itm("a",oc([rul("Identifier"),mod(function($) { return new Function("$", $); },rul("CodeBlock"))]))]))),rul("OtherExpression")]),
-	NaturalNumber: mod("nuturalNumber",tkn(oc([seq([cc([{"type":"range","start":49,"end":57}],false),rep(0,Infinity,cc([{"type":"range","start":48,"end":57}],false))]),str("0")]))),
-	NonZeroDigit: cc([{"type":"range","start":49,"end":57}],false),
-	NullLiteral: seq([str("null"),ltr(null)]),
-	NumericLiteral: mod("eval",tkn(seq([rep(0,1,str("-")),oc([rul("HexIntegerLiteral"),rul("DecimalLiteral")])]))),
-	OtherExpression: oc([seq([str("("),rul("__"),rul("ChoiceExpression"),rul("__"),str(")")]),mod("expr",obj(oc([seq([ci("op","str"),itm("a",rul("StringLiteral"))]),seq([ci("op","cc"),str("["),itm("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),itm("a",rul("CharacterClass")),str("]")]),seq([ci("op","ltr"),str("\\"),rul("__"),itm("a",oc([rul("StringLiteral"),rul("NumericLiteral"),rul("BooleanLiteral"),rul("NullLiteral")]))]),seq([ci("op","arr"),str("@"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","obj"),str("{"),rul("__"),itm("a",rul("ChoiceExpression")),rul("__"),str("}")]),seq([ci("op","tkn"),str("`"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","pla"),str("&"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","nla"),str("!"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","rep"),str("?"),rul("__"),itm("c",rul("OtherExpression")),itm("a",ltr(0)),itm("b",ltr(1))]),seq([ci("op","rep"),str("*"),rul("__"),itm("c",rul("OtherExpression")),itm("a",ltr(0)),itm("b",mod(function($) {return Infinity},ltr(0)))]),seq([ci("op","rep"),itm("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),itm("c",rul("OtherExpression")),itm("b",ltr("min"))]),seq([ci("op","rep"),itm("a",mod("ensureMin",rep(0,1,rul("NaturalNumber")))),str(","),itm("b",mod("ensureMax",rep(0,1,rul("NaturalNumber")))),rul("__"),str("*"),rul("__"),itm("c",rul("OtherExpression"))]),seq([ci("op","rep"),str("+"),rul("__"),itm("c",rul("OtherExpression")),itm("a",ltr(1)),itm("b",mod(function($) {return Infinity},ltr(0)))]),seq([ci("op","ac"),str(".")]),seq([ci("op","pi"),str("$"),itm("a",rul("Identifier"))]),seq([ci("op","rul"),itm("a",rul("Identifier")),nla(seq([rul("__"),str("=")]))])])))]),
-	Rule: seq([obj(seq([itm("symbol",rul("Identifier")),rul("__"),str("="),rul("__"),itm("body",rul("ChoiceExpression"))])),rul("__")]),
-	SequenceExpression: oc([seq([mod("expr",obj(seq([itm("op",ltr("seq")),itm("a",arr(seq([rul("LabelExpression"),rep(1,Infinity,seq([rul("__"),rul("LabelExpression")]))])))]))),rul("__")]),seq([rul("LabelExpression"),rul("__")])]),
-	SignedInteger: seq([rep(0,1,cc([{"type":"single","char":43},{"type":"single","char":45}],false)),rep(1,Infinity,rul("DecimalDigit"))]),
-	StringLiteral: mod("eval",tkn(oc([seq([str("'"),rep(0,Infinity,oc([cc([{"type":"single","char":39},{"type":"single","char":92},{"type":"range","start":0,"end":31}],true),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])])),str("'")]),seq([str("\""),rep(0,Infinity,oc([cc([{"type":"single","char":34},{"type":"single","char":92},{"type":"range","start":0,"end":31}],true),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])])),str("\"")])]))),
-	__: rep(0,1,rep(1,Infinity,oc([cc([{"type":"single","char":32},{"type":"single","char":9},{"type":"single","char":13},{"type":"single","char":10}],false),rul("Comment")]))),
-	start: seq([rul("__"),obj(seq([rep(0,1,seq([itm("initializer",rul("CodeBlock")),rul("__")])),itm("rules",mod("arrayToObject",arr(rep(0,Infinity,rul("Rule")))))]))]),
-};
-
-var Parser = __webpack_require__(2);
-
-module.exports = new Parser(snakeGrammarRules, snakeModifiers);
-
-
-/***/ },
-/* 5 */
-/***/ function(module, exports, __webpack_require__) {
-
-var InfiniteLoopError = __webpack_require__(6);
-
-
-// Expression Class
-var Expression = function() {
-};
-
-
-var expressions = {};
-
-var extendsExpression = function(cls, name) {
-	cls.prototype = new Expression();
-	cls.prototype._name = name;
-	expressions[name] = cls;
-};
-
-
-// Classes extends Expression
-var MatchString = function(s) {
-	this.string = s;
-};
-extendsExpression(MatchString, "str");
-
-var MatchCharactorClass = function(cc, i) {
-	this.charactorClass = cc;
-	this.invert = !!i;
-};
-extendsExpression(MatchCharactorClass, "cc");
-
-var MatchAnyCharactor = function() {
-};
-extendsExpression(MatchAnyCharactor, "ac");
-
-var OrderedChoice = function(es) {
-	if (es instanceof Array)
-		this.children = es;
-	else {
-		this.children = [].slice.call(arguments, 0, [].indexOf.call(arguments));
-	}
-};
-extendsExpression(OrderedChoice, "oc");
-
-var Sequence = function(es) {
-	if (es instanceof Array)
-		this.children = es;
-	else {
-		this.children = [].slice.call(arguments, 0, [].indexOf.call(arguments));
-	}
-};
-extendsExpression(Sequence, "seq");
-
-var Repeat = function(min, max, e) {
-	this.min = min !== undefined ? min : 0;
-	this.max = max !== undefined ? (max === "min" ? min : max) : Infinity;
-//	this.min = min;
-//	this.max = max === "min" ? min : max;
-//	this.min = min !== undefined ? min : 0;
-//	this.max = max !== undefined ? max : Infinity;
-//	this.min = min;
-//	this.max = max !== undefined ? max : min;
-	this.child = e;
-};
-extendsExpression(Repeat, "rep");
-
-var Objectize = function(e) {
-	this.child = e;
-};
-extendsExpression(Objectize, "obj");
-
-var Arraying = function(e) {
-	this.child = e;
-};
-extendsExpression(Arraying, "arr");
-
-var Itemize = function(k, e) {
-	this.key = k;
-	this.child = e;
-};
-extendsExpression(Itemize, "itm");
-
-var ConstItem = function(k, v) {
-	this.key = k;
-	this.value = v;
-};
-extendsExpression(ConstItem, "ci");
-
-var Tokenize = function(e) {
-	this.child = e;
-};
-extendsExpression(Tokenize, "tkn");
-
-var Literal = function(v) {
-	this.value = v;
-};
-extendsExpression(Literal, "ltr");
-
-var PositiveLookaheadAssertion = function(e) {
-	this.child = e;
-};
-extendsExpression(PositiveLookaheadAssertion, "pla");
-
-var NegativeLookaheadAssertion = function(e) {
-	this.child = e;
-};
-extendsExpression(NegativeLookaheadAssertion, "nla");
-
-var Modify = function(m, e) {
-	this.modifierSymbolOrFunction = m;
-	this.child = e;
-	this.modifier = null;
-};
-extendsExpression(Modify, "mod");
-
-var RuleReference = function(r) {
-	this.ruleSymbol = r;
-	this.rule = null;
-};
-extendsExpression(RuleReference, "rul");
-
-
-// collectSymbols
-Expression.prototype.collectSymbols = function(rules, modifiers) {
-};
-
-OrderedChoice.prototype.collectSymbols = function(rules, modifiers) {
-	for (var i in this.children)
-		this.children[i].collectSymbols(rules, modifiers);
-};
-
-Sequence.prototype.collectSymbols = OrderedChoice.prototype.collectSymbols;
-
-Repeat.prototype.collectSymbols = function(rules, modifiers) {
-	this.child.collectSymbols(rules, modifiers);
-};
-
-Objectize.prototype.collectSymbols = Repeat.prototype.collectSymbols;
-Arraying.prototype.collectSymbols = Repeat.prototype.collectSymbols;
-Tokenize.prototype.collectSymbols = Repeat.prototype.collectSymbols;
-Itemize.prototype.collectSymbols = Repeat.prototype.collectSymbols;
-PositiveLookaheadAssertion.prototype.collectSymbols = Repeat.prototype.collectSymbols;
-NegativeLookaheadAssertion.prototype.collectSymbols = Repeat.prototype.collectSymbols;
-
-Modify.prototype.collectSymbols = function(rules, modifiers) {
-	if (typeof(this.modifierSymbolOrFunction) === "string")
-		if (modifiers.indexOf(this.modifierSymbolOrFunction) == -1)
-			modifiers.push(this.modifierSymbolOrFunction);
-	this.child.collectSymbols(rules, modifiers);
-};
-
-RuleReference.prototype.collectSymbols = function(rules, modifiers) {
-	if (rules.indexOf(this.ruleSymbol) == -1)
-		rules.push(this.ruleSymbol);
-};
-
-
-// prepare
-Expression.prototype.prepare = function(rules, modifiers) {
-};
-
-OrderedChoice.prototype.prepare = function(rules, modifiers) {
-	for (var i in this.children)
-		this.children[i].prepare(rules, modifiers);
-};
-
-Sequence.prototype.prepare = OrderedChoice.prototype.prepare;
-
-Repeat.prototype.prepare = function(rules, modifiers) {
-	this.child.prepare(rules, modifiers);
-};
-
-Objectize.prototype.prepare = Repeat.prototype.prepare;
-Arraying.prototype.prepare = Repeat.prototype.prepare;
-Tokenize.prototype.prepare = Repeat.prototype.prepare;
-Itemize.prototype.prepare = Repeat.prototype.prepare;
-PositiveLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
-NegativeLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
-
-Modify.prototype.prepare = function(rules, modifiers) {
-	if (this.modifierSymbolOrFunction.constructor === String) {
-		this.modifier = modifiers[this.modifierSymbolOrFunction];
-	} else if (this.modifierSymbolOrFunction instanceof Function) {
-		this.modifier = this.modifierSymbolOrFunction;
-	}
-	this.child.prepare(rules, modifiers);
-};
-
-RuleReference.prototype.prepare = function(rules, modifiers) {
-	this.rule = rules[this.ruleSymbol];
-};
-
-// toString
-Expression.prototype.toString = function() {
-	return this._name + "()";
-};
-
-OrderedChoice.prototype.toString = function() {
-	var ss = [];
-	for (var i in this.children)
-		ss.push(this.children[i].toString());
-	return this._name + "(" + ss.join(",") + ")";
-};
-
-Sequence.prototype.toString = OrderedChoice.prototype.toString;
-
-MatchString.prototype.toString = function() {
-	return this._name + "(" + JSON.stringify(this.string) + ")";
-};
-
-MatchCharactorClass.prototype.toString = function() {
-	return this._name + "(" + JSON.stringify(this.charactorClass) + "," + +this.invert + ")";
-};
-
-Repeat.prototype.toString = function() {
-	return this._name + "(" + this.min + "," + this.max + "," + this.child.toString() + ")";
-};
-
-Objectize.prototype.toString = function() {
-	return this._name + "(" + this.child.toString() + ")";
-};
-
-Arraying.prototype.toString = Objectize.prototype.toString;
-Tokenize.prototype.toString = Objectize.prototype.toString;
-PositiveLookaheadAssertion.prototype.toString = Objectize.prototype.toString;
-NegativeLookaheadAssertion.prototype.toString = Objectize.prototype.toString;
-
-Itemize.prototype.toString = function() {
-	return this._name + "(" + JSON.stringify(this.key) + "," + this.child.toString() + ")";
-};
-
-ConstItem.prototype.toString = function() {
-	return this._name + "(" + JSON.stringify(this.key) + "," + JSON.stringify(this.value) + ")";
-};
-
-Literal.prototype.toString = function() {
-	return this._name + "(" + JSON.stringify(this.value) + ")";
-};
-
-Modify.prototype.toString = function() {
-	var modifier;
-	if (typeof(this.modifierSymbolOrFunction) === "string") {
-		modifier = JSON.stringify(this.modifierSymbolOrFunction);
-	} else if (this.modifierSymbolOrFunction instanceof Function) {
-		modifier = this.modifierSymbolOrFunction.toString();
-	}
-	return this._name + "(" + modifier + "," + this.child.toString() + ")";
-};
-
-RuleReference.prototype.toString = function() {
-	return this._name + "(" + JSON.stringify(this.ruleSymbol) + ")";
-};
-
-// match
-OrderedChoice.prototype.match = function(str, ptr, memo) {
-	var error = {ptr: -1, nexts: []};
-	for (var i in this.children) {
-		var tr = this.children[i].match(str, ptr, memo);
-		if (tr.nodes !== undefined) {
-			tr.error = mergeError(tr.error, error);
-			return tr;
-		}
-		error = mergeError(error, tr);
-	}
-	return error;
-};
-
-Sequence.prototype.match = function(str, ptr, memo) {
-	var nodes = [],
-	error = {ptr: -1, nexts: []};
-	for (var i in this.children) {
-		var tr = this.children[i].match(str, ptr, memo);
-		if (tr.nodes === undefined)
-			return mergeError(tr, error);
-		nodes = nodes.concat(tr.nodes);
-		ptr = tr.ptr;
-		error = mergeError(error, tr.error);
-	}
-	return {nodes: nodes, ptr: ptr, error: error};
-};
-
-Repeat.prototype.match = function(str, ptr, memo) {
-	var nodes = [];
-	for (var i = 0; i < this.max; ++i) {
-		var tr = this.child.match(str, ptr, memo);
-		if (tr.nodes === undefined) {
-			if (i < this.min)
-				return tr;
-			else
-				return {nodes: nodes, ptr: ptr, error: tr};
-		}
-		if (ptr === tr.ptr && this.max === Infinity)
-			throw new InfiniteLoopError();
-		nodes = nodes.concat(tr.nodes);
-		ptr = tr.ptr;
-	}
-	return {nodes: nodes, ptr: ptr, error: tr.error};
-};
-
-MatchString.prototype.match = function(str, ptr, memo) {
-	if (str.substr(ptr, this.string.length) === this.string)
-		return {nodes: [], ptr: ptr + this.string.length, error: {ptr: -1, nexts: []}};
-	return {ptr: ptr, nexts: [JSON.stringify(this.string)]};
-};
-
-MatchCharactorClass.prototype.match = function(str, ptr, memo) {
-	if (str.length <= ptr)
-		return this.error(ptr);
-	var cc = str[ptr].charCodeAt();
-	if (!this.invert) {
-		for (var i in this.charactorClass) {
-			var c = this.charactorClass[i];
-			if (c.type === "range" ? c.start <= cc && cc <= c.end : cc === c.char)
-				return {nodes: [], ptr: ptr + 1, error: {ptr: -1, nexts: []}};
-		}
-		return this.error(ptr);
-	} else {
-		for (var i in this.charactorClass) {
-			var c = this.charactorClass[i];
-			if (c.type === "range" ? c.start <= cc && cc <= c.end : cc === c.char)
-				return this.error(ptr);
-		}
-		return {nodes: [], ptr: ptr + 1, error: {ptr: -1, nexts: []}};
-	}
-};
-
-MatchCharactorClass.prototype.error = function(ptr) {
-	return {
-		ptr: ptr,
-		nexts: [(this.invert ? "[^" : "[") + this.charactorClass.map(
-			function(x) {
-				if (x.type == "range")
-					return String.fromCharCode(x.start) + "-" + String.fromCharCode(x.end)
-				else
-					return String.fromCharCode(x.char);
-			}).join("") + "]"]
-	};
-};
-
-MatchAnyCharactor.prototype.match = function(str, ptr, memo) {
-	if (str.length <= ptr)
-		return {ptr: ptr, nexts: ["."]};
-	return {nodes: [], ptr: ptr + 1, error: {ptr: -1, nexts: []}};
-};
-
-Objectize.prototype.match = function(str, ptr, memo) {
-	var tr = this.child.match(str, ptr, memo);
-	if (tr.nodes === undefined)
-		return tr;
-	var obj = {};
-	for (var i in tr.nodes)
-		obj[tr.nodes[i].key] = tr.nodes[i].value;
-	return {nodes: [obj], ptr: tr.ptr, error: tr.error};
-};
-
-Itemize.prototype.match = function(str, ptr, memo) {
-	var tr = this.child.match(str, ptr, memo);
-	if (tr.nodes === undefined)
-		return tr;
-	if (typeof(tr.nodes[0]) === "string")
-		return {nodes: [{key: this.key, value: tr.nodes.join('')}], ptr: tr.ptr, error: tr.error};
-	return {nodes: [{key: this.key, value: tr.nodes[0]}], ptr: tr.ptr, error: tr.error};
-};
-
-ConstItem.prototype.match = function(str, ptr, memo) {
-	return {nodes: [{key: this.key, value: this.value}], ptr: ptr, error: {ptr: -1, nexts: []}};
-};
-
-Arraying.prototype.match = function(str, ptr, memo) {
-	var tr = this.child.match(str, ptr, memo);
-	if (tr.nodes === undefined)
-		return tr;
-	return {nodes: [tr.nodes], ptr: tr.ptr, error: tr.error};
-};
-
-Tokenize.prototype.match = function(str, ptr, memo) {
-	var tr = this.child.match(str, ptr, memo);
-	if (tr.nodes === undefined) {
-		return tr;
-	}
-	var text = str.substring(ptr, tr.ptr);
-	return {nodes: [text], ptr: tr.ptr, error: tr.error};
-};
-
-Literal.prototype.match = function(str, ptr, memo) {
-	return {nodes: [this.value], ptr: ptr, error: {ptr: -1, nexts: []}};
-};
-
-PositiveLookaheadAssertion.prototype.match = function(str, ptr, memo) {
-	var tr = this.child.match(str, ptr, memo);
-	if (tr.nodes === undefined) {
-		return tr;
-	}
-	return {nodes: [], ptr: ptr, error: tr.error};
-};
-
-NegativeLookaheadAssertion.prototype.match = function(str, ptr, memo) {
-	var tr = this.child.match(str, ptr, memo);
-	if (tr.nodes === undefined) {
-		return {nodes: [], ptr: ptr, error: {ptr: -1, nexts: []}};	// おっ？
-	}
-	return {ptr: ptr, nexts: ["!"]};	// TODO
-};
-
-Modify.prototype.match = function(str, ptr, memo) {
-	var tr = this.child.match(str, ptr, memo);
-	if (tr.nodes === undefined) {
-		return tr;
-	}
-	return {nodes: [this.modifier(tr.nodes[0])], ptr: tr.ptr, error: tr.error};
-};
-
-RuleReference.prototype.match = function(str, ptr, memo) {
-	var memo_ = memo[ptr],
-	sym = this.ruleSymbol;
-	if (memo_ === undefined) {
-		memo_ = memo[ptr] = {};
-	} else if (sym in memo_) {
-		///////////////////////////////////////
-		if (memo_[sym] === "recursive?") {
-			memo_[sym] = "recursive!";	// 再帰検出したよ！
-			return {ptr: -1, nexts: []};
-		}
-		///////////////////////////////////////
-
-		return memo_[sym];
-	}
-
-	///////////////////////////////////////
-	memo_[sym] = "recursive?";
-	///////////////////////////////////////
-
-	var tr = this.rule.match(str, ptr, memo),
-	error = tr.nodes === undefined ? tr : tr.error;
-
-	///////////////////////////////////////
-	if (tr.nodes !== undefined && memo_[sym] === "recursive!") {	// 一回目の再帰終了したよ
-		var p = tr.ptr;
-		memo[ptr] = {};
-		memo[ptr][sym] = tr;
-		while (true) {
-			tr = this.rule.match(str, ptr, memo);
-			if (tr.nodes === undefined || tr.ptr <= p) {
-				break;
-			}
-			p = tr.ptr;
-			memo[ptr] = {};
-			memo[ptr][sym] = tr;
-		}
-		tr = memo[ptr][sym];
-
-		error = tr.nodes === undefined ? tr : tr.error;
-		
-		memo[ptr] = memo_;
-	}
-	///////////////////////////////////////
-	
-	if (error.ptr === ptr) {
-		error.nexts = [sym];
-	}
-	
-	memo[ptr][sym] = tr;
-	return tr;
-
-	/*
-		console.log(sym);
-		var ret = r.f(rs, rs[sym], str, ptr, memo);
-		console.log("/" + sym + (ret.error === undefined ? "" : " !"));
-
-		return ret;//*/
-};
-
-
-Expression.prototype.traverse = function(func) {
-	func(this);
-};
-
-OrderedChoice.prototype.traverse = function(func) {
-	func(this);
-	for (var i in this.children)
-		this.children[i].traverse(func);
-};
-
-Sequence.prototype.traverse = OrderedChoice.prototype.traverse;
-
-Repeat.prototype.traverse = function(func) {
-	func(this);
-	this.child.traverse(func);
-};
-
-Objectize.prototype.traverse = Repeat.prototype.traverse;
-Arraying.prototype.traverse = Repeat.prototype.traverse;
-Tokenize.prototype.traverse = Repeat.prototype.traverse;
-Itemize.prototype.traverse = Repeat.prototype.traverse;
-PositiveLookaheadAssertion.prototype.traverse = Repeat.prototype.traverse;
-NegativeLookaheadAssertion.prototype.traverse = Repeat.prototype.traverse;
-Modify.prototype.traverse = Repeat.prototype.traverse;
-
-RuleReference.prototype.traverse = function(func) {
-	func(this);
-};
-
-
-//////////////////////////////////////////////////////////
-// -1 必ず進む 0 進まない可能性がある　1 左再帰する可能性がある
-Expression.prototype.isLeftRecursion = function(rule, passedRules) {
-	return 0;
-};
-
-OrderedChoice.prototype.isLeftRecursion = function(rule, passedRules) {
-	var res = -1;
-	for (var i in this.children)
-		res = Math.max(res, this.children[i].isLeftRecursion(rule, passedRules));
-	return res;
-};
-
-Sequence.prototype.isLeftRecursion = function(rule, passedRules) {
-	for (var i in this.children) {
-		var r = this.children[i].isLeftRecursion(rule, passedRules);
-		if (r === -1)
-			return -1;
-		else if (r === 1)
-			return 1;
-	}
-	return 0;
-};
-
-MatchString.prototype.isLeftRecursion = function(rule, passedRules) {
-	return -1;
-};
-
-MatchCharactorClass.prototype.isLeftRecursion = MatchString.prototype.isLeftRecursion;
-MatchAnyCharactor.prototype.isLeftRecursion = MatchString.prototype.isLeftRecursion;
-
-Repeat.prototype.isLeftRecursion = function(rule, passedRules) {
-	if (this.min === 0) {
-		return Math.max(0, this.child.isLeftRecursion(rule, passedRules));
-	} else {
-		return this.child.isLeftRecursion(rule, passedRules);
-	}
-};
-
-Objectize.prototype.isLeftRecursion = function(rule, passedRules) {
-	return this.child.isLeftRecursion(rule, passedRules);
-};
-
-Arraying.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-Tokenize.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-Itemize.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-PositiveLookaheadAssertion.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-NegativeLookaheadAssertion.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-Modify.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-
-RuleReference.prototype.isLeftRecursion = function(rule, passedRules) {
-	if (rule === this.ruleSymbol)
-		return 1;
-	if (passedRules.indexOf(this.ruleSymbol) !== -1)
-		return 0; // 別ルールの左再帰を検出した。　0を返すのは怪しい
-	return this.rule.isLeftRecursion(rule, passedRules.concat([this.ruleSymbol]));
-};
-
-
-var mergeError = function(e1, e2) {
-	if (e1.ptr < e2.ptr) {
-		e1.ptr = e2.ptr;
-		e1.nexts = e2.nexts;
-	} else if (e1.ptr === e2.ptr) {
-		union(e1.nexts, e2.nexts);
-	}
-	return e1;
-};
-
-var union = function(a1, a2) {
-	for (var i = 0, il = a2.length; i < il; ++i) {
-		if (a1.indexOf(a2[i]) === -1)
-			a1.push(a2[i]);
-	}
-};
-
-module.exports = {
-	Expression: Expression,
-	expressions: expressions,
-	mergeError: mergeError,
-	union: union,
-};
-
-
-/***/ },
-/* 6 */
-/***/ function(module, exports, __webpack_require__) {
-
-var InfiniteLoopError = function(message) {
-	this.name = "InfiniteLoopError";
-	this.message = message || "Detected an infinite loop";
-};
-
-module.exports = InfiniteLoopError;
 
 
 /***/ }

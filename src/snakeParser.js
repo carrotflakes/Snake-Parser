@@ -1,9 +1,10 @@
 var buildParser = require("./build");
 var Parser = require("./parserObject");
-var genjs = require("./genjs");
+var expressions = require("./expressions");
+expressions = expressions.expressions;
 
 window.SnakeParser = {
 	buildParser: buildParser,
 	Parser: Parser,
-	genjs: genjs,
+	expressions: expressions,
 };

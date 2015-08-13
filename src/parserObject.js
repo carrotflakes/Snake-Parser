@@ -1,8 +1,5 @@
 var expressions = require("./expressions");
-var mergeError = expressions.mergeError;
-var union = expressions.union;
 expressions = expressions.expressions;
-var InfiniteLoopError = require("./infiniteLoopError");
 var genjs = require("./genjs");
 
 
@@ -10,12 +7,12 @@ var Parser = function(rules, modifier) {
 	this.rules = rules;
 	this.modifier = modifier;
 
-	rules[""] = new expressions.rul("start");
+//	rules[""] = new expressions.rul("start");
 
 	for (var r in rules)
 		rules[r].prepare(rules, modifier);
 };
-
+/*
 Parser.prototype.parse = function(str) {
 	var memo = [];
 	var er;
@@ -58,10 +55,12 @@ Parser.prototype.parse = function(str) {
 		success: true,
 		content: er.nodes[0],
 	};
-};
+};*/
 
 
 Parser.prototype.toJavascript = function(exportVariable) {
+	if (exportVariable === undefined)
+		return genjs(this);
 	return exportVariable + " = " + genjs(this);
 };
 
