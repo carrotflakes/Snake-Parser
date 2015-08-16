@@ -259,12 +259,6 @@ extendsExpression(Sequence, "seq");
 var Repeat = function(min, max, e) {
 	this.min = min !== undefined ? min : 0;
 	this.max = max !== undefined ? (max === "min" ? min : max) : Infinity;
-//	this.min = min;
-//	this.max = max === "min" ? min : max;
-//	this.min = min !== undefined ? min : 0;
-//	this.max = max !== undefined ? max : Infinity;
-//	this.min = min;
-//	this.max = max !== undefined ? max : min;
 	this.child = e;
 };
 extendsExpression(Repeat, "rep");
@@ -1139,7 +1133,7 @@ var genRule = function(ruleSymbol, expression, indentLevel) {
 			"memo[" + memoKey + "] = {objects: " + objs + ", pointer: " + ptr1 + ", undeterminate: undet};\n" +
 			"continue rec;\n";
 		var states = [];
-		states.push("function(" + ptr + ") {\n");
+		states.push("function rule$" + ruleSymbol + "(" + ptr + ") {\n");
 		states.push(indent + indentStr + "var " + memoKey + " = " + JSON.stringify(ruleSymbol + "$") + " + " + ptr + ", " + ptr1 + ", rptr = -1, " + objs + " = [], undet = 0;\n");
 		states.push(addIndent(readMemo, indentLevel + 1));
 		states.push(addIndent(writeMatchTable, indentLevel + 1));
@@ -1164,7 +1158,7 @@ var genRule = function(ruleSymbol, expression, indentLevel) {
 			indentStr + "memo[" + memoKey + "] = undet;\n" +
 			"return undet;\n";
 		var states = [];
-		states.push("function(" + ptr + ") {\n");
+		states.push("function rule$" + ruleSymbol + "(" + ptr + ") {\n");
 		states.push(indent + indentStr + "var " + memoKey + " = " + JSON.stringify(ruleSymbol + "$") + " + " + ptr + ", " + ptr1 + " = " + ptr + ", " + objs + " = [], undet = 0;\n");
 		states.push(addIndent(readMemo, indentLevel + 1));
 		states.push(addIndent(writeMatchTable, indentLevel + 1));
@@ -1201,14 +1195,14 @@ var genjs = function(parser) {
 	states.push("(function() {\n" + indentStr + "var str, strLength, memo, matchTable, errorMask, failMatchs, failPtr;\n\n");
 	// rules
 	for (var key in parser.rules) {
-		states.push(indentStr + "var rule$" + key + " = " + genRule(key, parser.rules[key], 1) + ";\n\n");
+		states.push(indentStr + genRule(key, parser.rules[key], 1) + ";\n\n");
 	}
 	// modifiers
 	for (var key in parser.modifier) {
 		states.push(indentStr + "var mod$" + key + " = " + parser.modifier[key].toString() + ";\n\n");
 	}
 
-	states.push(addIndent('var matchingFail = function(ptr, match) {\n\
+	states.push(addIndent('function matchingFail(ptr, match) {\n\
 	if (errorMask === 0 && failPtr <= ptr) {\n\
 		match = matchTable[ptr] ? matchTable[ptr] : match;\n\
 		if (failPtr === ptr) {\n\
@@ -1221,9 +1215,9 @@ var genjs = function(parser) {
 	}\n\
 };', 1) + "\n\n");
 
-	states.push(addIndent("var joinByOr = " + joinByOr.toString() + ";", 1) + "\n\n");
+	states.push(addIndent(joinByOr.toString() + ";", 1) + "\n\n");
 
-	states.push(addIndent('var $parse = function(string) {\n\
+	states.push(addIndent('function parse(string) {\n\
 	str = string;\n\
 	strLength = string.length;\n\
 	memo = {};\n\
@@ -1253,12 +1247,12 @@ var genjs = function(parser) {
 	str = memo = matchTable = undefined;\n\
 	return ret;\n\
 };\n', 1)); // Line , column : Expected  but  found.
-	states.push(indentStr + "return $parse;\n");
+	states.push(indentStr + "return parse;\n");
 	states.push("})();\n");
 	return states.join("");
 };
 
-var joinByOr = function(strs) {
+function joinByOr(strs) {
 	if (strs.length === 0)
 		return "";
 	if (strs.length === 1)
