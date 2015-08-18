@@ -51,7 +51,7 @@
 <script src="snakeParser.js"></script>
 <script>
 
-var parser = null;
+var parser = null, code = null;
 var grammarElem = document.getElementById("grammar"),
 inputTextElem = document.getElementById("input_text"),
 syntaxMessageElm = document.getElementById("syntaxMessage"),
@@ -87,15 +87,23 @@ function buildParser() {
 	var grammar = grammarElem.value;
 
 	var t = new Date().getTime();
-	parser = SnakeParser.buildParser(grammar);
+	br = SnakeParser.buildParser(grammar);
 	t = new Date().getTime() - t;
+	
 
-	if (typeof(parser) === "string") {
-		syntaxMessageElm.innerHTML = (parser + "\n" + t + "ms").replace(/\n/g, "<br>");
-		parser = null;
+	if (br.success) {
+		try {
+			parser = eval(code = br.code);
+			syntaxMessageElm.innerHTML = ("Parser built successfully.\n" + t + "ms").replace(/\n/g, "<br>");
+		} catch (e) {
+			code = null;
+			parser = null;
+			syntaxMessageElm.innerHTML = (e.message).replace(/\n/g, "<br>");
+		}
 	} else {
-		syntaxMessageElm.innerHTML = ("Parser built successfully.\n" + t + "ms").replace(/\n/g, "<br>");
-		eval(parser.toJavascript("parserParse"));
+		syntaxMessageElm.innerHTML = (br.error + "\n" + t + "ms").replace(/\n/g, "<br>");
+		code = null;
+		parser = null;
 	}
 
 	resultMessageElm.innerHTML = "";
@@ -114,7 +122,7 @@ function parse() {
 
 
 	var t = new Date().getTime();
-	var result = parserParse(inputText);
+	var result = parser(inputText);
 	t = new Date().getTime() - t;
 
 	console.dir(result);
@@ -131,12 +139,12 @@ function parse() {
 };
 
 function toJS() {
-	if (parser === null)
+	if (code === null)
 		return;
 
 	var resultElem = document.getElementById("result");
 
-	resultElem.value = parser.toJavascript("parser");
+	resultElem.value = code;
 };
 
 function example(idx) {

@@ -45,13 +45,11 @@
 /***/ function(module, exports, __webpack_require__) {
 
 var buildParser = __webpack_require__(1);
-var Parser = __webpack_require__(2);
-var expressions = __webpack_require__(3);
+var expressions = __webpack_require__(2);
 expressions = expressions.expressions;
 
 window.SnakeParser = {
 	buildParser: buildParser,
-	Parser: Parser,
 	expressions: expressions,
 };
 
@@ -60,35 +58,27 @@ window.SnakeParser = {
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-var grammarParse = __webpack_require__(4);
-var Parser = __webpack_require__(2);
-
-var parse = eval(grammarParse.toJavascript());
+var grammarParse = __webpack_require__(3);
+var genjs = __webpack_require__(4);
 
 var buildParser = function(grammarSource) {
-	var er = parse(grammarSource);
+	var er = grammarParse(grammarSource);
 
 	if (!er.success)
-		return er.error;
+		return {success: false, error: er.error};
 
 	var rules = er.content.rules,
-	modifier = null;
+	initializer;
 
-	// モディファイアのパース
 	if (er.content.initializer !== undefined) {
-		try {
-			modifier = eval("(function(){return {" + er.content.initializer.replace(/^\s+/, "") + "}})()");
-		} catch (e) {
-			console.dir(e);
-			return "Initializer parse error: " + e.message;
-		}
+		initializer = er.content.initializer;
 	} else {
-		modifier = {};
+		initializer = "";
 	}
 
 	// start がない
 	if (rules.start === undefined)
-		return "Undefined 'start' symbol.";
+		return {success: false, error: "Undefined 'start' symbol."};
 
 	// ルールに使用されているシンボルを集める
 	var ss = [], mss = [];
@@ -101,19 +91,15 @@ var buildParser = function(grammarSource) {
 		if (i !== -1)
 			ss.splice(i, 1);
 	}
-	if (ss.length !== 0)
-		return 'Referenced rule ' + ss.map(function(str) {return '"' + str + '"';}).join(", ") + ' does not exist.';
-
-	// モディファイアが定義されているかチェック
-	for (var k in modifier) {
-		var i = mss.indexOf(k);
-		if (i !== -1)
-			mss.splice(i, 1);
+	if (ss.length !== 0) {
+		return {
+			success: false,
+			error: 'Referenced rule ' + ss.map(function(str) {return '"' + str + '"';}).join(", ") + ' does not exist.'
+		};
 	}
-	if (mss.length !== 0)
-		return 'Referenced modifier ' + mss.map(function(str) {return '"' + str + '"';}).join(", ") + ' does not exist.';
 
-	return new Parser(rules, modifier);
+	var code = genjs(rules, initializer);
+	return {success: true, code: code};
 };
 
 
@@ -122,86 +108,6 @@ module.exports = buildParser;
 
 /***/ },
 /* 2 */
-/***/ function(module, exports, __webpack_require__) {
-
-var expressions = __webpack_require__(3);
-expressions = expressions.expressions;
-var genjs = __webpack_require__(5);
-
-
-var Parser = function(rules, modifier) {
-	this.rules = rules;
-	this.modifier = modifier;
-
-//	rules[""] = new expressions.rul("start");
-
-	for (var r in rules)
-		rules[r].prepare(rules, modifier);
-};
-/*
-Parser.prototype.parse = function(str) {
-	var memo = [];
-	var er;
-
-	try {
-		er = this.rules[""].match(str, 0, memo);
-	} catch (e) {
-		if (e instanceof InfiniteLoopError) {
-			return {
-				success: false,
-				error: e.message,
-			};
-		} else {
-			throw e;
-		}
-	}
-
-	if (er.nodes !== undefined) {
-		if (str.length !== er.ptr) {	// 成功したけどポインタが最後まで行ってない
-			er = er.error;
-			er.nexts.push("end of input");
-		}
-	}
-
-	if (er.nodes === undefined) {
-		var lac = getLineAndColumn(str, er.ptr);
-		var error = "Line " + lac.line +
-			", column " + lac.column +
-			": Expected " + er.nexts.join(", ") +
-			" but " + (JSON.stringify(str[er.ptr]) || "end of input") +
-			" found.";
-
-		return {
-			success: false,
-			error: error,
-		};
-	}
-
-	return {
-		success: true,
-		content: er.nodes[0],
-	};
-};*/
-
-
-Parser.prototype.toJavascript = function(exportVariable) {
-	if (exportVariable === undefined)
-		return genjs(this);
-	return exportVariable + " = " + genjs(this);
-};
-
-var getLineAndColumn = function(str, ptr) {
-	return {
-		line: (str.slice(0, ptr).match(/\n/g) || []).length + 1,
-		column: ptr - str.lastIndexOf("\n", ptr - 1),
-	};
-};
-
-module.exports = Parser;
-
-
-/***/ },
-/* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
 // Expression Class
@@ -342,9 +248,9 @@ PositiveLookaheadAssertion.prototype.collectSymbols = Repeat.prototype.collectSy
 NegativeLookaheadAssertion.prototype.collectSymbols = Repeat.prototype.collectSymbols;
 
 Modify.prototype.collectSymbols = function(rules, modifiers) {
-	if (typeof(this.modifierSymbolOrFunction) === "string")
-		if (modifiers.indexOf(this.modifierSymbolOrFunction) == -1)
-			modifiers.push(this.modifierSymbolOrFunction);
+	//if (typeof(this.modifierSymbolOrFunction) === "string")
+	//	if (modifiers.indexOf(this.modifierSymbolOrFunction) == -1)
+	//		modifiers.push(this.modifierSymbolOrFunction);
 	this.child.collectSymbols(rules, modifiers);
 };
 
@@ -377,11 +283,11 @@ PositiveLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
 NegativeLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
 
 Modify.prototype.prepare = function(rules, modifiers) {
-	if (this.modifierSymbolOrFunction.constructor === String) {
-		this.modifier = modifiers[this.modifierSymbolOrFunction];
-	} else if (this.modifierSymbolOrFunction instanceof Function) {
-		this.modifier = this.modifierSymbolOrFunction;
-	}
+	//if (this.modifierSymbolOrFunction.constructor === String) {
+	//	this.modifier = modifiers[this.modifierSymbolOrFunction];
+	//} else if (this.modifierSymbolOrFunction instanceof Function) {
+	//	this.modifier = this.modifierSymbolOrFunction;
+	//}
 	this.child.prepare(rules, modifiers);
 };
 
@@ -483,20 +389,20 @@ RuleReference.prototype.traverse = function(func) {
 
 //////////////////////////////////////////////////////////
 // -1 必ず進む 0 進まない可能性がある　1 左再帰する可能性がある
-Expression.prototype.isLeftRecursion = function(rule, passedRules) {
+Expression.prototype.canLeftRecurs = function(rule, passedRules) {
 	return 0;
 };
 
-OrderedChoice.prototype.isLeftRecursion = function(rule, passedRules) {
+OrderedChoice.prototype.canLeftRecurs = function(rule, passedRules) {
 	var res = -1;
 	for (var i in this.children)
-		res = Math.max(res, this.children[i].isLeftRecursion(rule, passedRules));
+		res = Math.max(res, this.children[i].canLeftRecurs(rule, passedRules));
 	return res;
 };
 
-Sequence.prototype.isLeftRecursion = function(rule, passedRules) {
+Sequence.prototype.canLeftRecurs = function(rule, passedRules) {
 	for (var i in this.children) {
-		var r = this.children[i].isLeftRecursion(rule, passedRules);
+		var r = this.children[i].canLeftRecurs(rule, passedRules);
 		if (r === -1)
 			return -1;
 		else if (r === 1)
@@ -505,38 +411,38 @@ Sequence.prototype.isLeftRecursion = function(rule, passedRules) {
 	return 0;
 };
 
-MatchString.prototype.isLeftRecursion = function(rule, passedRules) {
+MatchString.prototype.canLeftRecurs = function(rule, passedRules) {
 	return -1;
 };
 
-MatchCharactorClass.prototype.isLeftRecursion = MatchString.prototype.isLeftRecursion;
-MatchAnyCharactor.prototype.isLeftRecursion = MatchString.prototype.isLeftRecursion;
+MatchCharactorClass.prototype.canLeftRecurs = MatchString.prototype.canLeftRecurs;
+MatchAnyCharactor.prototype.canLeftRecurs = MatchString.prototype.canLeftRecurs;
 
-Repeat.prototype.isLeftRecursion = function(rule, passedRules) {
+Repeat.prototype.canLeftRecurs = function(rule, passedRules) {
 	if (this.min === 0) {
-		return Math.max(0, this.child.isLeftRecursion(rule, passedRules));
+		return Math.max(0, this.child.canLeftRecurs(rule, passedRules));
 	} else {
-		return this.child.isLeftRecursion(rule, passedRules);
+		return this.child.canLeftRecurs(rule, passedRules);
 	}
 };
 
-Objectize.prototype.isLeftRecursion = function(rule, passedRules) {
-	return this.child.isLeftRecursion(rule, passedRules);
+Objectize.prototype.canLeftRecurs = function(rule, passedRules) {
+	return this.child.canLeftRecurs(rule, passedRules);
 };
 
-Arraying.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-Tokenize.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-Itemize.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-PositiveLookaheadAssertion.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-NegativeLookaheadAssertion.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-Modify.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
+Arraying.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+Tokenize.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+Itemize.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+PositiveLookaheadAssertion.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+NegativeLookaheadAssertion.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+Modify.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
 
-RuleReference.prototype.isLeftRecursion = function(rule, passedRules) {
+RuleReference.prototype.canLeftRecurs = function(rule, passedRules) {
 	if (rule === this.ruleSymbol)
 		return 1;
 	if (passedRules.indexOf(this.ruleSymbol) !== -1)
 		return 0; // 別ルールの左再帰を検出した。　0を返すのは怪しい
-	return this.rule.isLeftRecursion(rule, passedRules.concat([this.ruleSymbol]));
+	return this.rule.canLeftRecurs(rule, passedRules.concat([this.ruleSymbol]));
 };
 
 // canAdvance
@@ -680,56 +586,53 @@ module.exports = {
 
 
 /***/ },
-/* 4 */
+/* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-var expressions = __webpack_require__(3);
+var expressions = __webpack_require__(2);
 expressions = expressions.expressions;
+var genjs = __webpack_require__(4);
 
-var snakeModifiers = {
-	arrayToObject: function($) {
-		var res = {};
-		for (var i = 0, il = $.length; i < il; ++i)
-			res[$[i].symbol] = $[i].body;
-		return res;
-	},
-	eval: function($) {
-		return eval($);
-	},
-  ensureMin: function($) {
-    return $ === undefined ? 0 : $;
-  },
-  ensureMax: function($) {
-    return $ === undefined ? Infinity : $;
-  },
-	characterClassChar: function($) {
-		var str = $,
-		len = str.length;
-		if (len === 1)
-			return str.charCodeAt();
-		if (len === 4 || len === 6)
-			return parseInt(str.substring(2), 16);
-		if (str === "\\b")
-			return "\b".charCodeAt();
-		if (str === "\\t")
-			return "\t".charCodeAt();
-		if (str === "\\v")
-			return "\v".charCodeAt();
-		if (str === "\\n")
-			return "\n".charCodeAt();
-		if (str === "\\r")
-			return "\r".charCodeAt();
-		if (str === "\\f")
-			return "\f".charCodeAt();
-		return str.charCodeAt(1);	// \0 とかの場合 0 を返すんだけど、これいらないかも。
-	},
-	nuturalNumber: function($) {
-		return parseInt($);
-	},
-  expr: function($) {
-    return new (SnakeParser.expressions[$.op])($.a, $.b, $.c);
-  }
-};
+var initializer = '\
+	function arrayToObject($) {\n\
+		var res = {};\n\
+		for (var i = 0, il = $.length; i < il; ++i)\n\
+			res[$[i].symbol] = $[i].body;\n\
+		return res;\n\
+	};\n\
+  function ensureMin($) {\n\
+    return $ === undefined ? 0 : $;\n\
+  };\n\
+  function ensureMax($) {\n\
+    return $ === undefined ? Infinity : $;\n\
+  };\n\
+	function characterClassChar($) {\n\
+		var str = $,\n\
+		len = str.length;\n\
+		if (len === 1)\n\
+			return str.charCodeAt();\n\
+		if (len === 4 || len === 6)\n\
+			return parseInt(str.substring(2), 16);\n\
+		if (str === "\\\\b")\n\
+			return "\\b".charCodeAt();\n\
+		if (str === "\\\\t")\n\
+			return "\\t".charCodeAt();\n\
+		if (str === "\\\\v")\n\
+			return "\\v".charCodeAt();\n\
+		if (str === "\\\\n")\n\
+			return "\\n".charCodeAt();\n\
+		if (str === "\\\\r")\n\
+			return "\\r".charCodeAt();\n\
+		if (str === "\\\\f")\n\
+			return "\\f".charCodeAt();\n\
+		return str.charCodeAt(1);\n\
+	};\n\
+	function nuturalNumber($) {\n\
+		return parseInt($);\n\
+	};\n\
+  function expr($) {\n\
+    return new (SnakeParser.expressions[$.op])($.a, $.b, $.c);\n\
+  };';
 
 
 var nop = function() {
@@ -784,7 +687,7 @@ var rul = function(a) {
 	return new expressions.rul(a);
 };
 
-var snakeGrammarRules = {
+var rules = {
 	BooleanLiteral: oc([seq([str("true"),ltr(true)]),seq([str("false"),ltr(false)])]),
 	CharacterClass: arr(rep(0,Infinity,obj(oc([seq([itm("type",ltr("range")),itm("start",rul("CharacterClassChar")),str("-"),itm("end",rul("CharacterClassChar"))]),seq([itm("type",ltr("single")),itm("char",rul("CharacterClassChar"))])])))),
 	CharacterClassChar: mod("characterClassChar",tkn(oc([cc([{"type":"single","char":93},{"type":"single","char":92}],true),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])]))),
@@ -816,16 +719,16 @@ var snakeGrammarRules = {
 	start: seq([rul("__"),obj(seq([rep(0,1,seq([itm("initializer",rul("CodeBlock")),rul("__")])),itm("rules",mod("arrayToObject",arr(rep(0,Infinity,rul("Rule")))))]))]),
 };
 
-var Parser = __webpack_require__(2);
+var code = genjs(rules, initializer);
 
-module.exports = new Parser(snakeGrammarRules, snakeModifiers);
+module.exports = eval(code);
 
 
 /***/ },
-/* 5 */
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-var expressions = __webpack_require__(3);
+var expressions = __webpack_require__(2);
 var Expression = expressions.Expression;
 expressions = expressions.expressions;
 
@@ -1212,7 +1115,8 @@ expressions.mod.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel
 	var objs1 = "objs" + newId(ids, "objs");
 	var modify;
 	if (typeof(this.modifierSymbolOrFunction) === "string")
-		modify = objs + ".push(mod$" + this.modifierSymbolOrFunction + "(" + objs1 + "[0]));\n";
+//		modify = objs + ".push(mod$" + this.modifierSymbolOrFunction + "(" + objs1 + "[0]));\n";
+		modify = objs + ".push(" + this.modifierSymbolOrFunction + "(" + objs1 + "[0]));\n";
 	else
 		modify = objs + ".push((" + this.modifierSymbolOrFunction.toString() + ")(" + objs1 + "[0]));\n";
 	var states = [];
@@ -1238,31 +1142,6 @@ expressions.rul.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel
 	return states.join("");
 };
 
-/*
-// メモ化なし
-var genRule = function(ruleSymbol, expression, indentLevel) {
-	var ids = {};
-	var objs = "objs";
-	var ptr = "ptr";
-	var pass = "return {objects: " + objs + ", pointer: " + ptr + ", undeterminate: undet};\n";
-	var fail = "return undet;\n";
-	var states = [];
-	states.push("function(" + ptr + ") {\n");
-	states.push(makeIndent(indentLevel + 1) + "var " + objs + " = [], undet = 0;\n");
-	states.push(expression.gen(ptr, objs, ids, pass, fail, indentLevel + 1));
-	states.push(makeIndent(indentLevel) + "}");
-	return states.join("");
-};
-//*/
-
-/*
-if (!matchTable[])
-	matchTable[] = ruleSymbol;
-
-if (matchTable[] === ruleSymbol)
-	matchTable = null;*/
-// メモ化あり
-//*
 var genRule = function(ruleSymbol, expression, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var ids = {};
@@ -1276,7 +1155,7 @@ var genRule = function(ruleSymbol, expression, indentLevel) {
 	var deleteMatchTable = "if (matchTable[" + ptr + "] === " + JSON.stringify(ruleSymbol) + ")\n" +
 		indentStr + "matchTable[" + ptr + "] = null;\n";
 
-	if (expression.isLeftRecursion(ruleSymbol, []) === 1) { // 左再帰対応
+	if (expression.canLeftRecurs(ruleSymbol, []) === 1) { // 左再帰対応
 		var ptr1 = "ptr" + newId(ids, "ptr");
 		var obj1 = "obj" + newId(ids, "obj");
 		var fail = deleteMatchTable +
@@ -1330,7 +1209,7 @@ var genRule = function(ruleSymbol, expression, indentLevel) {
 		states.push(indent + "}");
 		return states.join("");
 	}
-};//*/
+};
 
 /*
 if (key in memo) return memo[key];
@@ -1354,16 +1233,19 @@ while (true) {
 }
 //*/
 
-var genjs = function(parser) {
+var genjs = function(rules, initializer, exportVariable) {
+	for (var r in rules)
+		rules[r].prepare(rules);
+
 	var states = [];
+	if (exportVariable)
+		states.push(exportVariable + " = ");
 	states.push("(function() {\n" + indentStr + "var str, strLength, memo, matchTable, errorMask, failMatchs, failPtr;\n\n");
+	// initializer
+	states.push(initializer);
 	// rules
-	for (var key in parser.rules) {
-		states.push(indentStr + genRule(key, parser.rules[key], 1) + ";\n\n");
-	}
-	// modifiers
-	for (var key in parser.modifier) {
-		states.push(indentStr + "var mod$" + key + " = " + parser.modifier[key].toString() + ";\n\n");
+	for (var key in rules) {
+		states.push(indentStr + genRule(key, rules[key], 1) + ";\n\n");
 	}
 
 	states.push(addIndent('function matchingFail(ptr, match) {\n\

@@ -1,50 +1,47 @@
 var expressions = require("./expressions");
 expressions = expressions.expressions;
+var genjs = require("./genjs");
 
-var snakeModifiers = {
-	arrayToObject: function($) {
-		var res = {};
-		for (var i = 0, il = $.length; i < il; ++i)
-			res[$[i].symbol] = $[i].body;
-		return res;
-	},
-	eval: function($) {
-		return eval($);
-	},
-  ensureMin: function($) {
-    return $ === undefined ? 0 : $;
-  },
-  ensureMax: function($) {
-    return $ === undefined ? Infinity : $;
-  },
-	characterClassChar: function($) {
-		var str = $,
-		len = str.length;
-		if (len === 1)
-			return str.charCodeAt();
-		if (len === 4 || len === 6)
-			return parseInt(str.substring(2), 16);
-		if (str === "\\b")
-			return "\b".charCodeAt();
-		if (str === "\\t")
-			return "\t".charCodeAt();
-		if (str === "\\v")
-			return "\v".charCodeAt();
-		if (str === "\\n")
-			return "\n".charCodeAt();
-		if (str === "\\r")
-			return "\r".charCodeAt();
-		if (str === "\\f")
-			return "\f".charCodeAt();
-		return str.charCodeAt(1);	// \0 とかの場合 0 を返すんだけど、これいらないかも。
-	},
-	nuturalNumber: function($) {
-		return parseInt($);
-	},
-  expr: function($) {
-    return new (SnakeParser.expressions[$.op])($.a, $.b, $.c);
-  }
-};
+var initializer = '\
+	function arrayToObject($) {\n\
+		var res = {};\n\
+		for (var i = 0, il = $.length; i < il; ++i)\n\
+			res[$[i].symbol] = $[i].body;\n\
+		return res;\n\
+	};\n\
+  function ensureMin($) {\n\
+    return $ === undefined ? 0 : $;\n\
+  };\n\
+  function ensureMax($) {\n\
+    return $ === undefined ? Infinity : $;\n\
+  };\n\
+	function characterClassChar($) {\n\
+		var str = $,\n\
+		len = str.length;\n\
+		if (len === 1)\n\
+			return str.charCodeAt();\n\
+		if (len === 4 || len === 6)\n\
+			return parseInt(str.substring(2), 16);\n\
+		if (str === "\\\\b")\n\
+			return "\\b".charCodeAt();\n\
+		if (str === "\\\\t")\n\
+			return "\\t".charCodeAt();\n\
+		if (str === "\\\\v")\n\
+			return "\\v".charCodeAt();\n\
+		if (str === "\\\\n")\n\
+			return "\\n".charCodeAt();\n\
+		if (str === "\\\\r")\n\
+			return "\\r".charCodeAt();\n\
+		if (str === "\\\\f")\n\
+			return "\\f".charCodeAt();\n\
+		return str.charCodeAt(1);\n\
+	};\n\
+	function nuturalNumber($) {\n\
+		return parseInt($);\n\
+	};\n\
+  function expr($) {\n\
+    return new (SnakeParser.expressions[$.op])($.a, $.b, $.c);\n\
+  };';
 
 
 var nop = function() {
@@ -99,7 +96,7 @@ var rul = function(a) {
 	return new expressions.rul(a);
 };
 
-var snakeGrammarRules = {
+var rules = {
 	BooleanLiteral: oc([seq([str("true"),ltr(true)]),seq([str("false"),ltr(false)])]),
 	CharacterClass: arr(rep(0,Infinity,obj(oc([seq([itm("type",ltr("range")),itm("start",rul("CharacterClassChar")),str("-"),itm("end",rul("CharacterClassChar"))]),seq([itm("type",ltr("single")),itm("char",rul("CharacterClassChar"))])])))),
 	CharacterClassChar: mod("characterClassChar",tkn(oc([cc([{"type":"single","char":93},{"type":"single","char":92}],true),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])]))),
@@ -131,6 +128,6 @@ var snakeGrammarRules = {
 	start: seq([rul("__"),obj(seq([rep(0,1,seq([itm("initializer",rul("CodeBlock")),rul("__")])),itm("rules",mod("arrayToObject",arr(rep(0,Infinity,rul("Rule")))))]))]),
 };
 
-var Parser = require("./parserObject");
+var code = genjs(rules, initializer);
 
-module.exports = new Parser(snakeGrammarRules, snakeModifiers);
+module.exports = eval(code);

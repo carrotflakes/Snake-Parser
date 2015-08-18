@@ -1,32 +1,24 @@
 var grammarParse = require("./grammarParse");
-var Parser = require("./parserObject");
-
-var parse = eval(grammarParse.toJavascript());
+var genjs = require("./genjs");
 
 var buildParser = function(grammarSource) {
-	var er = parse(grammarSource);
+	var er = grammarParse(grammarSource);
 
 	if (!er.success)
-		return er.error;
+		return {success: false, error: er.error};
 
 	var rules = er.content.rules,
-	modifier = null;
+	initializer;
 
-	// モディファイアのパース
 	if (er.content.initializer !== undefined) {
-		try {
-			modifier = eval("(function(){return {" + er.content.initializer.replace(/^\s+/, "") + "}})()");
-		} catch (e) {
-			console.dir(e);
-			return "Initializer parse error: " + e.message;
-		}
+		initializer = er.content.initializer;
 	} else {
-		modifier = {};
+		initializer = "";
 	}
 
 	// start がない
 	if (rules.start === undefined)
-		return "Undefined 'start' symbol.";
+		return {success: false, error: "Undefined 'start' symbol."};
 
 	// ルールに使用されているシンボルを集める
 	var ss = [], mss = [];
@@ -39,19 +31,15 @@ var buildParser = function(grammarSource) {
 		if (i !== -1)
 			ss.splice(i, 1);
 	}
-	if (ss.length !== 0)
-		return 'Referenced rule ' + ss.map(function(str) {return '"' + str + '"';}).join(", ") + ' does not exist.';
-
-	// モディファイアが定義されているかチェック
-	for (var k in modifier) {
-		var i = mss.indexOf(k);
-		if (i !== -1)
-			mss.splice(i, 1);
+	if (ss.length !== 0) {
+		return {
+			success: false,
+			error: 'Referenced rule ' + ss.map(function(str) {return '"' + str + '"';}).join(", ") + ' does not exist.'
+		};
 	}
-	if (mss.length !== 0)
-		return 'Referenced modifier ' + mss.map(function(str) {return '"' + str + '"';}).join(", ") + ' does not exist.';
 
-	return new Parser(rules, modifier);
+	var code = genjs(rules, initializer);
+	return {success: true, code: code};
 };
 
 

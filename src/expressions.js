@@ -136,9 +136,9 @@ PositiveLookaheadAssertion.prototype.collectSymbols = Repeat.prototype.collectSy
 NegativeLookaheadAssertion.prototype.collectSymbols = Repeat.prototype.collectSymbols;
 
 Modify.prototype.collectSymbols = function(rules, modifiers) {
-	if (typeof(this.modifierSymbolOrFunction) === "string")
-		if (modifiers.indexOf(this.modifierSymbolOrFunction) == -1)
-			modifiers.push(this.modifierSymbolOrFunction);
+	//if (typeof(this.modifierSymbolOrFunction) === "string")
+	//	if (modifiers.indexOf(this.modifierSymbolOrFunction) == -1)
+	//		modifiers.push(this.modifierSymbolOrFunction);
 	this.child.collectSymbols(rules, modifiers);
 };
 
@@ -171,11 +171,11 @@ PositiveLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
 NegativeLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
 
 Modify.prototype.prepare = function(rules, modifiers) {
-	if (this.modifierSymbolOrFunction.constructor === String) {
-		this.modifier = modifiers[this.modifierSymbolOrFunction];
-	} else if (this.modifierSymbolOrFunction instanceof Function) {
-		this.modifier = this.modifierSymbolOrFunction;
-	}
+	//if (this.modifierSymbolOrFunction.constructor === String) {
+	//	this.modifier = modifiers[this.modifierSymbolOrFunction];
+	//} else if (this.modifierSymbolOrFunction instanceof Function) {
+	//	this.modifier = this.modifierSymbolOrFunction;
+	//}
 	this.child.prepare(rules, modifiers);
 };
 

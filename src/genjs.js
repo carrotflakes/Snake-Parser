@@ -385,7 +385,8 @@ expressions.mod.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel
 	var objs1 = "objs" + newId(ids, "objs");
 	var modify;
 	if (typeof(this.modifierSymbolOrFunction) === "string")
-		modify = objs + ".push(mod$" + this.modifierSymbolOrFunction + "(" + objs1 + "[0]));\n";
+//		modify = objs + ".push(mod$" + this.modifierSymbolOrFunction + "(" + objs1 + "[0]));\n";
+		modify = objs + ".push(" + this.modifierSymbolOrFunction + "(" + objs1 + "[0]));\n";
 	else
 		modify = objs + ".push((" + this.modifierSymbolOrFunction.toString() + ")(" + objs1 + "[0]));\n";
 	var states = [];
@@ -424,7 +425,7 @@ var genRule = function(ruleSymbol, expression, indentLevel) {
 	var deleteMatchTable = "if (matchTable[" + ptr + "] === " + JSON.stringify(ruleSymbol) + ")\n" +
 		indentStr + "matchTable[" + ptr + "] = null;\n";
 
-	if (expression.isLeftRecursion(ruleSymbol, []) === 1) { // 左再帰対応
+	if (expression.canLeftRecurs(ruleSymbol, []) === 1) { // 左再帰対応
 		var ptr1 = "ptr" + newId(ids, "ptr");
 		var obj1 = "obj" + newId(ids, "obj");
 		var fail = deleteMatchTable +
@@ -502,16 +503,19 @@ while (true) {
 }
 //*/
 
-var genjs = function(parser) {
+var genjs = function(rules, initializer, exportVariable) {
+	for (var r in rules)
+		rules[r].prepare(rules);
+
 	var states = [];
+	if (exportVariable)
+		states.push(exportVariable + " = ");
 	states.push("(function() {\n" + indentStr + "var str, strLength, memo, matchTable, errorMask, failMatchs, failPtr;\n\n");
+	// initializer
+	states.push(initializer);
 	// rules
-	for (var key in parser.rules) {
-		states.push(indentStr + genRule(key, parser.rules[key], 1) + ";\n\n");
-	}
-	// modifiers
-	for (var key in parser.modifier) {
-		states.push(indentStr + "var mod$" + key + " = " + parser.modifier[key].toString() + ";\n\n");
+	for (var key in rules) {
+		states.push(indentStr + genRule(key, rules[key], 1) + ";\n\n");
 	}
 
 	states.push(addIndent('function matchingFail(ptr, match) {\n\
