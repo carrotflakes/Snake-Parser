@@ -277,20 +277,20 @@ RuleReference.prototype.traverse = function(func) {
 
 //////////////////////////////////////////////////////////
 // -1 必ず進む 0 進まない可能性がある　1 左再帰する可能性がある
-Expression.prototype.isLeftRecursion = function(rule, passedRules) {
+Expression.prototype.canLeftRecurs = function(rule, passedRules) {
 	return 0;
 };
 
-OrderedChoice.prototype.isLeftRecursion = function(rule, passedRules) {
+OrderedChoice.prototype.canLeftRecurs = function(rule, passedRules) {
 	var res = -1;
 	for (var i in this.children)
-		res = Math.max(res, this.children[i].isLeftRecursion(rule, passedRules));
+		res = Math.max(res, this.children[i].canLeftRecurs(rule, passedRules));
 	return res;
 };
 
-Sequence.prototype.isLeftRecursion = function(rule, passedRules) {
+Sequence.prototype.canLeftRecurs = function(rule, passedRules) {
 	for (var i in this.children) {
-		var r = this.children[i].isLeftRecursion(rule, passedRules);
+		var r = this.children[i].canLeftRecurs(rule, passedRules);
 		if (r === -1)
 			return -1;
 		else if (r === 1)
@@ -299,38 +299,170 @@ Sequence.prototype.isLeftRecursion = function(rule, passedRules) {
 	return 0;
 };
 
-MatchString.prototype.isLeftRecursion = function(rule, passedRules) {
+MatchString.prototype.canLeftRecurs = function(rule, passedRules) {
 	return -1;
 };
 
-MatchCharactorClass.prototype.isLeftRecursion = MatchString.prototype.isLeftRecursion;
-MatchAnyCharactor.prototype.isLeftRecursion = MatchString.prototype.isLeftRecursion;
+MatchCharactorClass.prototype.canLeftRecurs = MatchString.prototype.canLeftRecurs;
+MatchAnyCharactor.prototype.canLeftRecurs = MatchString.prototype.canLeftRecurs;
 
-Repeat.prototype.isLeftRecursion = function(rule, passedRules) {
+Repeat.prototype.canLeftRecurs = function(rule, passedRules) {
 	if (this.min === 0) {
-		return Math.max(0, this.child.isLeftRecursion(rule, passedRules));
+		return Math.max(0, this.child.canLeftRecurs(rule, passedRules));
 	} else {
-		return this.child.isLeftRecursion(rule, passedRules);
+		return this.child.canLeftRecurs(rule, passedRules);
 	}
 };
 
-Objectize.prototype.isLeftRecursion = function(rule, passedRules) {
-	return this.child.isLeftRecursion(rule, passedRules);
+Objectize.prototype.canLeftRecurs = function(rule, passedRules) {
+	return this.child.canLeftRecurs(rule, passedRules);
 };
 
-Arraying.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-Tokenize.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-Itemize.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-PositiveLookaheadAssertion.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-NegativeLookaheadAssertion.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
-Modify.prototype.isLeftRecursion = Objectize.prototype.isLeftRecursion;
+Arraying.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+Tokenize.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+Itemize.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+PositiveLookaheadAssertion.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+NegativeLookaheadAssertion.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+Modify.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
 
-RuleReference.prototype.isLeftRecursion = function(rule, passedRules) {
+RuleReference.prototype.canLeftRecurs = function(rule, passedRules) {
 	if (rule === this.ruleSymbol)
 		return 1;
 	if (passedRules.indexOf(this.ruleSymbol) !== -1)
 		return 0; // 別ルールの左再帰を検出した。　0を返すのは怪しい
-	return this.rule.isLeftRecursion(rule, passedRules.concat([this.ruleSymbol]));
+	return this.rule.canLeftRecurs(rule, passedRules.concat([this.ruleSymbol]));
+};
+
+// canAdvance
+Expression.prototype.canAdvance = function() {
+	return false;
+};
+
+OrderedChoice.prototype.canAdvance = function() {
+	var ret = false;
+	for (var i in this.children)
+		ret = ret || this.children[i].canAdvance();
+	return ret;
+};
+
+Sequence.prototype.canAdvance = OrderedChoice.prototype.canAdvance;
+
+MatchString.prototype.canAdvance = function() {
+	return this.string.length != 0;
+};
+
+MatchCharactorClass.prototype.canAdvance = function() {
+	return true;
+};
+
+Repeat.prototype.canAdvance = function() {
+	return 0 < this.max && this.child.canAdvance();
+};
+
+Objectize.prototype.canAdvance = function() {
+	return this.child.canAdvance();
+};
+
+Arraying.prototype.canAdvance = Objectize.prototype.canAdvance;
+Tokenize.prototype.canAdvance = Objectize.prototype.canAdvance;
+
+PositiveLookaheadAssertion.prototype.canAdvance = function() {
+	return false;
+};
+
+NegativeLookaheadAssertion.prototype.canAdvance = PositiveLookaheadAssertion.prototype.canAdvance;
+
+Itemize.prototype.canAdvance = function() {
+	return this.child.canAdvance();
+};
+
+ConstItem.prototype.canAdvance = function() {
+	return false;
+};
+
+Literal.prototype.canAdvance = function() {
+	return false;
+};
+
+Modify.prototype.canAdvance = function() {
+	return this.child.canAdvance();
+};
+
+RuleReference.prototype.canAdvance = function() {
+	if (this._passed) {
+		delete this._passed;
+		return false;
+	}
+	this._passed = true;
+	var ret = this.rule.canAdvance();
+	delete this._passed;
+	return ret;
+};
+
+// canProduce
+Expression.prototype.canProduce = function() {
+	return false;
+};
+
+OrderedChoice.prototype.canProduce = function() {
+	var ret = false;
+	for (var i in this.children)
+		ret = ret || this.children[i].canProduce();
+	return ret;
+};
+
+Sequence.prototype.canProduce = OrderedChoice.prototype.canProduce;
+
+MatchString.prototype.canProduce = function() {
+	return false;
+};
+
+MatchCharactorClass.prototype.canProduce = function() {
+	return false;
+};
+
+Repeat.prototype.canProduce = function() {
+	return 0 < this.max && this.child.canProduce();
+};
+
+Objectize.prototype.canProduce = function() {
+	return true;
+};
+
+Arraying.prototype.canProduce = Objectize.prototype.canProduce;
+Tokenize.prototype.canProduce = Objectize.prototype.canProduce;
+
+PositiveLookaheadAssertion.prototype.canProduce = function() {
+	return false;
+};
+
+NegativeLookaheadAssertion.prototype.canProduce = PositiveLookaheadAssertion.prototype.canProduce;
+
+Itemize.prototype.canProduce = function() {
+	return true;
+};
+
+ConstItem.prototype.canProduce = function() {
+	return true;
+};
+
+Literal.prototype.canProduce = function() {
+	return true;
+};
+
+Modify.prototype.canProduce = function() {
+	return true;
+};
+
+RuleReference.prototype.canProduce = function() {
+	if (this._passed) {
+		delete this._passed;
+		return false;
+	}
+	this._passed = true;
+	var ret = this.rule.canProduce();
+	delete this._passed;
+	return ret;
 };
 
 

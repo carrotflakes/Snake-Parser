@@ -27,6 +27,22 @@ var newId = function(ids, name) {
 		return (ids[name] = 0);
 };
 
+var makeVarState = function(vs) {
+	vs = vs.filter(function(v) {
+		if (v instanceof Object)
+			return v[0] !== null;
+		else
+			return v !== null;
+	});
+	vs = vs.map(function(v) {
+		if (v instanceof Object)
+			return v[0] + (v[1] ? " = " + v[1] : "");
+		else
+			return v;
+	});
+	return vs.length !== 0 ? "var " + vs.join(", ") + ";\n" : "";
+};
+
 var makeErrorLogging = function(ptr, match, indentLevel) {
 	var matchStr = JSON.stringify(match);
 	var indent = makeIndent(indentLevel);
@@ -41,23 +57,34 @@ expressions.oc.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel)
 	if (this.children.length === 1)
 		return this.children[0].gen(ptr, objs, ids, pass, fail, indentLevel);
 	var indent = makeIndent(indentLevel);
-	var ptr1 = "ptr" + newId(ids, "ptr");
-	var objs1 = "objs" + newId(ids, "objs");
+	var ptr1 = null;
+	var objs1 = null;
 	var flag = "oc" + newId(ids, "oc");
 	var pass1 = flag + " = true;\n";
 	var fail1 = flag + " = false;\n";
-	var backtrack = objs1 + " = [];\n" + ptr1 + " = " + ptr + ";\n";
+	if (this.canAdvance())
+		ptr1 = "ptr" + newId(ids, "ptr");
+	if (this.canProduce())
+		objs1 = "objs" + newId(ids, "objs");
 	for (var i = this.children.length - 1; 0 <= i; --i) {
+		var reset = "";
+		if (this.children[i].canAdvance())
+			reset += ptr + " = " + ptr1 + ";\n";
+		if (this.children[i].canProduce())
+			reset += objs1 + " = [];\n";
 		var ids1 = {};
 		ids1.__proto__ = ids;
-		fail1 = backtrack + this.children[i].gen(ptr1, objs1, ids1, pass1, fail1, 0);
+		fail1 = this.children[i].gen(/*ptr1 || */ptr, objs1 || objs, ids1, pass1, reset + fail1, 0);
 	}
 	var states = [];
-	states.push(indent + "var " + ptr1 + ", " + objs1 + ", " + flag + ";\n");
+//	states.push(indent + makeVarState([[ptr1, ptr], [objs1, "[]"], flag]));
+	states.push(indent + makeVarState([[ptr1, ptr], [objs1, "[]"], flag]));
 	states.push(addIndent(fail1, indentLevel));
 	states.push(indent + "if (" + flag + ") {\n");
-	states.push(indent + indentStr + ptr + " = " + ptr1  + ";\n");
-	states.push(indent + indentStr + objs + ".push.apply(" + objs + ", " + objs1 + ");\n");
+//	if (ptr1)
+//		states.push(indent + indentStr + ptr + " = " + ptr1 + ";\n");
+	if (objs1)
+		states.push(indent + indentStr + objs + ".push.apply(" + objs + ", " + objs1 + ");\n");
 	states.push(addIndent(pass, indentLevel + 1));
 	states.push(indent + "} else {\n");
 	states.push(addIndent(fail, indentLevel + 1));
@@ -133,7 +160,7 @@ if (flg) {
 
 */
 
-expressions.rep.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel) { // TODO min max によって特殊化
+expressions.rep.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel) { // TODO min max によって特殊化 0-inf のときかならずpass! 0-1 のときかならずpass!
 	var indent = makeIndent(indentLevel);
 	var ptr1 = "ptr" + newId(ids, "ptr");
 	var objs1 = "objs" + newId(ids, "objs");
@@ -157,11 +184,15 @@ expressions.rep.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel
 	states.push(indent + indentStr + ptr1 + " = " + ptr + ", " + objs1 + " = [];\n");
 	states.push(this.child.gen(ptr1, objs1, ids, pass1, fail1, indentLevel + 1));
 	states.push(indent + "}\n");
-	states.push(indent + "if (" + flag + ") {\n");
-	states.push(addIndent(pass, indentLevel + 1));
-	states.push(indent + "} else {\n");
-	states.push(addIndent(fail, indentLevel + 1));
-	states.push(indent + "}\n");
+	if (this.min === 0) {
+		states.push(addIndent(pass, indentLevel));
+	} else {
+		states.push(indent + "if (" + flag + ") {\n");
+		states.push(addIndent(pass, indentLevel + 1));
+		states.push(indent + "} else {\n");
+		states.push(addIndent(fail, indentLevel + 1));
+		states.push(indent + "}\n");
+	}
 	return states.join("");
 };
 /*
@@ -189,6 +220,7 @@ if (flag) {
 	fail
 }
 */
+
 
 expressions.str.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel) {
 	if (this.string.length === 0)
@@ -379,31 +411,6 @@ expressions.rul.prototype.gen = function(ptr, objs, ids, pass, fail, indentLevel
 	return states.join("");
 };
 
-/*
-// メモ化なし
-var genRule = function(ruleSymbol, expression, indentLevel) {
-	var ids = {};
-	var objs = "objs";
-	var ptr = "ptr";
-	var pass = "return {objects: " + objs + ", pointer: " + ptr + ", undeterminate: undet};\n";
-	var fail = "return undet;\n";
-	var states = [];
-	states.push("function(" + ptr + ") {\n");
-	states.push(makeIndent(indentLevel + 1) + "var " + objs + " = [], undet = 0;\n");
-	states.push(expression.gen(ptr, objs, ids, pass, fail, indentLevel + 1));
-	states.push(makeIndent(indentLevel) + "}");
-	return states.join("");
-};
-//*/
-
-/*
-if (!matchTable[])
-	matchTable[] = ruleSymbol;
-
-if (matchTable[] === ruleSymbol)
-	matchTable = null;*/
-// メモ化あり
-//*
 var genRule = function(ruleSymbol, expression, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var ids = {};
@@ -471,7 +478,7 @@ var genRule = function(ruleSymbol, expression, indentLevel) {
 		states.push(indent + "}");
 		return states.join("");
 	}
-};//*/
+};
 
 /*
 if (key in memo) return memo[key];
