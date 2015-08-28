@@ -1,9 +1,10 @@
+var expressions = {};
+
 // Expression Class
 var Expression = function() {
 };
+expressions["exp"] = Expression;
 
-
-var expressions = {};
 
 var extendsExpression = function(cls, name) {
 	cls.prototype = new Expression();
@@ -99,10 +100,10 @@ var NegativeLookaheadAssertion = function(e) {
 };
 extendsExpression(NegativeLookaheadAssertion, "nla");
 
-var Modify = function(m, e) {
-	this.modifierSymbolOrFunction = m;
+var Modify = function(e, i, c) {
 	this.child = e;
-	this.modifier = null;
+	this.identifier = i;
+	this.code = c;
 };
 extendsExpression(Modify, "mod");
 
@@ -114,18 +115,18 @@ extendsExpression(RuleReference, "rul");
 
 
 // collectSymbols
-Expression.prototype.collectSymbols = function(rules, modifiers) {
+Expression.prototype.collectSymbols = function(rules) {
 };
 
-OrderedChoice.prototype.collectSymbols = function(rules, modifiers) {
+OrderedChoice.prototype.collectSymbols = function(rules) {
 	for (var i in this.children)
-		this.children[i].collectSymbols(rules, modifiers);
+		this.children[i].collectSymbols(rules);
 };
 
 Sequence.prototype.collectSymbols = OrderedChoice.prototype.collectSymbols;
 
-Repeat.prototype.collectSymbols = function(rules, modifiers) {
-	this.child.collectSymbols(rules, modifiers);
+Repeat.prototype.collectSymbols = function(rules) {
+	this.child.collectSymbols(rules);
 };
 
 Objectize.prototype.collectSymbols = Repeat.prototype.collectSymbols;
@@ -135,32 +136,29 @@ Itemize.prototype.collectSymbols = Repeat.prototype.collectSymbols;
 PositiveLookaheadAssertion.prototype.collectSymbols = Repeat.prototype.collectSymbols;
 NegativeLookaheadAssertion.prototype.collectSymbols = Repeat.prototype.collectSymbols;
 
-Modify.prototype.collectSymbols = function(rules, modifiers) {
-	//if (typeof(this.modifierSymbolOrFunction) === "string")
-	//	if (modifiers.indexOf(this.modifierSymbolOrFunction) == -1)
-	//		modifiers.push(this.modifierSymbolOrFunction);
-	this.child.collectSymbols(rules, modifiers);
+Modify.prototype.collectSymbols = function(rules) {
+	this.child.collectSymbols(rules);
 };
 
-RuleReference.prototype.collectSymbols = function(rules, modifiers) {
+RuleReference.prototype.collectSymbols = function(rules) {
 	if (rules.indexOf(this.ruleSymbol) == -1)
 		rules.push(this.ruleSymbol);
 };
 
 
 // prepare
-Expression.prototype.prepare = function(rules, modifiers) {
+Expression.prototype.prepare = function(rules) {
 };
 
-OrderedChoice.prototype.prepare = function(rules, modifiers) {
+OrderedChoice.prototype.prepare = function(rules) {
 	for (var i in this.children)
-		this.children[i].prepare(rules, modifiers);
+		this.children[i].prepare(rules);
 };
 
 Sequence.prototype.prepare = OrderedChoice.prototype.prepare;
 
-Repeat.prototype.prepare = function(rules, modifiers) {
-	this.child.prepare(rules, modifiers);
+Repeat.prototype.prepare = function(rules) {
+	this.child.prepare(rules);
 };
 
 Objectize.prototype.prepare = Repeat.prototype.prepare;
@@ -170,16 +168,11 @@ Itemize.prototype.prepare = Repeat.prototype.prepare;
 PositiveLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
 NegativeLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
 
-Modify.prototype.prepare = function(rules, modifiers) {
-	//if (this.modifierSymbolOrFunction.constructor === String) {
-	//	this.modifier = modifiers[this.modifierSymbolOrFunction];
-	//} else if (this.modifierSymbolOrFunction instanceof Function) {
-	//	this.modifier = this.modifierSymbolOrFunction;
-	//}
-	this.child.prepare(rules, modifiers);
+Modify.prototype.prepare = function(rules) {
+	this.child.prepare(rules);
 };
 
-RuleReference.prototype.prepare = function(rules, modifiers) {
+RuleReference.prototype.prepare = function(rules) {
 	this.rule = rules[this.ruleSymbol];
 };
 
@@ -231,13 +224,19 @@ Literal.prototype.toString = function() {
 };
 
 Modify.prototype.toString = function() {
+	/*
 	var modifier;
 	if (typeof(this.modifierSymbolOrFunction) === "string") {
 		modifier = JSON.stringify(this.modifierSymbolOrFunction);
 	} else if (this.modifierSymbolOrFunction instanceof Function) {
 		modifier = this.modifierSymbolOrFunction.toString();
 	}
-	return this._name + "(" + modifier + "," + this.child.toString() + ")";
+	return this._name + "(" + modifier + "," + this.child.toString() + ")";*/
+	if (this.code) {
+		return this._name + "(" + this.child.toString() + ",null," + JSON.stringify(this.code) + ")";
+	} else {
+		return this._name + "(" + this.child.toString() + "," + JSON.stringify(this.identifier) + ",null)";
+	}
 };
 
 RuleReference.prototype.toString = function() {
@@ -466,8 +465,4 @@ RuleReference.prototype.canProduce = function() {
 };
 
 
-
-module.exports = {
-	Expression: Expression,
-	expressions: expressions,
-};
+module.exports = expressions;
