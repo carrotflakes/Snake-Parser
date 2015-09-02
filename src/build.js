@@ -1,8 +1,9 @@
 var grammarParse = require("./grammarParse");
+var expressions = require("./expressions");
 var genjs = require("./genjs");
 
 var buildParser = function(grammarSource) {
-	var er = grammarParse(grammarSource);
+	var er = grammarParse(grammarSource, {expressions: expressions});
 
 	if (!er.success)
 		return {success: false, error: er.error};
@@ -17,8 +18,12 @@ var buildParser = function(grammarSource) {
 	}
 
 	// start がない
-	if (rules.start === undefined)
-		return {success: false, error: "Undefined 'start' symbol."};
+	if (rules.start === undefined) {
+		return {
+			success: false,
+			error: "Undefined 'start' symbol."
+		};
+	}
 
 	// ルールに使用されているシンボルを集める
 	var ss = [], mss = [];
@@ -39,7 +44,10 @@ var buildParser = function(grammarSource) {
 	}
 
 	var code = genjs(rules, initializer);
-	return {success: true, code: code};
+	return {
+		success: true,
+		code: code,
+	};
 };
 
 
