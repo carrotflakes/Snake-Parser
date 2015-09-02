@@ -119,9 +119,16 @@ function parse() {
 	
 	var inputText = inputTextElem.value;
 
-
+	var result;
 	var t = new Date().getTime();
-	var result = parser(inputText);
+	try {
+		result = parser(inputText);
+	} catch (e) {
+		result = {
+			success: false,
+			error: e.message
+		};
+	}
 	t = new Date().getTime() - t;
 
 	//console.dir(result);
