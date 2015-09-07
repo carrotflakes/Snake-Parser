@@ -1,0 +1,80 @@
+start = ws value ws
+
+begin_array     = ws "[" ws
+begin_object    = ws "{" ws
+end_array       = ws "]" ws
+end_object      = ws "}" ws
+name_separator  = ws ":" ws
+value_separator = ws "," ws
+
+ws "whitespace" = *[ \t\n\r]
+
+value
+  = false
+  | null
+  | true
+  | object
+  | array
+  | number
+  | string
+
+false = "false" \false
+null  = "null"  \null
+true  = "true"  \true
+
+object
+  = begin_object
+    @(?member *(value_separator member)) -> {
+      var result = {};
+      for (var i = 0; i < $.length; ++i)
+        result[$[i].name] = $[i].value;
+      return result;
+    }
+    end_object
+
+member
+  = { name:string name_separator value:value }
+
+array
+  = begin_array
+    @(?value *(value_separator value))
+    end_array
+
+number "number"
+  = `(?minus int ?frac ?exp) -> { return parseFloat($); }
+
+decimal_point = "."
+digit1_9      = [1-9]
+e             = [eE]
+exp           = e ?(minus | plus) +DIGIT
+frac          = decimal_point +DIGIT
+int           = zero | (digit1_9 *DIGIT)
+minus         = "-"
+plus          = "+"
+zero          = "0"
+
+string "string"
+  = quotation_mark
+    @*char -> { return $.join(""); }
+    quotation_mark
+
+char
+  = `unescaped
+  | escape (
+        `'"'
+      | `"\\"
+      | `"/"
+      | "b" \"\b"
+      | "f" \"\f"
+      | "n" \"\n"
+      | "r" \"\r"
+      | "t" \"\t"
+      | "u" `4*HEXDIG -> { return String.fromCharCode(parseInt($, 16)); }
+    )
+
+escape         = "\\"
+quotation_mark = '"'
+unescaped      = [^\u0000-\u001F\\"]
+
+DIGIT =  [0-9]
+HEXDIG = [0-9a-fA-F]

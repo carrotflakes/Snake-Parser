@@ -1,0 +1,44 @@
+{
+  function add(o) {
+    return o.left + o.right;
+  }
+  function subtract(o) {
+    return o.left - o.right;
+  }
+  function multiple(o) {
+    return o.left * o.right;
+  }
+  function divide(o) {
+    return o.left / o.right;
+  }
+  function modulo(o) {
+    return o.left % o.right;
+  }
+  function integer(o) {
+    return +o;
+  }
+}
+
+start
+  = ws additive ws
+
+additive
+  = {left:additive ws "+" ws right:multiplicative} -> add
+  | {left:additive ws "-" ws right:multiplicative} -> subtract
+  | multiplicative
+
+multiplicative
+  = {left:multiplicative ws "*" ws right:primary} -> multiple
+  | {left:multiplicative ws "/" ws right:primary} -> divide
+  | {left:multiplicative ws "%" ws right:primary} -> modulo
+  | primary
+
+primary
+  = integer
+  | "(" ws additive ws ")"
+
+integer "integer"
+  = `(?'-' +[0-9]) -> integer
+
+ws "whitespace"
+  = *[ \t\r\n]
