@@ -16,10 +16,17 @@
 
 	#syntaxMessage, #resultMessage {
 		background-color: #FE8;
+		font-size: small;
 	}
 
 	p {
 		margin: 2px 0px;
+	}
+
+	.group {
+		display:inline-block;
+		width: 600px;
+		vertical-align: top;
 	}
 
 </style>
@@ -27,45 +34,58 @@
 </head>
 <body>
 
-	<h4>Examples :</h4>
-	<button onclick="example(0);">calculator</button>
-	<button onclick="example(1);">snake grammar</button>
-
-	<h4>Grammar :</h4>
-	<textarea id="grammar" style="width: 400px; height: 100px"></textarea>
-
-	<p id="syntaxMessage"></p>
-
-	<h4>Input text :</h4>
-	<textarea id="input_text" style="width: 400px; height: 100px"></textarea>
-
-	<p id="resultMessage"></p>
-	
-	<h4>Output :</h4>
-	<textarea id="result" style="width: 400px; height: 100px"></textarea>
-
 	<div>
-		<button onclick="toJS();">Generate parser</button>
+	Examples :
+	<select id="examples">
+	<option value="0">calculator</option>
+	<option value="1">snake grammar</option>
+	</select>
 	</div>
 
+	<div class="group">
+	<h4>Grammar :</h4>
+	<div id="grammar" style="width: 550px; height: 500px;"></div>
+
+	<p id="syntaxMessage"></p>
+	</div>
+
+	<div class="group">
+	<h4>Input text :</h4>
+	<div id="input_text" style="width: 550px; height: 200px;"></div>
+
+	<p id="resultMessage"></p>
+
+	<h4>Output :</h4>
+	<textarea id="result" style="width: 550px; height: 200px"></textarea>
+
+	<button onclick="toJS();">Generate</button>
+	</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ace.js" type="text/javascript" charset="utf-8"></script>
 <script src="snakeParser.js"></script>
 <script>
 
 var parser = null, code = null;
-var grammarElem = document.getElementById("grammar"),
-inputTextElem = document.getElementById("input_text"),
-syntaxMessageElm = document.getElementById("syntaxMessage"),
+var syntaxMessageElm = document.getElementById("syntaxMessage"),
 resultMessageElm = document.getElementById("resultMessage");
 var updateParserTime = new Date().getTime(),
 updateModifierTime = new Date().getTime(),
 updateInputTextTime = new Date().getTime();
+var grammarEditor = ace.edit("grammar");
+var inputTextEditor = ace.edit("input_text");
 
-grammarElem.onkeyup = function() {
+grammarEditor.$blockScrolling = Infinity;
+inputTextEditor.$blockScrolling = Infinity;
+
+grammarEditor.getSession().on('change', function() {
 	updateParserTime = new Date().getTime() + 500;
-};
-inputTextElem.onkeyup = function() {
+});
+inputTextEditor.getSession().on('change', function() {
 	updateInputTextTime = new Date().getTime() + 500;
-};
+});
+
+grammarEditor.setDisplayIndentGuides(false);
+inputTextEditor.setDisplayIndentGuides(false);
 
 window.setInterval(function() {
 	var now = new Date().getTime();
@@ -84,7 +104,7 @@ window.setInterval(function() {
 
 
 function buildParser() {
-	var grammar = grammarElem.value;
+	var grammar = grammarEditor.getValue();
 
 	var t = new Date().getTime();
 	br = SnakeParser.buildParser(grammar);
@@ -117,7 +137,7 @@ function parse() {
 	
 	resultElem.value = "";
 	
-	var inputText = inputTextElem.value;
+	var inputText = inputTextEditor.getValue();
 
 	var result;
 	var t = new Date().getTime();
@@ -154,21 +174,25 @@ function toJS() {
 };
 
 function example(idx) {
-	document.getElementById("grammar").value = examples[idx].grammar;
-	document.getElementById("input_text").value = examples[idx].inputText;
+	grammarEditor.setValue(examples[idx].grammar);
+	inputTextEditor.setValue(examples[idx].inputText);
 
 	updateParserTime = new Date().getTime();
 };
 
 var examples = [
 {
-	grammar: '{\n  additive: function($) {\n    return $.left + $.right;\n  },\n  multiplicative: function($) {\n    return $.left * $.right;\n  },\n  integer: function($) {\n    return +$;\n  }\n}\n\n\nstart =\n  additive\n\nadditive =\n  {left:multiplicative "+" right:additive}>additive\n  | multiplicative\n\nmultiplicative =\n  {left:primary "*" right:multiplicative}>multiplicative\n  | primary\n\nprimary =\n  integer\n  | "(" additive ")"\n\ninteger =\n  `+[0-9]>integer',
+	grammar: "{\n  function add(o) {\n    return o.left + o.right;\n  }\n  function subtract(o) {\n    return o.left - o.right;\n  }\n  function multiple(o) {\n    return o.left * o.right;\n  }\n  function divide(o) {\n    return o.left / o.right;\n  }\n  function modulo(o) {\n    return o.left % o.right;\n  }\n  function integer(o) {\n    return +o;\n  }\n}\n\nstart\n  = ws additive ws\n\nadditive\n  = {left:additive ws \"+\" ws right:multiplicative} -> add\n  | {left:additive ws \"-\" ws right:multiplicative} -> subtract\n  | multiplicative\n\nmultiplicative\n  = {left:multiplicative ws \"*\" ws right:primary} -> multiple\n  | {left:multiplicative ws \"/\" ws right:primary} -> divide\n  | {left:multiplicative ws \"%\" ws right:primary} -> modulo\n  | primary\n\nprimary\n  = integer\n  | \"(\" ws additive ws \")\"\n\ninteger \"integer\"\n  = `(?'-' +[0-9]) -> integer\n\nws \"whitespace\"\n  = *[ \\t\\r\\n]",
 	inputText: '1+2*(3+4)'
 }, {
-	grammar: "{\n  arrayToObject: function($) {\n    var res = {};\n    for (var i = 0, il = $.length; i < il; ++i)\n      res[$[i].symbol] = $[i].body;\n    return res;\n  },\n  omit: function($) {\n    if ($.arg.length === 1)\n      return $.arg[0];\n    return $;\n  },\n  eval: function($) {\n    return eval($);\n  },\n  characterClassChar: function($) {\n    var str = $,\n    len = str.length;\n    if (len === 1) {\n      return str.charCodeAt();\n    } else if (len === 6) {\n      return parseInt(str.substring(2), 16);\n    } else if (str === \"\\\\n\"){\n      return 10;\n    } else if (str === \"\\\\t\"){\n      return 9;\n    } else if (str === \"\\\\r\"){\n      return 13;\n    }\n    return str.charCodeAt(1);\n  },\n  nuturalNumber: function($) {\n    return parseInt($);\n  }\n}\n\n\n\nstart\n  = {__ ?(initializer:CodeBlock __) rules:@*Rule>arrayToObject}\n\nRule\n  = {symbol:Identifier __ '=' __ body:ChoiceExpression} __\n\nChoiceExpression\n  = {op:\\'|' arg:@(SequenceExpression __ *('|' __ SequenceExpression))}>omit __\n\nSequenceExpression\n  = {op:\\' ' arg:@(LabelExpression *(__ LabelExpression))}>omit __\n\nLabelExpression\n  = {op:\\':=' arg0:IdentifierOrStringLiteral __ ':=' __ arg1:IdentifierOrStringLiteral}\n  | {op:\\':' arg0:IdentifierOrStringLiteral __ ':' __ arg1:ModifyExpression}\n  | ModifyExpression\n\nModifyExpression\n  = {op:\\'>' arg0:ModifyExpression __ '>' __ (arg1:Identifier | arg2:CodeBlock)}\n  | OtherExpression\n\nOtherExpression\n  = '(' __ ChoiceExpression __ ')'\n  | {op:\\'\\'' arg:StringLiteral\n  | op:\\'[^' '[^' arg:CharacterClass ']'\n  | op:\\'[' '[' arg:CharacterClass ']'\n  | op:\\'\\\\' '\\\\' __ arg:(StringLiteral | NumericLiteral | BooleanLiteral | NullLiteral)\n  | op:\\'@' '@' __ arg:OtherExpression\n  | op:\\'#' '{' __ arg:ChoiceExpression __ '}'\n  | op:\\'`' '`' __ arg:OtherExpression\n  | op:\\'&' '&' __ arg:OtherExpression\n  | op:\\'!' '!' __ arg:OtherExpression\n  | op:\\'?' '?' __ arg:OtherExpression\n  | op:\\'*' '*' __ arg:OtherExpression\n  | op:\\'n' n:NaturalNumber __ '*' __ arg:OtherExpression\n  | op:\\'n-m' n:?NaturalNumber > {return $ || 0} ',' m:?NaturalNumber > {return $ || Infinity} __ '*' __ arg:OtherExpression\n  | op:\\'+' '+' __ arg:OtherExpression\n  | op:\\'.' '.'\n  | op:\\'$' arg:Identifier !(__ '=')}\n\n__\n  = ?+([ \\t\\r\\n] | Comment)\n\nComment\n  = '//' *[^\\n] ('\\n' | !.) | '/*' *([^*] | '*' [^/]) '*/'\n\nIdentifier\n  = `([a-zA-Z_] *[a-zA-Z0-9_])\n\nIdentifierOrStringLiteral\n  = StringLiteral | Identifier\n\nStringLiteral\n  = `(\n    ('\\'' *(+[^'\\\\] | '\\\\u' 4*[0-9a-fA-F] | '\\\\' [^u]) '\\'') |\n    ('\\\"' *(+[^\"\\\\] | '\\\\u' 4*[0-9a-fA-F] | '\\\\' [^u]) '\\\"') ) > eval\n\nCharacterClass\n  = @*{type:\\\"range\" start:CharacterClassChar '-' end:CharacterClassChar | type:\\\"single\" char:CharacterClassChar}\n\nCharacterClassChar\n  = `([^\\]\\\\]\n  | '\\\\u' 4*[0-9a-fA-F]\n  | '\\\\' [^u]) > characterClassChar\n\nCodeBlock\n  = \"{\" Code \"}\"\n\nCode\n  = `*(+(![{}] .) | \"{\" Code \"}\")\n\nNaturalNumber\n  = `([1-9] *[0-9] | '0') > nuturalNumber\n\n\nNullLiteral\n  = `\"null\" > eval\n\nBooleanLiteral\n  = `(\"true\" | \"false\") > eval\n\nNumericLiteral\n  = `(?\"-\" (HexIntegerLiteral | DecimalLiteral)) > eval\n\nDecimalLiteral\n  = DecimalIntegerLiteral \".\" *DecimalDigit ?ExponentPart\n  | \".\" +DecimalDigit ?ExponentPart\n  | DecimalIntegerLiteral ?ExponentPart\n\nDecimalIntegerLiteral\n  = \"0\"\n  | NonZeroDigit *DecimalDigit\n\nDecimalDigit\n  = [0-9]\n\nNonZeroDigit\n  = [1-9]\n\nExponentPart\n  = ExponentIndicator SignedInteger\n\nExponentIndicator\n  = \"e\" | \"E\"\n\nSignedInteger\n  = ?[+-] +DecimalDigit\n\nHexIntegerLiteral\n  = (\"0x\" | \"0X\") +HexDigit\n\nHexDigit\n  = [0-9a-fA-F]",
+	grammar: "{\n  function arrayToObject($) {\n    var res = {};\n    for (var i = 0, il = $.length; i < il; ++i)\n      res[$[i].symbol] = $[i];\n    return res;\n  }\n  function ensureMin($) {\n    return $ === undefined ? 0 : $;\n  }\n  function ensureMax($) {\n    return $ === undefined ? Infinity : $;\n  }\n  function characterClassChar($) {\n    var str = $,\n    len = str.length;\n    if (len === 1) {\n      return str.charCodeAt();\n    } else if (len === 6) {\n      return parseInt(str.substring(2), 16);\n    } else if (str === \"\\\\n\") {\n      return 10;\n    } else if (str === \"\\\\t\") {\n      return 9;\n    } else if (str === \"\\\\r\") {\n      return 13;\n    }\n    return str.charCodeAt(1);\n  }\n  function nuturalNumber($) {\n    return parseInt($);\n  }\n	function expr($) {\n		switch ($.op) {\n		case \"nop\":\n		case \"ac\":\n			return $.op + \"()\";\n		case \"oc\":\n		case \"seq\":\n			return $.op + \"([\" + $.a + \"])\";\n		case \"ci\":\n			return $.op + \"(\" + JSON.stringify($.a) + \",\" + JSON.stringify($.b) + \")\";\n		case \"itm\":\n			return $.op + \"(\" + JSON.stringify($.a) + \",\" + $.b + \")\";\n		case \"mod\":\n			return $.op + \"(\" + $.a + \",\" + JSON.stringify($.b) + \",\" + JSON.stringify($.c) + \")\";\n		case \"str\":\n			return $.op + \"(\" + JSON.stringify($.a) + \")\";\n		case \"cc\":\n			return $.op + \"(\" + JSON.stringify($.a) + \",\" + JSON.stringify($.b) + \")\";\n		case \"ltr\":\n			return $.op + \"(\" + JSON.stringify($.a) + \")\";\n		case \"arr\":\n		case \"obj\":\n		case \"tkn\":\n		case \"pla\":\n		case \"nla\":\n			return $.op + \"(\" + $.a + \")\";\n		case \"rep\":\n			return $.op + \"(\" + $.a + \",\" + $.b + \",\" + $.c + \")\";\n		case \"pi\":\n			return $.op + \"(\" + $.a + \")\";\n		case \"rul\":\n			return $.op + \"(\" + JSON.stringify($.a) + \")\";\n		}\n	}\n}\n\n\nstart\n  = {\n      __\n      ?(initializer:CodeBlock __)\n      rules:@*Rule -> arrayToObject\n    }\n\nRule\n  = {\n      symbol:Identifier __\n      ?(parameters:RuleParameters __)\n      ?(name:StringLiteral __)\n      '=' __\n      body:ChoiceExpression __\n    }\n\nRuleParameters\n  = @(\n      \"<\" __\n      ?(\n        Identifier __\n			  *(\",\" __ Identifier __)\n      )\n      \">\"\n    )\n\nChoiceExpression\n  = {op:=oc a:@(SequenceExpression __ +('|' __ SequenceExpression))} -> expr __\n  | SequenceExpression __\n  | {op:=nop} -> expr\n\nSequenceExpression\n  = {op:=seq a:@(LabelExpression +(__ LabelExpression))} -> expr __\n  | LabelExpression __\n\nLabelExpression\n  = {op:=ci  a:IdentifierOrStringLiteral __ ':=' __ b:IdentifierOrStringLiteral} -> expr\n  | {op:=itm a:IdentifierOrStringLiteral __ ':'  __ b:ModifyExpression} -> expr\n  | ModifyExpression\n\nModifyExpression\n  = {\n      (\n        a:ModifyExpression __\n        (\n          '->' __\n          op:=mod\n          (b:Identifier c:\\null | b:\\null c:CodeBlock)\n        |\n          '-?' __\n          op:=grd\n          (b:Identifier c:\\null | b:\\null c:CodeBlock)\n        |\n          '-|'\n          op:=wst\n        )\n      )\n    } -> expr\n  | OtherExpression\n\nOtherExpression\n  = '(' __ ChoiceExpression __ ')'\n  | { op:=str a:StringLiteral\n    | op:=cc  '[' b:('^' \\true | \\false) a:CharacterClass ']'\n    | op:=ltr '\\\\' __ a:(StringLiteral | NumericLiteral | BooleanLiteral | NullLiteral)\n    | op:=arr '@' __ a:OtherExpression\n    | op:=obj '{' __ a:ChoiceExpression __ '}'\n    | op:=tkn '`' __ a:OtherExpression\n    | op:=pla '&' __ a:OtherExpression\n    | op:=nla '!' __ a:OtherExpression\n    | op:=rep '?' __ c:OtherExpression a:\\0 b:\\1\n    | op:=rep '*' __ c:OtherExpression a:\\0 b:\\0 -> {return Infinity}\n    | op:=rep a:NaturalNumber __ '*' __ c:OtherExpression b:\\\"min\"\n    | op:=rep a:?NaturalNumber->ensureMin ',' b:?NaturalNumber->ensureMax __ '*' __ c:OtherExpression\n    | op:=rep '+' __ c:OtherExpression a:\\1 b:\\0 -> {return Infinity}\n    | op:=ac  '.'\n    | op:=pi  '$' a:Identifier\n    | op:=rul !Rule a:Identifier ?(__ b:RuleArguments)} -> expr\n\nRuleArguments\n  = @(\n      \"<\" __\n      ?(\n        ChoiceExpression __\n			  *(\",\" __ ChoiceExpression __)\n      )\n      \">\"\n    )\n\n__\n  = *([ \\t\\r\\n] | Comment)\n\nComment\n  = '//' *[^\\n] ('\\n' | !.)\n  | '/*' *([^*] | '*' [^/]) '*/'\n\nLineTerminator\n  = [\\n\\r\\u2028\\u2029]\n\nIdentifier\n  = `([a-zA-Z_] *[a-zA-Z0-9_])\n\nIdentifierOrStringLiteral\n  = StringLiteral | Identifier\n\nStringLiteral\n  = `StringLiteralRaw -> eval\n\nStringLiteralRaw\n  = (\n      '\\''\n      *(!LineTerminator [^'\\\\] | '\\\\x' 2*HexDigit | '\\\\u' 4*HexDigit | '\\\\' [^ux])\n      '\\''\n    )\n  | (\n      '\\\"'\n      *(!LineTerminator [^\"\\\\] | '\\\\x' 2*HexDigit | '\\\\u' 4*HexDigit | '\\\\' [^ux])\n      '\\\"'\n    )\n\nCharacterClass\n  = @*{\n      type:\\\"range\"\n      start:CharacterClassChar '-' end:CharacterClassChar\n    | type:\\\"single\"\n      char:CharacterClassChar\n    }\n\nCharacterClassChar\n  = `([^\\]\\\\]\n  | '\\\\x' 2*HexDigit\n  | '\\\\u' 4*HexDigit\n  | '\\\\' [^ux]) -> characterClassChar\n\nCodeBlock\n  = \"{\" `Code \"}\"\n\nCode\n  = *([^{}] | \"{\" Code \"}\")\n\nNaturalNumber\n  = `([1-9] *[0-9] | \"0\") -> nuturalNumber\n\n\nNullLiteral\n  = \"null\" \\null\n\nBooleanLiteral\n  = \"true\"  \\true\n  | \"false\" \\false\n\nNumericLiteral\n  = `(?\"-\" (HexIntegerLiteral | DecimalLiteral)) -> eval\n\nDecimalLiteral\n  = DecimalIntegerLiteral \".\" *DecimalDigit ?ExponentPart\n  | \".\" +DecimalDigit ?ExponentPart\n  | DecimalIntegerLiteral ?ExponentPart\n\nDecimalIntegerLiteral\n  = \"0\"\n  | NonZeroDigit *DecimalDigit\n\nDecimalDigit\n  = [0-9]\n\nNonZeroDigit\n  = [1-9]\n\nExponentPart\n  = ExponentIndicator SignedInteger\n\nExponentIndicator\n  = [eE]\n\nSignedInteger\n  = ?[+-] +DecimalDigit\n\nHexIntegerLiteral\n  = (\"0x\" | \"0X\") +HexDigit\n\nHexDigit\n  = [0-9a-fA-F]",
 	inputText: 'start = "hello world"'
 },
 ];
+
+document.getElementById("examples").onchange = function(e) {
+	example(+document.getElementById("examples").value);
+};
 
 example(0);
 
