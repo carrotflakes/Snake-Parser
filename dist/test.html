@@ -8,6 +8,7 @@
 
 	textarea {
 		font-family: Consolas, 'Courier New', Courier, Monaco, monospace;
+		font-size: small;
 	}
 
 	h4 {
@@ -17,6 +18,7 @@
 	#syntaxMessage, #resultMessage {
 		background-color: #FE8;
 		font-size: small;
+		width: 550px
 	}
 
 	p {
@@ -25,7 +27,6 @@
 
 	.group {
 		display:inline-block;
-		width: 600px;
 		vertical-align: top;
 	}
 
@@ -78,10 +79,10 @@ grammarEditor.$blockScrolling = Infinity;
 inputTextEditor.$blockScrolling = Infinity;
 
 grammarEditor.getSession().on('change', function() {
-	updateParserTime = new Date().getTime() + 500;
+	updateParserTime = new Date().getTime() + 1000;
 });
 inputTextEditor.getSession().on('change', function() {
-	updateInputTextTime = new Date().getTime() + 500;
+	updateInputTextTime = new Date().getTime() + 1000;
 });
 
 grammarEditor.setDisplayIndentGuides(false);
@@ -97,7 +98,7 @@ window.setInterval(function() {
 		parse();
 	} else if (updateInputTextTime < now) {
 		updateInputTextTime = Infinity;
-		
+
 		parse();
 	}
 }, 250);
@@ -176,6 +177,8 @@ function toJS() {
 function example(idx) {
 	grammarEditor.setValue(examples[idx].grammar);
 	inputTextEditor.setValue(examples[idx].inputText);
+	grammarEditor.clearSelection();
+	inputTextEditor.clearSelection();
 
 	updateParserTime = new Date().getTime();
 };

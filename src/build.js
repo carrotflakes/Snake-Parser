@@ -14,7 +14,7 @@ var buildParser = function(grammarSource) {
 	if (rules.start === undefined) {
 		return {
 			success: false,
-			error: "Undefined 'start' symbol.",
+			error: "Undefined rule 'start'.",
 		};
 	}
 

@@ -71,17 +71,11 @@ var Arraying = function(e) {
 };
 extendsExpression(Arraying, "arr");
 
-var Itemize = function(k, e) { // TODO Property
+var Property = function(k, e) {
 	this.key = k;
 	this.child = e;
 };
-extendsExpression(Itemize, "itm");
-
-var ConstItem = function(k, v) {
-	this.key = k;
-	this.value = v;
-};
-extendsExpression(ConstItem, "ci");
+extendsExpression(Property, "pr");
 
 var Tokenize = function(e) {
 	this.child = e;
@@ -123,7 +117,7 @@ var Waste = function(e) {
 extendsExpression(Waste, "wst");
 
 var RuleReference = function(r, a, rule, body) {
-	this.ruleSymbol = r;
+	this.ruleIdent = r;
 	this.arguments = a;
 	this.rule = rule;
 	this.body = body;
@@ -171,7 +165,7 @@ Repeat.prototype.extractAnonymousRule = function(arules) {
 Objectize.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
 Arraying.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
 Tokenize.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
-Itemize.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
+Property.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
 PositiveLookaheadAssertion.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
 NegativeLookaheadAssertion.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
 Modify.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
@@ -205,7 +199,7 @@ Repeat.prototype.prepare = function(rules) {
 Objectize.prototype.prepare = Repeat.prototype.prepare;
 Arraying.prototype.prepare = Repeat.prototype.prepare;
 Tokenize.prototype.prepare = Repeat.prototype.prepare;
-Itemize.prototype.prepare = Repeat.prototype.prepare;
+Property.prototype.prepare = Repeat.prototype.prepare;
 PositiveLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
 NegativeLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
 Modify.prototype.prepare = Repeat.prototype.prepare;
@@ -213,9 +207,9 @@ Guard.prototype.prepare = Repeat.prototype.prepare;
 Waste.prototype.prepare = Repeat.prototype.prepare;
 
 RuleReference.prototype.prepare = function(rules) {
-	var rule = rules[this.ruleSymbol];
+	var rule = rules[this.ruleIdent];
 	if (!rule)
-		throw new Error('Referenced identifier ' + this.ruleSymbol + ' not found.');
+		throw new Error('Referenced identifier ' + this.ruleIdent + ' not found.');
 	this.rule = rule;
 	if (rule === "argument") // これは引数の参照
 		return;
@@ -228,7 +222,7 @@ RuleReference.prototype.prepare = function(rules) {
 			this.arguments[i].prepare(rules);
 	} else {
 		if (rule.parameters)
-			throw new Error('Referenced rule ' + rule.symbol +
+			throw new Error('Referenced rule ' + rule.ident +
 											' takes ' + rule.parameters.length + ' arguments.');
 	}
 };
@@ -251,7 +245,7 @@ Repeat.prototype.expand = function(env) {
 Objectize.prototype.expand = Repeat.prototype.expand;
 Arraying.prototype.expand = Repeat.prototype.expand;
 Tokenize.prototype.expand = Repeat.prototype.expand;
-Itemize.prototype.expand = Repeat.prototype.expand;
+Property.prototype.expand = Repeat.prototype.expand;
 PositiveLookaheadAssertion.prototype.expand = Repeat.prototype.expand;
 NegativeLookaheadAssertion.prototype.expand = Repeat.prototype.expand;
 Modify.prototype.expand = Repeat.prototype.expand;
@@ -260,14 +254,14 @@ Waste.prototype.expand = Repeat.prototype.expand;
 
 RuleReference.prototype.expand = function(env) {
 	if (!this.rule) { // 多分、これは引数の参照
-		var body = env[this.ruleSymbol];
+		var body = env[this.ruleIdent];
 		if (!body)
-			throw new Error('Referenced argument ' + this.ruleSymbol + ' not found.');
+			throw new Error('Referenced argument ' + this.ruleIdent + ' not found.');
 		this.body = body;
 	} else if (this.arguments) { // これは引数付きルールの参照
-		var e = this.specialize(env);
+		var e = this.specialize(env, 1);
 		if (e instanceof RuleReference) {
-			this.ruleSymbol = e.ruleSymbol;
+			this.ruleIdent = e.ruleIdent;
 			this.arguments = e.arguments;
 			this.rule = e.rule;
 			this.body = e.body;
@@ -284,28 +278,39 @@ RuleReference.prototype.expand = function(env) {
 		reference.referenceCount += 1;
 		*/
 	 // 引数なしルールなのに引数を受け取った
-	//	throw new Error('Referenced rule ' + this.ruleSymbol + ' takes no arguments.');
+	//	throw new Error('Referenced rule ' + this.ruleIdent + ' takes no arguments.');
 };
 
 // specialize
-Expression.prototype.specialize = function(env) {
+Expression.prototype.specialize = function(env, depth) {
 	return this;
 };
 
-OrderedChoice.prototype.specialize = function(env) {
-	return new this.constructor(this.children.map(function(e) {
-		return e.specialize(env);
-	}));
+OrderedChoice.prototype.specialize = function(env, depth) {
+	var changed = false;
+	var children = [];
+	for (var i in this.children) {
+		children[i] = this.children[i].specialize(env, depth);
+		changed = changed || this.children[i] !== children[i];
+	}
+	if (!changed)
+		return this;
+	return new this.constructor(children);
 };
 
 Sequence.prototype.specialize = OrderedChoice.prototype.specialize;
 
-Repeat.prototype.specialize = function(env) {
-	return new Repeat(this.min, this.max, this.child.specialize(env));
+Repeat.prototype.specialize = function(env, depth) {
+	var child = this.child.specialize(env, depth); if (child === this.child)
+	return this;
+	return new Repeat(this.min, this.max, child);
 };
 
-Objectize.prototype.specialize = function(env) {
-	return new this.constructor(this.child.specialize(env));
+Objectize.prototype.specialize = function(env, depth) {
+	var child = this.child.specialize(env, depth);
+	if (child === this.child)
+		return this;
+	return new this.constructor(child);
 };
 
 Arraying.prototype.specialize = Objectize.prototype.specialize;
@@ -314,33 +319,42 @@ PositiveLookaheadAssertion.prototype.specialize = Objectize.prototype.specialize
 NegativeLookaheadAssertion.prototype.specialize = Objectize.prototype.specialize;
 Waste.prototype.specialize = Objectize.prototype.specialize;
 
-Itemize.prototype.specialize = function(env) {
-	return new Itemize(this.key, this.child.specialize(env));
+Property.prototype.specialize = function(env, depth) {
+	var child = this.child.specialize(env, depth);
+	if (child === this.child)
+		return this;
+	return new Property(this.key, child);
 };
 
-Modify.prototype.specialize = function(env) {
-	return new this.constructor(this.child.specialize(env), this.identifier, this.code);
+Modify.prototype.specialize = function(env, depth) {
+	var child = this.child.specialize(env, depth);
+	if (child === this.child)
+		return this;
+	return new this.constructor(child, this.identifier, this.code);
 };
 
 Guard.prototype.specialize = Modify.prototype.specialize;
 
-RuleReference.prototype.specialize = function(env) {
+RuleReference.prototype.specialize = function(env, depth) {
 	if (this.rule === "argument") { // これは引数の参照
-		var body = env[this.ruleSymbol];
+		var body = env[this.ruleIdent];
 		if (!body)
-			throw new Error('Referenced argument ' + this.ruleSymbol + ' not found.');
+			throw new Error('Referenced argument ' + this.ruleIdent + ' not found.');
 		return body;
 	} else if (this.arguments) { // これは引数付きルールの参照
+		if (depth === 32)
+			throw new Error("Parameterized rule reference nested too deep.");
+
 		// 引数チェック
 		if (!this.arguments || this.rule.parameters.length !== this.arguments.length) {
-			throw new Error('Referenced rule ' + this.ruleSymbol +
+			throw new Error('Referenced rule ' + this.ruleIdent +
 											' takes ' + rule.parameters.length + ' arguments.');
 		}
 
 		if (this.rule.recursive) { // 再帰
 			var arguments = [];
 			for (var i in this.arguments) {
-				arguments[i] = this.arguments[i].specialize(env);
+				arguments[i] = this.arguments[i].specialize(env, depth + 1);
 			}
 
 			// すでに特殊化されていないかチェック
@@ -360,7 +374,7 @@ RuleReference.prototype.specialize = function(env) {
 
 			if (!specialized) {
 				specialized = {
-					symbol: this.ruleSymbol + "$" + this.rule.specializeds.length,
+					ident: this.ruleIdent + "$" + this.rule.specializeds.length,
 					arguments: arguments,
 					body: null,
 				};
@@ -370,18 +384,18 @@ RuleReference.prototype.specialize = function(env) {
 				env1.__proto__ = env;
 				for (var i in arguments)
 					env1[this.rule.parameters[i]] = arguments[i];
-				specialized.body = this.rule.body.specialize(env1);
+				specialized.body = this.rule.body.specialize(env1, depth + 1);
 			}
 			this.specialized = specialized;
-			return new RuleReference(specialized.symbol, null, specialized, specialized.body);
+			return new RuleReference(specialized.ident, null, specialized, specialized.body);
 		} else { // 展開
 			var env1 = {};
 			env1.__proto__ = env;
 			for (var i in this.arguments) {
-				env1[this.rule.parameters[i]] = this.arguments[i].specialize(env);
+				env1[this.rule.parameters[i]] = this.arguments[i].specialize(env, depth + 1);
 			}
 
-			return this.rule.body.specialize(env1);
+			return this.rule.body.specialize(env1, depth + 1);
 		}
 	} else { // これは引数付きでないルールの参照
 		return this;
@@ -423,12 +437,8 @@ Tokenize.prototype.toString = Objectize.prototype.toString;
 PositiveLookaheadAssertion.prototype.toString = Objectize.prototype.toString;
 NegativeLookaheadAssertion.prototype.toString = Objectize.prototype.toString;
 
-Itemize.prototype.toString = function() {
+Property.prototype.toString = function() {
 	return this._name + "(" + JSON.stringify(this.key) + "," + this.child.toString() + ")";
-};
-
-ConstItem.prototype.toString = function() {
-	return this._name + "(" + JSON.stringify(this.key) + "," + JSON.stringify(this.value) + ")";
 };
 
 Literal.prototype.toString = function() {
@@ -450,12 +460,12 @@ Waste.prototype.toString = function() {
 
 RuleReference.prototype.toString = function() {
 	if (!this.parameters)
-		return this._name + "(" + JSON.stringify(this.ruleSymbol) + ")";
+		return this._name + "(" + JSON.stringify(this.ruleIdent) + ")";
 
 	var args = this.arguments.map(function(e) {
 		return e.toString();
 	}).join(",");
-	return this._name + "(" + JSON.stringify(this.ruleSymbol) + ",[" + args + "])";
+	return this._name + "(" + JSON.stringify(this.ruleIdent) + ",[" + args + "])";
 };
 
 
@@ -480,7 +490,7 @@ Repeat.prototype.traverse = function(func) {
 Objectize.prototype.traverse = Repeat.prototype.traverse;
 Arraying.prototype.traverse = Repeat.prototype.traverse;
 Tokenize.prototype.traverse = Repeat.prototype.traverse;
-Itemize.prototype.traverse = Repeat.prototype.traverse;
+Property.prototype.traverse = Repeat.prototype.traverse;
 PositiveLookaheadAssertion.prototype.traverse = Repeat.prototype.traverse;
 NegativeLookaheadAssertion.prototype.traverse = Repeat.prototype.traverse;
 Modify.prototype.traverse = Repeat.prototype.traverse;
@@ -492,25 +502,25 @@ RuleReference.prototype.traverse = function(func) {
 };
 
 // isRecursive 引数付きルールに対して
-Expression.prototype.isRecursive = function(ruleSymbol, passedRules) {
+Expression.prototype.isRecursive = function(ruleIdent, passedRules) {
 	return false;
 };
 
-OrderedChoice.prototype.isRecursive = function(ruleSymbol, passedRules) {
+OrderedChoice.prototype.isRecursive = function(ruleIdent, passedRules) {
 	for (var i in this.children)
-		if (this.children[i].isRecursive(ruleSymbol, passedRules))
+		if (this.children[i].isRecursive(ruleIdent, passedRules))
 			return true;
 	return false;
 };
 
 Sequence.prototype.isRecursive = OrderedChoice.prototype.isRecursive;
 
-Repeat.prototype.isRecursive = function(ruleSymbol, passedRules) {
-	return this.child.isRecursive(ruleSymbol, passedRules);
+Repeat.prototype.isRecursive = function(ruleIdent, passedRules) {
+	return this.child.isRecursive(ruleIdent, passedRules);
 };
 
-Objectize.prototype.isRecursive = function(ruleSymbol, passedRules) {
-	return this.child.isRecursive(ruleSymbol, passedRules);
+Objectize.prototype.isRecursive = function(ruleIdent, passedRules) {
+	return this.child.isRecursive(ruleIdent, passedRules);
 };
 
 Arraying.prototype.isRecursive = Objectize.prototype.isRecursive;
@@ -519,29 +529,29 @@ PositiveLookaheadAssertion.prototype.isRecursive = Objectize.prototype.isRecursi
 NegativeLookaheadAssertion.prototype.isRecursive = Objectize.prototype.isRecursive;
 Waste.prototype.isRecursive = Objectize.prototype.isRecursive;
 
-Itemize.prototype.isRecursive = function(ruleSymbol, passedRules) {
-	return this.child.isRecursive(ruleSymbol, passedRules);
+Property.prototype.isRecursive = function(ruleIdent, passedRules) {
+	return this.child.isRecursive(ruleIdent, passedRules);
 };
 
-Modify.prototype.isRecursive = function(ruleSymbol, passedRules) {
-	return this.child.isRecursive(ruleSymbol, passedRules);
+Modify.prototype.isRecursive = function(ruleIdent, passedRules) {
+	return this.child.isRecursive(ruleIdent, passedRules);
 };
 
 Guard.prototype.isRecursive = Modify.prototype.isRecursive;
 
-RuleReference.prototype.isRecursive = function(ruleSymbol, passedRules) {
+RuleReference.prototype.isRecursive = function(ruleIdent, passedRules) {
 	if (this.arguments) { // これは引数付きルールの参照
-		if (this.ruleSymbol === ruleSymbol)
+		if (this.ruleIdent === ruleIdent)
 			return true;
 
-		if (passedRules.indexOf(this.ruleSymbol) !== -1)
+		if (passedRules.indexOf(this.ruleIdent) !== -1)
 			return false;
 
 		for (var i in this.arguments)
-			if (this.arguments[i].isRecursive(ruleSymbol, passedRules))
+			if (this.arguments[i].isRecursive(ruleIdent, passedRules))
 				return true;
 
-		return this.rule.body.isRecursive(ruleSymbol, passedRules.concat([this.ruleSymbol]));
+		return this.rule.body.isRecursive(ruleIdent, passedRules.concat([this.ruleIdent]));
 	}
 };
 
@@ -591,7 +601,7 @@ Objectize.prototype.canLeftRecurs = function(rule, passedRules) {
 
 Arraying.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
 Tokenize.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
-Itemize.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+Property.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
 PositiveLookaheadAssertion.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
 NegativeLookaheadAssertion.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
 Modify.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
@@ -599,17 +609,17 @@ Guard.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
 Waste.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
 
 RuleReference.prototype.canLeftRecurs = function(rule, passedRules) {
-	if (rule === this.ruleSymbol)
+	if (rule === this.ruleIdent)
 		return 1;
 
-	if (passedRules.indexOf(this.ruleSymbol) !== -1)
+	if (passedRules.indexOf(this.ruleIdent) !== -1)
 		return 0; // 別ルールの左再帰を検出した
 
 	var ret = this.leftRecurs;
 	if (ret !== undefined)
 		return ret;
 
-	ret = this.body.canLeftRecurs(rule, passedRules.concat([this.ruleSymbol]));
+	ret = this.body.canLeftRecurs(rule, passedRules.concat([this.ruleIdent]));
 	if (ret === -1)
 		rule.leftRecurs = ret;
 
@@ -655,12 +665,8 @@ PositiveLookaheadAssertion.prototype.canAdvance = function() {
 
 NegativeLookaheadAssertion.prototype.canAdvance = PositiveLookaheadAssertion.prototype.canAdvance;
 
-Itemize.prototype.canAdvance = function() {
+Property.prototype.canAdvance = function() {
 	return this.child.canAdvance();
-};
-
-ConstItem.prototype.canAdvance = function() {
-	return false;
 };
 
 Literal.prototype.canAdvance = function() {
@@ -723,11 +729,7 @@ PositiveLookaheadAssertion.prototype.canProduce = function() {
 
 NegativeLookaheadAssertion.prototype.canProduce = PositiveLookaheadAssertion.prototype.canProduce;
 
-Itemize.prototype.canProduce = function() {
-	return true;
-};
-
-ConstItem.prototype.canProduce = function() {
+Property.prototype.canProduce = function() {
 	return true;
 };
 

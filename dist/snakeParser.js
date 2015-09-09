@@ -73,7 +73,7 @@ var buildParser = function(grammarSource) {
 	if (rules.start === undefined) {
 		return {
 			success: false,
-			error: "Undefined 'start' symbol.",
+			error: "Undefined rule 'start'.",
 		};
 	}
 
@@ -172,17 +172,11 @@ var Arraying = function(e) {
 };
 extendsExpression(Arraying, "arr");
 
-var Itemize = function(k, e) { // TODO Property
+var Property = function(k, e) {
 	this.key = k;
 	this.child = e;
 };
-extendsExpression(Itemize, "itm");
-
-var ConstItem = function(k, v) {
-	this.key = k;
-	this.value = v;
-};
-extendsExpression(ConstItem, "ci");
+extendsExpression(Property, "pr");
 
 var Tokenize = function(e) {
 	this.child = e;
@@ -224,7 +218,7 @@ var Waste = function(e) {
 extendsExpression(Waste, "wst");
 
 var RuleReference = function(r, a, rule, body) {
-	this.ruleSymbol = r;
+	this.ruleIdent = r;
 	this.arguments = a;
 	this.rule = rule;
 	this.body = body;
@@ -272,7 +266,7 @@ Repeat.prototype.extractAnonymousRule = function(arules) {
 Objectize.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
 Arraying.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
 Tokenize.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
-Itemize.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
+Property.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
 PositiveLookaheadAssertion.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
 NegativeLookaheadAssertion.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
 Modify.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
@@ -306,7 +300,7 @@ Repeat.prototype.prepare = function(rules) {
 Objectize.prototype.prepare = Repeat.prototype.prepare;
 Arraying.prototype.prepare = Repeat.prototype.prepare;
 Tokenize.prototype.prepare = Repeat.prototype.prepare;
-Itemize.prototype.prepare = Repeat.prototype.prepare;
+Property.prototype.prepare = Repeat.prototype.prepare;
 PositiveLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
 NegativeLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
 Modify.prototype.prepare = Repeat.prototype.prepare;
@@ -314,9 +308,9 @@ Guard.prototype.prepare = Repeat.prototype.prepare;
 Waste.prototype.prepare = Repeat.prototype.prepare;
 
 RuleReference.prototype.prepare = function(rules) {
-	var rule = rules[this.ruleSymbol];
+	var rule = rules[this.ruleIdent];
 	if (!rule)
-		throw new Error('Referenced identifier ' + this.ruleSymbol + ' not found.');
+		throw new Error('Referenced identifier ' + this.ruleIdent + ' not found.');
 	this.rule = rule;
 	if (rule === "argument") // これは引数の参照
 		return;
@@ -329,7 +323,7 @@ RuleReference.prototype.prepare = function(rules) {
 			this.arguments[i].prepare(rules);
 	} else {
 		if (rule.parameters)
-			throw new Error('Referenced rule ' + rule.symbol +
+			throw new Error('Referenced rule ' + rule.ident +
 											' takes ' + rule.parameters.length + ' arguments.');
 	}
 };
@@ -352,7 +346,7 @@ Repeat.prototype.expand = function(env) {
 Objectize.prototype.expand = Repeat.prototype.expand;
 Arraying.prototype.expand = Repeat.prototype.expand;
 Tokenize.prototype.expand = Repeat.prototype.expand;
-Itemize.prototype.expand = Repeat.prototype.expand;
+Property.prototype.expand = Repeat.prototype.expand;
 PositiveLookaheadAssertion.prototype.expand = Repeat.prototype.expand;
 NegativeLookaheadAssertion.prototype.expand = Repeat.prototype.expand;
 Modify.prototype.expand = Repeat.prototype.expand;
@@ -361,14 +355,14 @@ Waste.prototype.expand = Repeat.prototype.expand;
 
 RuleReference.prototype.expand = function(env) {
 	if (!this.rule) { // 多分、これは引数の参照
-		var body = env[this.ruleSymbol];
+		var body = env[this.ruleIdent];
 		if (!body)
-			throw new Error('Referenced argument ' + this.ruleSymbol + ' not found.');
+			throw new Error('Referenced argument ' + this.ruleIdent + ' not found.');
 		this.body = body;
 	} else if (this.arguments) { // これは引数付きルールの参照
-		var e = this.specialize(env);
+		var e = this.specialize(env, 1);
 		if (e instanceof RuleReference) {
-			this.ruleSymbol = e.ruleSymbol;
+			this.ruleIdent = e.ruleIdent;
 			this.arguments = e.arguments;
 			this.rule = e.rule;
 			this.body = e.body;
@@ -385,28 +379,39 @@ RuleReference.prototype.expand = function(env) {
 		reference.referenceCount += 1;
 		*/
 	 // 引数なしルールなのに引数を受け取った
-	//	throw new Error('Referenced rule ' + this.ruleSymbol + ' takes no arguments.');
+	//	throw new Error('Referenced rule ' + this.ruleIdent + ' takes no arguments.');
 };
 
 // specialize
-Expression.prototype.specialize = function(env) {
+Expression.prototype.specialize = function(env, depth) {
 	return this;
 };
 
-OrderedChoice.prototype.specialize = function(env) {
-	return new this.constructor(this.children.map(function(e) {
-		return e.specialize(env);
-	}));
+OrderedChoice.prototype.specialize = function(env, depth) {
+	var changed = false;
+	var children = [];
+	for (var i in this.children) {
+		children[i] = this.children[i].specialize(env, depth);
+		changed = changed || this.children[i] !== children[i];
+	}
+	if (!changed)
+		return this;
+	return new this.constructor(children);
 };
 
 Sequence.prototype.specialize = OrderedChoice.prototype.specialize;
 
-Repeat.prototype.specialize = function(env) {
-	return new Repeat(this.min, this.max, this.child.specialize(env));
+Repeat.prototype.specialize = function(env, depth) {
+	var child = this.child.specialize(env, depth); if (child === this.child)
+	return this;
+	return new Repeat(this.min, this.max, child);
 };
 
-Objectize.prototype.specialize = function(env) {
-	return new this.constructor(this.child.specialize(env));
+Objectize.prototype.specialize = function(env, depth) {
+	var child = this.child.specialize(env, depth);
+	if (child === this.child)
+		return this;
+	return new this.constructor(child);
 };
 
 Arraying.prototype.specialize = Objectize.prototype.specialize;
@@ -415,33 +420,42 @@ PositiveLookaheadAssertion.prototype.specialize = Objectize.prototype.specialize
 NegativeLookaheadAssertion.prototype.specialize = Objectize.prototype.specialize;
 Waste.prototype.specialize = Objectize.prototype.specialize;
 
-Itemize.prototype.specialize = function(env) {
-	return new Itemize(this.key, this.child.specialize(env));
+Property.prototype.specialize = function(env, depth) {
+	var child = this.child.specialize(env, depth);
+	if (child === this.child)
+		return this;
+	return new Property(this.key, child);
 };
 
-Modify.prototype.specialize = function(env) {
-	return new this.constructor(this.child.specialize(env), this.identifier, this.code);
+Modify.prototype.specialize = function(env, depth) {
+	var child = this.child.specialize(env, depth);
+	if (child === this.child)
+		return this;
+	return new this.constructor(child, this.identifier, this.code);
 };
 
 Guard.prototype.specialize = Modify.prototype.specialize;
 
-RuleReference.prototype.specialize = function(env) {
+RuleReference.prototype.specialize = function(env, depth) {
 	if (this.rule === "argument") { // これは引数の参照
-		var body = env[this.ruleSymbol];
+		var body = env[this.ruleIdent];
 		if (!body)
-			throw new Error('Referenced argument ' + this.ruleSymbol + ' not found.');
+			throw new Error('Referenced argument ' + this.ruleIdent + ' not found.');
 		return body;
 	} else if (this.arguments) { // これは引数付きルールの参照
+		if (depth === 32)
+			throw new Error("Parameterized rule reference nested too deep.");
+
 		// 引数チェック
 		if (!this.arguments || this.rule.parameters.length !== this.arguments.length) {
-			throw new Error('Referenced rule ' + this.ruleSymbol +
+			throw new Error('Referenced rule ' + this.ruleIdent +
 											' takes ' + rule.parameters.length + ' arguments.');
 		}
 
 		if (this.rule.recursive) { // 再帰
 			var arguments = [];
 			for (var i in this.arguments) {
-				arguments[i] = this.arguments[i].specialize(env);
+				arguments[i] = this.arguments[i].specialize(env, depth + 1);
 			}
 
 			// すでに特殊化されていないかチェック
@@ -461,7 +475,7 @@ RuleReference.prototype.specialize = function(env) {
 
 			if (!specialized) {
 				specialized = {
-					symbol: this.ruleSymbol + "$" + this.rule.specializeds.length,
+					ident: this.ruleIdent + "$" + this.rule.specializeds.length,
 					arguments: arguments,
 					body: null,
 				};
@@ -471,18 +485,18 @@ RuleReference.prototype.specialize = function(env) {
 				env1.__proto__ = env;
 				for (var i in arguments)
 					env1[this.rule.parameters[i]] = arguments[i];
-				specialized.body = this.rule.body.specialize(env1);
+				specialized.body = this.rule.body.specialize(env1, depth + 1);
 			}
 			this.specialized = specialized;
-			return new RuleReference(specialized.symbol, null, specialized, specialized.body);
+			return new RuleReference(specialized.ident, null, specialized, specialized.body);
 		} else { // 展開
 			var env1 = {};
 			env1.__proto__ = env;
 			for (var i in this.arguments) {
-				env1[this.rule.parameters[i]] = this.arguments[i].specialize(env);
+				env1[this.rule.parameters[i]] = this.arguments[i].specialize(env, depth + 1);
 			}
 
-			return this.rule.body.specialize(env1);
+			return this.rule.body.specialize(env1, depth + 1);
 		}
 	} else { // これは引数付きでないルールの参照
 		return this;
@@ -524,12 +538,8 @@ Tokenize.prototype.toString = Objectize.prototype.toString;
 PositiveLookaheadAssertion.prototype.toString = Objectize.prototype.toString;
 NegativeLookaheadAssertion.prototype.toString = Objectize.prototype.toString;
 
-Itemize.prototype.toString = function() {
+Property.prototype.toString = function() {
 	return this._name + "(" + JSON.stringify(this.key) + "," + this.child.toString() + ")";
-};
-
-ConstItem.prototype.toString = function() {
-	return this._name + "(" + JSON.stringify(this.key) + "," + JSON.stringify(this.value) + ")";
 };
 
 Literal.prototype.toString = function() {
@@ -551,12 +561,12 @@ Waste.prototype.toString = function() {
 
 RuleReference.prototype.toString = function() {
 	if (!this.parameters)
-		return this._name + "(" + JSON.stringify(this.ruleSymbol) + ")";
+		return this._name + "(" + JSON.stringify(this.ruleIdent) + ")";
 
 	var args = this.arguments.map(function(e) {
 		return e.toString();
 	}).join(",");
-	return this._name + "(" + JSON.stringify(this.ruleSymbol) + ",[" + args + "])";
+	return this._name + "(" + JSON.stringify(this.ruleIdent) + ",[" + args + "])";
 };
 
 
@@ -581,7 +591,7 @@ Repeat.prototype.traverse = function(func) {
 Objectize.prototype.traverse = Repeat.prototype.traverse;
 Arraying.prototype.traverse = Repeat.prototype.traverse;
 Tokenize.prototype.traverse = Repeat.prototype.traverse;
-Itemize.prototype.traverse = Repeat.prototype.traverse;
+Property.prototype.traverse = Repeat.prototype.traverse;
 PositiveLookaheadAssertion.prototype.traverse = Repeat.prototype.traverse;
 NegativeLookaheadAssertion.prototype.traverse = Repeat.prototype.traverse;
 Modify.prototype.traverse = Repeat.prototype.traverse;
@@ -593,25 +603,25 @@ RuleReference.prototype.traverse = function(func) {
 };
 
 // isRecursive 引数付きルールに対して
-Expression.prototype.isRecursive = function(ruleSymbol, passedRules) {
+Expression.prototype.isRecursive = function(ruleIdent, passedRules) {
 	return false;
 };
 
-OrderedChoice.prototype.isRecursive = function(ruleSymbol, passedRules) {
+OrderedChoice.prototype.isRecursive = function(ruleIdent, passedRules) {
 	for (var i in this.children)
-		if (this.children[i].isRecursive(ruleSymbol, passedRules))
+		if (this.children[i].isRecursive(ruleIdent, passedRules))
 			return true;
 	return false;
 };
 
 Sequence.prototype.isRecursive = OrderedChoice.prototype.isRecursive;
 
-Repeat.prototype.isRecursive = function(ruleSymbol, passedRules) {
-	return this.child.isRecursive(ruleSymbol, passedRules);
+Repeat.prototype.isRecursive = function(ruleIdent, passedRules) {
+	return this.child.isRecursive(ruleIdent, passedRules);
 };
 
-Objectize.prototype.isRecursive = function(ruleSymbol, passedRules) {
-	return this.child.isRecursive(ruleSymbol, passedRules);
+Objectize.prototype.isRecursive = function(ruleIdent, passedRules) {
+	return this.child.isRecursive(ruleIdent, passedRules);
 };
 
 Arraying.prototype.isRecursive = Objectize.prototype.isRecursive;
@@ -620,29 +630,29 @@ PositiveLookaheadAssertion.prototype.isRecursive = Objectize.prototype.isRecursi
 NegativeLookaheadAssertion.prototype.isRecursive = Objectize.prototype.isRecursive;
 Waste.prototype.isRecursive = Objectize.prototype.isRecursive;
 
-Itemize.prototype.isRecursive = function(ruleSymbol, passedRules) {
-	return this.child.isRecursive(ruleSymbol, passedRules);
+Property.prototype.isRecursive = function(ruleIdent, passedRules) {
+	return this.child.isRecursive(ruleIdent, passedRules);
 };
 
-Modify.prototype.isRecursive = function(ruleSymbol, passedRules) {
-	return this.child.isRecursive(ruleSymbol, passedRules);
+Modify.prototype.isRecursive = function(ruleIdent, passedRules) {
+	return this.child.isRecursive(ruleIdent, passedRules);
 };
 
 Guard.prototype.isRecursive = Modify.prototype.isRecursive;
 
-RuleReference.prototype.isRecursive = function(ruleSymbol, passedRules) {
+RuleReference.prototype.isRecursive = function(ruleIdent, passedRules) {
 	if (this.arguments) { // これは引数付きルールの参照
-		if (this.ruleSymbol === ruleSymbol)
+		if (this.ruleIdent === ruleIdent)
 			return true;
 
-		if (passedRules.indexOf(this.ruleSymbol) !== -1)
+		if (passedRules.indexOf(this.ruleIdent) !== -1)
 			return false;
 
 		for (var i in this.arguments)
-			if (this.arguments[i].isRecursive(ruleSymbol, passedRules))
+			if (this.arguments[i].isRecursive(ruleIdent, passedRules))
 				return true;
 
-		return this.rule.body.isRecursive(ruleSymbol, passedRules.concat([this.ruleSymbol]));
+		return this.rule.body.isRecursive(ruleIdent, passedRules.concat([this.ruleIdent]));
 	}
 };
 
@@ -692,7 +702,7 @@ Objectize.prototype.canLeftRecurs = function(rule, passedRules) {
 
 Arraying.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
 Tokenize.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
-Itemize.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+Property.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
 PositiveLookaheadAssertion.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
 NegativeLookaheadAssertion.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
 Modify.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
@@ -700,17 +710,17 @@ Guard.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
 Waste.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
 
 RuleReference.prototype.canLeftRecurs = function(rule, passedRules) {
-	if (rule === this.ruleSymbol)
+	if (rule === this.ruleIdent)
 		return 1;
 
-	if (passedRules.indexOf(this.ruleSymbol) !== -1)
+	if (passedRules.indexOf(this.ruleIdent) !== -1)
 		return 0; // 別ルールの左再帰を検出した
 
 	var ret = this.leftRecurs;
 	if (ret !== undefined)
 		return ret;
 
-	ret = this.body.canLeftRecurs(rule, passedRules.concat([this.ruleSymbol]));
+	ret = this.body.canLeftRecurs(rule, passedRules.concat([this.ruleIdent]));
 	if (ret === -1)
 		rule.leftRecurs = ret;
 
@@ -756,12 +766,8 @@ PositiveLookaheadAssertion.prototype.canAdvance = function() {
 
 NegativeLookaheadAssertion.prototype.canAdvance = PositiveLookaheadAssertion.prototype.canAdvance;
 
-Itemize.prototype.canAdvance = function() {
+Property.prototype.canAdvance = function() {
 	return this.child.canAdvance();
-};
-
-ConstItem.prototype.canAdvance = function() {
-	return false;
 };
 
 Literal.prototype.canAdvance = function() {
@@ -824,11 +830,7 @@ PositiveLookaheadAssertion.prototype.canProduce = function() {
 
 NegativeLookaheadAssertion.prototype.canProduce = PositiveLookaheadAssertion.prototype.canProduce;
 
-Itemize.prototype.canProduce = function() {
-	return true;
-};
-
-ConstItem.prototype.canProduce = function() {
+Property.prototype.canProduce = function() {
 	return true;
 };
 
@@ -868,7 +870,7 @@ var initializer = '\
 	function arrayToObject($) {\n\
 		var res = {};\n\
 		for (var i = 0, il = $.length; i < il; ++i)\n\
-			res[$[i].symbol] = $[i];\n\
+			res[$[i].ident] = $[i];\n\
 		return res;\n\
 	};\n\
 	function ensureMin($) {\n\
@@ -933,11 +935,8 @@ var obj = function(a) {
 var arr = function(a) {
 	return new expressions.arr(a);
 };
-var itm = function(a, b) {
-	return new expressions.itm(a, b);
-};
-var ci = function(a, b) {
-	return new expressions.ci(a, b);
+var pr = function(a, b) {
+	return new expressions.pr(a, b);
 };
 var tkn = function(a) {
 	return new expressions.tkn(a);
@@ -966,9 +965,9 @@ var rul = function(a, b) {
 
 var rules = {
 	BooleanLiteral: oc([seq([str("true"),ltr(true)]),seq([str("false"),ltr(false)])]),
-	CharacterClass: arr(rep(0,Infinity,obj(oc([seq([itm("type",ltr("range")),itm("start",rul("CharacterClassChar")),str("-"),itm("end",rul("CharacterClassChar"))]),seq([itm("type",ltr("single")),itm("char",rul("CharacterClassChar"))])])))),
+	CharacterClass: arr(rep(0,Infinity,obj(oc([seq([pr("type",ltr("range")),pr("start",rul("CharacterClassChar")),str("-"),pr("end",rul("CharacterClassChar"))]),seq([pr("type",ltr("single")),pr("char",rul("CharacterClassChar"))])])))),
 	CharacterClassChar: mod(tkn(oc([cc([{"type":"single","char":93},{"type":"single","char":92}],true),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])])),"characterClassChar",null),
-	ChoiceExpression: oc([seq([mod(obj(seq([ci("op","oc"),itm("a",arr(seq([rul("SequenceExpression"),rul("__"),rep(1,Infinity,seq([str("|"),rul("__"),rul("SequenceExpression")]))])))])),"expr",null),rul("__")]),seq([rul("SequenceExpression"),rul("__")]),mod(obj(ci("op","nop")),"expr",null)]),
+	ChoiceExpression: oc([seq([mod(obj(seq([pr("op",ltr("oc")),pr("a",arr(seq([rul("SequenceExpression"),rul("__"),rep(1,Infinity,seq([str("|"),rul("__"),rul("SequenceExpression")]))])))])),"expr",null),rul("__")]),seq([rul("SequenceExpression"),rul("__")]),mod(obj(pr("op",ltr("nop"))),"expr",null)]),
 	Code: rep(0,Infinity,oc([cc([{"type":"single","char":123},{"type":"single","char":125}],true),seq([str("{"),rul("Code"),str("}")])])),
 	CodeBlock: seq([str("{"),tkn(rul("Code")),str("}")]),
 	Comment: oc([seq([str("//"),rep(0,Infinity,cc([{"type":"single","char":10}],true)),oc([str("\n"),nla(ac())])]),seq([str("/*"),rep(0,Infinity,oc([cc([{"type":"single","char":42}],true),seq([str("*"),cc([{"type":"single","char":47}],true)])])),str("*/")])]),
@@ -981,29 +980,29 @@ DecimalIntegerLiteral: oc([str("0"),seq([rul("NonZeroDigit"),rep(0,Infinity,rul(
 	HexIntegerLiteral: seq([oc([str("0x"),str("0X")]),rep(1,Infinity,rul("HexDigit"))]),
 	Identifier: tkn(seq([cc([{"type":"range","start":97,"end":122},{"type":"range","start":65,"end":90},{"type":"single","char":95}],false),rep(0,Infinity,cc([{"type":"range","start":97,"end":122},{"type":"range","start":65,"end":90},{"type":"range","start":48,"end":57},{"type":"single","char":95}],false))])),
 	IdentifierOrStringLiteral: oc([rul("StringLiteral"),rul("Identifier")]),
-	LabelExpression: oc([mod(obj(seq([ci("op","ci"),itm("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":="),rul("__"),itm("b",rul("IdentifierOrStringLiteral"))])),"expr",null),mod(obj(seq([ci("op","itm"),itm("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":"),rul("__"),itm("b",rul("ModifyExpression"))])),"expr",null),rul("ModifyExpression")]),
+	LabelExpression: oc([mod(obj(seq([pr("op",ltr("ci")),pr("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":="),rul("__"),pr("b",rul("IdentifierOrStringLiteral"))])),"expr",null),mod(obj(seq([pr("op",ltr("pr")),pr("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":"),rul("__"),pr("b",rul("ModifyExpression"))])),"expr",null),rul("ModifyExpression")]),
 	LineTerminator: cc([{"type":"single","char":10},{"type":"single","char":13},{"type":"single","char":8232},{"type":"single","char":8233}],false),
-	ModifyExpression: oc([mod(obj(seq([itm("a",rul("ModifyExpression")),rul("__"),oc([seq([str("->"),rul("__"),ci("op","mod"),oc([seq([itm("b",rul("Identifier")),itm("c",ltr(null))]),seq([itm("b",ltr(null)),itm("c",rul("CodeBlock"))])])]),seq([str("-?"),rul("__"),ci("op","grd"),oc([seq([itm("b",rul("Identifier")),itm("c",ltr(null))]),seq([itm("b",ltr(null)),itm("c",rul("CodeBlock"))])])]),seq([str("-|"),ci("op","wst")])])])),"expr",null),rul("OtherExpression")]),
+	ModifyExpression: oc([mod(obj(seq([pr("a",rul("ModifyExpression")),rul("__"),oc([seq([str("->"),rul("__"),pr("op",ltr("mod")),oc([seq([pr("b",rul("Identifier")),pr("c",ltr(null))]),seq([pr("b",ltr(null)),pr("c",rul("CodeBlock"))])])]),seq([str("-?"),rul("__"),pr("op",ltr("grd")),oc([seq([pr("b",rul("Identifier")),pr("c",ltr(null))]),seq([pr("b",ltr(null)),pr("c",rul("CodeBlock"))])])]),seq([str("-|"),pr("op",ltr("wst"))])])])),"expr",null),rul("OtherExpression")]),
 	NaturalNumber: mod(tkn(oc([seq([cc([{"type":"range","start":49,"end":57}],false),rep(0,Infinity,cc([{"type":"range","start":48,"end":57}],false))]),str("0")])),"nuturalNumber",null),
 	NonZeroDigit: cc([{"type":"range","start":49,"end":57}],false),
 	NullLiteral: seq([str("null"),ltr(null)]),
 	NumericLiteral: mod(tkn(seq([rep(0,1,str("-")),oc([rul("HexIntegerLiteral"),rul("DecimalLiteral")])])),"eval",null),
-	OtherExpression: oc([seq([str("("),rul("__"),rul("ChoiceExpression"),rul("__"),str(")")]),mod(obj(oc([seq([ci("op","str"),itm("a",rul("StringLiteral"))]),seq([ci("op","cc"),str("["),itm("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),itm("a",rul("CharacterClass")),str("]")]),seq([ci("op","ltr"),str("\\"),rul("__"),itm("a",oc([rul("StringLiteral"),rul("NumericLiteral"),rul("BooleanLiteral"),rul("NullLiteral")]))]),seq([ci("op","arr"),str("@"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","obj"),str("{"),rul("__"),itm("a",rul("ChoiceExpression")),rul("__"),str("}")]),seq([ci("op","tkn"),str("`"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","pla"),str("&"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","nla"),str("!"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","rep"),str("?"),rul("__"),itm("c",rul("OtherExpression")),itm("a",ltr(0)),itm("b",ltr(1))]),seq([ci("op","rep"),str("*"),rul("__"),itm("c",rul("OtherExpression")),itm("a",ltr(0)),itm("b",mod(ltr(0),null,"return Infinity"))]),seq([ci("op","rep"),itm("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),itm("c",rul("OtherExpression")),itm("b",ltr("min"))]),seq([ci("op","rep"),itm("a",mod(rep(0,1,rul("NaturalNumber")),"ensureMin",null)),str(","),itm("b",mod(rep(0,1,rul("NaturalNumber")),"ensureMax",null)),rul("__"),str("*"),rul("__"),itm("c",rul("OtherExpression"))]),seq([ci("op","rep"),str("+"),rul("__"),itm("c",rul("OtherExpression")),itm("a",ltr(1)),itm("b",mod(ltr(0),null,"return Infinity"))]),seq([ci("op","ac"),str(".")]),seq([ci("op","pi"),str("$"),itm("a",rul("Identifier"))]),seq([ci("op","rul"),nla(rul("Rule")),itm("a",rul("Identifier")),rep(0,1,seq([rul("__"),itm("b",rul("RuleArguments"))]))])])),"expr",null)]),
+	OtherExpression: oc([seq([str("("),rul("__"),rul("ChoiceExpression"),rul("__"),str(")")]),mod(obj(oc([seq([pr("op",ltr("str")),pr("a",rul("StringLiteral"))]),seq([pr("op",ltr("cc")),str("["),pr("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),pr("a",rul("CharacterClass")),str("]")]),seq([pr("op",ltr("ltr")),str("\\"),rul("__"),pr("a",oc([rul("StringLiteral"),rul("NumericLiteral"),rul("BooleanLiteral"),rul("NullLiteral")]))]),seq([pr("op",ltr("arr")),str("@"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("obj")),str("{"),rul("__"),pr("a",rul("ChoiceExpression")),rul("__"),str("}")]),seq([pr("op",ltr("tkn")),str("`"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("pla")),str("&"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("nla")),str("!"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("?"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",ltr(1))]),seq([pr("op",ltr("rep")),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",mod(ltr(0),null,"return Infinity"))]),seq([pr("op",ltr("rep")),pr("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("b",ltr("min"))]),seq([pr("op",ltr("rep")),pr("a",mod(rep(0,1,rul("NaturalNumber")),"ensureMin",null)),str(","),pr("b",mod(rep(0,1,rul("NaturalNumber")),"ensureMax",null)),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("+"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(1)),pr("b",mod(ltr(0),null,"return Infinity"))]),seq([pr("op",ltr("ac")),str(".")]),seq([pr("op",ltr("pi")),str("$"),pr("a",rul("Identifier"))]),seq([pr("op",ltr("rul")),nla(rul("Rule")),pr("a",rul("Identifier")),rep(0,1,seq([rul("__"),pr("b",rul("RuleArguments"))]))])])),"expr",null)]),
 	RegexpLiteralRaw: seq([str("/"),rep(0,Infinity,oc([cc([{"type":"single","char":47},{"type":"single","char":92}],true),seq([str("\\"),ac()])])),str("/")]),
-	Rule: obj(seq([itm("symbol",rul("Identifier")),rul("__"),rep(0,1,seq([itm("parameters",rul("RuleParameters")),rul("__")])),rep(0,1,seq([itm("name",rul("StringLiteral")),rul("__")])),str("="),rul("__"),itm("body",rul("ChoiceExpression")),rul("__")])),
+	Rule: obj(seq([pr("ident",rul("Identifier")),rul("__"),rep(0,1,seq([pr("parameters",rul("RuleParameters")),rul("__")])),rep(0,1,seq([pr("name",rul("StringLiteral")),rul("__")])),str("="),rul("__"),pr("body",rul("ChoiceExpression")),rul("__")])),
 	RuleArguments: arr(seq([str("<"),rul("__"),rep(0,1,seq([rul("ChoiceExpression"),rul("__"),rep(0,Infinity,seq([str(","),rul("__"),rul("ChoiceExpression"),rul("__")]))])),str(">")])),
 	RuleParameters: arr(seq([str("<"),rul("__"),rep(0,1,seq([rul("Identifier"),rul("__"),rep(0,Infinity,seq([str(","),rul("__"),rul("Identifier"),rul("__")]))])),str(">")])),
-	SequenceExpression: oc([seq([mod(obj(seq([ci("op","seq"),itm("a",arr(seq([rul("LabelExpression"),rep(1,Infinity,seq([rul("__"),rul("LabelExpression")]))])))])),"expr",null),rul("__")]),seq([rul("LabelExpression"),rul("__")])]),
+	SequenceExpression: oc([seq([mod(obj(seq([pr("op",ltr("seq")),pr("a",arr(seq([rul("LabelExpression"),rep(1,Infinity,seq([rul("__"),rul("LabelExpression")]))])))])),"expr",null),rul("__")]),seq([rul("LabelExpression"),rul("__")])]),
 	SignedInteger: seq([rep(0,1,cc([{"type":"single","char":43},{"type":"single","char":45}],false)),rep(1,Infinity,rul("DecimalDigit"))]),
 	StringLiteral: mod(tkn(rul("StringLiteralRaw")),"eval",null),
 	StringLiteralRaw: oc([seq([str("'"),rep(0,Infinity,oc([seq([nla(rul("LineTerminator")),cc([{"type":"single","char":39},{"type":"single","char":92}],true)]),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])])),str("'")]),seq([str("\""),rep(0,Infinity,oc([seq([nla(rul("LineTerminator")),cc([{"type":"single","char":34},{"type":"single","char":92}],true)]),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])])),str("\"")])]),
 	__: rep(0,Infinity,oc([cc([{"type":"single","char":32},{"type":"single","char":9},{"type":"single","char":13},{"type":"single","char":10}],false),rul("Comment")])),
-	start: obj(seq([rul("__"),rep(0,1,seq([itm("initializer",rul("CodeBlock")),rul("__")])),itm("rules",mod(arr(rep(0,Infinity,rul("Rule"))),"arrayToObject",null))])),
+	start: obj(seq([rul("__"),rep(0,1,seq([pr("initializer",rul("CodeBlock")),rul("__")])),pr("rules",mod(arr(rep(0,Infinity,rul("Rule"))),"arrayToObject",null))])),
 };
 
 for (var s in rules) {
 	rules[s] = {
-		symbol: s, // TODO identifier
+		ident: s, // TODO identifier
 		body: rules[s],
 		name: null,
 		parameters: null,
@@ -1012,141 +1011,141 @@ for (var s in rules) {
 
 var rules = {
 	"start": {
-		symbol: "start",
-		body: obj(seq([rul("__"),itm("initializer",oc([seq([rul("CodeBlock"),rul("__")]),ltr("")])),itm("rules",mod(arr(rep(0,Infinity,rul("Rule"))),"arrayToObject",null))])),
+		ident: "start",
+		body: obj(seq([rul("__"),pr("initializer",oc([seq([rul("CodeBlock"),rul("__")]),ltr("")])),pr("rules",mod(arr(rep(0,Infinity,rul("Rule"))),"arrayToObject",null))])),
 	},
 	"Rule": {
-		symbol: "Rule",
-		body: obj(seq([itm("symbol",rul("Identifier")),rul("__"),rep(0,1,seq([itm("parameters",rul("RuleParameters")),rul("__")])),rep(0,1,seq([itm("name",rul("StringLiteral")),rul("__")])),str("="),rul("__"),itm("body",rul("ChoiceExpression")),rul("__")])),
+		ident: "Rule",
+		body: obj(seq([pr("ident",rul("Identifier")),rul("__"),rep(0,1,seq([pr("parameters",rul("RuleParameters")),rul("__")])),rep(0,1,seq([pr("name",rul("StringLiteral")),rul("__")])),str("="),rul("__"),pr("body",rul("ChoiceExpression")),rul("__")])),
 	},
 	"RuleParameters": {
-		symbol: "RuleParameters",
+		ident: "RuleParameters",
 		body: arr(seq([str("<"),rul("__"),rep(0,1,seq([rul("Identifier"),rul("__"),rep(0,Infinity,seq([str(","),rul("__"),rul("Identifier"),rul("__")]))])),str(">")])),
 	},
 	"ChoiceExpression": {
-		symbol: "ChoiceExpression",
-		body: oc([seq([mod(obj(seq([ci("op","oc"),itm("a",arr(seq([rul("SequenceExpression"),rul("__"),rep(1,Infinity,seq([str("|"),rul("__"),rul("SequenceExpression")]))])))])),"expr",null),rul("__")]),seq([rul("SequenceExpression"),rul("__")]),mod(obj(ci("op","nop")),"expr",null)]),
+		ident: "ChoiceExpression",
+		body: oc([seq([mod(obj(seq([pr("op",ltr("oc")),pr("a",arr(seq([rul("SequenceExpression"),rul("__"),rep(1,Infinity,seq([str("|"),rul("__"),rul("SequenceExpression")]))])))])),"expr",null),rul("__")]),seq([rul("SequenceExpression"),rul("__")]),mod(obj(pr("op",ltr("nop"))),"expr",null)]),
 	},
 	"SequenceExpression": {
-		symbol: "SequenceExpression",
-		body: oc([seq([mod(obj(seq([ci("op","seq"),itm("a",arr(seq([rul("LabelExpression"),rep(1,Infinity,seq([rul("__"),rul("LabelExpression")]))])))])),"expr",null),rul("__")]),seq([rul("LabelExpression"),rul("__")])]),
+		ident: "SequenceExpression",
+		body: oc([seq([mod(obj(seq([pr("op",ltr("seq")),pr("a",arr(seq([rul("LabelExpression"),rep(1,Infinity,seq([rul("__"),rul("LabelExpression")]))])))])),"expr",null),rul("__")]),seq([rul("LabelExpression"),rul("__")])]),
 	},
 	"LabelExpression": {
-		symbol: "LabelExpression",
-		body: oc([mod(obj(seq([ci("op","ci"),itm("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":="),rul("__"),itm("b",rul("IdentifierOrStringLiteral"))])),"expr",null),mod(obj(seq([ci("op","itm"),itm("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":"),rul("__"),itm("b",rul("ModifyExpression"))])),"expr",null),rul("ModifyExpression")]),
+		ident: "LabelExpression",
+		body: oc([mod(obj(seq([pr("op",ltr("pr")),pr("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":="),rul("__"),pr("b",mod(obj(seq([pr("op",ltr("ltr")),pr("a",rul("IdentifierOrStringLiteral"))])),"expr",null))])),"expr",null),mod(obj(seq([pr("op",ltr("pr")),pr("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":"),rul("__"),pr("b",rul("ModifyExpression"))])),"expr",null),rul("ModifyExpression")]),
 	},
 	"ModifyExpression": {
-		symbol: "ModifyExpression",
-		body: oc([mod(obj(seq([itm("a",rul("ModifyExpression")),rul("__"),oc([seq([str("->"),rul("__"),ci("op","mod"),oc([seq([itm("b",rul("Identifier")),itm("c",ltr(null))]),seq([itm("b",ltr(null)),itm("c",rul("CodeBlock"))])])]),seq([str("-?"),rul("__"),ci("op","grd"),oc([seq([itm("b",rul("Identifier")),itm("c",ltr(null))]),seq([itm("b",ltr(null)),itm("c",rul("CodeBlock"))])])]),seq([str("-|"),ci("op","wst")])])])),"expr",null),rul("OtherExpression")]),
+		ident: "ModifyExpression",
+		body: oc([mod(obj(seq([pr("a",rul("ModifyExpression")),rul("__"),oc([seq([str("->"),rul("__"),pr("op",ltr("mod")),oc([seq([pr("b",rul("Identifier")),pr("c",ltr(null))]),seq([pr("b",ltr(null)),pr("c",rul("CodeBlock"))])])]),seq([str("-?"),rul("__"),pr("op",ltr("grd")),oc([seq([pr("b",rul("Identifier")),pr("c",ltr(null))]),seq([pr("b",ltr(null)),pr("c",rul("CodeBlock"))])])]),seq([str("-|"),pr("op",ltr("wst"))])])])),"expr",null),rul("OtherExpression")]),
 	},
 	"OtherExpression": {
-		symbol: "OtherExpression",
-		body: oc([seq([str("("),rul("__"),rul("ChoiceExpression"),rul("__"),str(")")]),mod(obj(oc([seq([ci("op","str"),itm("a",rul("StringLiteral"))]),seq([ci("op","cc"),str("["),itm("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),itm("a",rul("CharacterClass")),str("]")]),seq([ci("op","ltr"),str("\\"),rul("__"),itm("a",oc([rul("StringLiteral"),rul("NumericLiteral"),rul("BooleanLiteral"),rul("NullLiteral")]))]),seq([ci("op","arr"),str("@"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","obj"),str("{"),rul("__"),itm("a",rul("ChoiceExpression")),rul("__"),str("}")]),seq([ci("op","tkn"),str("`"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","pla"),str("&"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","nla"),str("!"),rul("__"),itm("a",rul("OtherExpression"))]),seq([ci("op","rep"),str("?"),rul("__"),itm("c",rul("OtherExpression")),itm("a",ltr(0)),itm("b",ltr(1))]),seq([ci("op","rep"),str("*"),rul("__"),itm("c",rul("OtherExpression")),itm("a",ltr(0)),itm("b",mod(ltr(0),null,"return Infinity"))]),seq([ci("op","rep"),itm("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),itm("c",rul("OtherExpression")),itm("b",ltr("min"))]),seq([ci("op","rep"),itm("a",mod(rep(0,1,rul("NaturalNumber")),"ensureMin",null)),str(","),itm("b",mod(rep(0,1,rul("NaturalNumber")),"ensureMax",null)),rul("__"),str("*"),rul("__"),itm("c",rul("OtherExpression"))]),seq([ci("op","rep"),str("+"),rul("__"),itm("c",rul("OtherExpression")),itm("a",ltr(1)),itm("b",mod(ltr(0),null,"return Infinity"))]),seq([ci("op","ac"),str(".")]),seq([ci("op","pi"),str("$"),itm("a",rul("Identifier"))]),seq([ci("op","rul"),nla(rul("Rule")),itm("a",rul("Identifier")),rep(0,1,seq([rul("__"),itm("b",rul("RuleArguments"))]))])])),"expr",null)]),
+		ident: "OtherExpression",
+		body: oc([seq([str("("),rul("__"),rul("ChoiceExpression"),rul("__"),str(")")]),mod(obj(oc([seq([pr("op",ltr("str")),pr("a",rul("StringLiteral"))]),seq([pr("op",ltr("cc")),str("["),pr("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),pr("a",rul("CharacterClass")),str("]")]),seq([pr("op",ltr("ltr")),str("\\"),rul("__"),pr("a",oc([rul("StringLiteral"),rul("NumericLiteral"),rul("BooleanLiteral"),rul("NullLiteral")]))]),seq([pr("op",ltr("arr")),str("@"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("obj")),str("{"),rul("__"),pr("a",rul("ChoiceExpression")),rul("__"),str("}")]),seq([pr("op",ltr("tkn")),str("`"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("pla")),str("&"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("nla")),str("!"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("?"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",ltr(1))]),seq([pr("op",ltr("rep")),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",mod(ltr(0),null,"return Infinity"))]),seq([pr("op",ltr("rep")),pr("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("b",ltr("min"))]),seq([pr("op",ltr("rep")),pr("a",mod(rep(0,1,rul("NaturalNumber")),"ensureMin",null)),str(","),pr("b",mod(rep(0,1,rul("NaturalNumber")),"ensureMax",null)),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("+"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(1)),pr("b",mod(ltr(0),null,"return Infinity"))]),seq([pr("op",ltr("ac")),str(".")]),seq([pr("op",ltr("pi")),str("$"),pr("a",rul("Identifier"))]),seq([pr("op",ltr("rul")),nla(rul("Rule")),pr("a",rul("Identifier")),rep(0,1,seq([rul("__"),pr("b",rul("RuleArguments"))]))])])),"expr",null)]),
 	},
 	"RuleArguments": {
-		symbol: "RuleArguments",
+		ident: "RuleArguments",
 		body: arr(seq([str("<"),rul("__"),rep(0,1,seq([rul("ChoiceExpression"),rul("__"),rep(0,Infinity,seq([str(","),rul("__"),rul("ChoiceExpression"),rul("__")]))])),str(">")])),
 	},
 	"__": {
-		symbol: "__",
+		ident: "__",
 		name: "white space",
 		body: rep(0,Infinity,oc([cc([{"type":"single","char":32},{"type":"single","char":9},{"type":"single","char":13},{"type":"single","char":10}],false),rul("Comment")])),
 	},
 	"Comment": {
-		symbol: "Comment",
+		ident: "Comment",
 		body: oc([seq([str("//"),rep(0,Infinity,cc([{"type":"single","char":10}],true)),oc([str("\n"),nla(ac())])]),seq([str("/*"),rep(0,Infinity,oc([cc([{"type":"single","char":42}],true),seq([str("*"),cc([{"type":"single","char":47}],true)])])),str("*/")])]),
 	},
 	"LineTerminator": {
-		symbol: "LineTerminator",
+		ident: "LineTerminator",
 		body: cc([{"type":"single","char":10},{"type":"single","char":13},{"type":"single","char":8232},{"type":"single","char":8233}],false),
 	},
 	"Identifier": {
-		symbol: "Identifier",
+		ident: "Identifier",
 		name: "identifier",
 		body: tkn(seq([cc([{"type":"range","start":97,"end":122},{"type":"range","start":65,"end":90},{"type":"single","char":95}],false),rep(0,Infinity,cc([{"type":"range","start":97,"end":122},{"type":"range","start":65,"end":90},{"type":"range","start":48,"end":57},{"type":"single","char":95}],false))])),
 	},
 	"IdentifierOrStringLiteral": {
-		symbol: "IdentifierOrStringLiteral",
+		ident: "IdentifierOrStringLiteral",
 		body: oc([rul("StringLiteral"),rul("Identifier")]),
 	},
 	"StringLiteral": {
-		symbol: "StringLiteral",
+		ident: "StringLiteral",
 		name: "string literal",
 		body: mod(tkn(rul("StringLiteralRaw")),"eval",null),
 	},
 	"StringLiteralRaw": {
-		symbol: "StringLiteralRaw",
+		ident: "StringLiteralRaw",
 		body: oc([seq([str("'"),rep(0,Infinity,oc([seq([nla(rul("LineTerminator")),cc([{"type":"single","char":39},{"type":"single","char":92}],true)]),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])])),str("'")]),seq([str("\""),rep(0,Infinity,oc([seq([nla(rul("LineTerminator")),cc([{"type":"single","char":34},{"type":"single","char":92}],true)]),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])])),str("\"")])]),
 	},
 	"CharacterClass": {
-		symbol: "CharacterClass",
-		body: arr(rep(0,Infinity,obj(oc([seq([itm("type",ltr("range")),itm("start",rul("CharacterClassChar")),str("-"),itm("end",rul("CharacterClassChar"))]),seq([itm("type",ltr("single")),itm("char",rul("CharacterClassChar"))])])))),
+		ident: "CharacterClass",
+		body: arr(rep(0,Infinity,obj(oc([seq([pr("type",ltr("range")),pr("start",rul("CharacterClassChar")),str("-"),pr("end",rul("CharacterClassChar"))]),seq([pr("type",ltr("single")),pr("char",rul("CharacterClassChar"))])])))),
 	},
 	"CharacterClassChar": {
-		symbol: "CharacterClassChar",
+		ident: "CharacterClassChar",
 		body: mod(tkn(oc([cc([{"type":"single","char":93},{"type":"single","char":92}],true),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])])),"characterClassChar",null),
 	},
 	"CodeBlock": {
-		symbol: "CodeBlock",
+		ident: "CodeBlock",
 		name: "code block",
 		body: seq([str("{"),tkn(rul("Code")),str("}")]),
 	},
 	"Code": {
-		symbol: "Code",
+		ident: "Code",
 		body: rep(0,Infinity,oc([cc([{"type":"single","char":123},{"type":"single","char":125}],true),seq([str("{"),rul("Code"),str("}")])])),
 	},
 	"NaturalNumber": {
-		symbol: "NaturalNumber",
+		ident: "NaturalNumber",
 		name: "natural number",
 		body: mod(tkn(oc([seq([cc([{"type":"range","start":49,"end":57}],false),rep(0,Infinity,cc([{"type":"range","start":48,"end":57}],false))]),str("0")])),"nuturalNumber",null),
 	},
 	"NullLiteral": {
-		symbol: "NullLiteral",
+		ident: "NullLiteral",
 		body: seq([str("null"),ltr(null)]),
 	},
 	"BooleanLiteral": {
-		symbol: "BooleanLiteral",
+		ident: "BooleanLiteral",
 		body: oc([seq([str("true"),ltr(true)]),seq([str("false"),ltr(false)])]),
 	},
 	"NumericLiteral": {
-		symbol: "NumericLiteral",
+		ident: "NumericLiteral",
 		name: "numeric literal",
 		body: mod(tkn(seq([rep(0,1,str("-")),oc([rul("HexIntegerLiteral"),rul("DecimalLiteral")])])),"eval",null),
 	},
 	"DecimalLiteral": {
-		symbol: "DecimalLiteral",
+		ident: "DecimalLiteral",
 		body: oc([seq([rul("DecimalIntegerLiteral"),str("."),rep(0,Infinity,rul("DecimalDigit")),rep(0,1,rul("ExponentPart"))]),seq([str("."),rep(1,Infinity,rul("DecimalDigit")),rep(0,1,rul("ExponentPart"))]),seq([rul("DecimalIntegerLiteral"),rep(0,1,rul("ExponentPart"))])]),
 	},
 	"DecimalIntegerLiteral": {
-		symbol: "DecimalIntegerLiteral",
+		ident: "DecimalIntegerLiteral",
 		body: oc([str("0"),seq([rul("NonZeroDigit"),rep(0,Infinity,rul("DecimalDigit"))])]),
 	},
 	"DecimalDigit": {
-		symbol: "DecimalDigit",
+		ident: "DecimalDigit",
 		body: cc([{"type":"range","start":48,"end":57}],false),
 	},
 	"NonZeroDigit": {
-		symbol: "NonZeroDigit",
+		ident: "NonZeroDigit",
 		body: cc([{"type":"range","start":49,"end":57}],false),
 	},
 	"ExponentPart": {
-		symbol: "ExponentPart",
+		ident: "ExponentPart",
 		body: seq([rul("ExponentIndicator"),rul("SignedInteger")]),
 	},
 	"ExponentIndicator": {
-		symbol: "ExponentIndicator",
+		ident: "ExponentIndicator",
 		body: cc([{"type":"single","char":101},{"type":"single","char":69}],false),
 	},
 	"SignedInteger": {
-		symbol: "SignedInteger",
+		ident: "SignedInteger",
 		body: seq([rep(0,1,cc([{"type":"single","char":43},{"type":"single","char":45}],false)),rep(1,Infinity,rul("DecimalDigit"))]),
 	},
 	"HexIntegerLiteral": {
-		symbol: "HexIntegerLiteral",
+		ident: "HexIntegerLiteral",
 		body: seq([oc([str("0x"),str("0X")]),rep(1,Infinity,rul("HexDigit"))]),
 	},
 	"HexDigit": {
-		symbol: "HexDigit",
+		ident: "HexDigit",
 		body: cc([{"type":"range","start":48,"end":57},{"type":"range","start":97,"end":102},{"type":"range","start":65,"end":70}],false),
 	},
 };
@@ -1281,58 +1280,48 @@ expressions.seq.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	return states.join("");
 };
 
-expressions.rep.prototype.gen = function(ids, pos, objsLen, indentLevel) { // TODO min max によって特殊化
+expressions.rep.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
-	pos = newId(ids, "pos");
-	objsLen = newId(ids, "objsLen");
-	var i = newId(ids, "i");
+	if (this.min === 0 && this.max === 1) {
+		var posV, objsLenV;
+		pos = pos || (posV = newId(ids, "pos"));
+		objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
 
-	var states = [];
-	states.push(makeVarState([[pos, "$pos"], [objsLen, "$objsLen"]], indentLevel));
-	if (this.max != Infinity)
-		states.push(indent + "for (var " + i + " = 0; " + i + " < " + this.max + "; ++" + i + ") {\n");
-	else
-		states.push(indent + "for (var " + i + " = 0; ; ++" + i + ") {\n");
-	states.push(this.child.gen(ids, pos, objsLen, indentLevel + 1));
-	states.push(indent + indentStr + "if ($pos !== -1) {\n");
-	if (this.max === Infinity)
-		states.push(indent + indentStr + indentStr + "if ($pos === " + pos + ") throw new Error(\"Infinite loop detected.\");\n");
-	states.push(indent + indentStr + indentStr + pos + " = $pos;\n");
-	states.push(indent + indentStr + indentStr + objsLen + " = $objsLen;\n");
-	states.push(indent + indentStr + "} else {\n");
-	states.push(indent + indentStr + indentStr + "break;\n");
-	states.push(indent + indentStr + "}\n");
-	states.push(indent + "}\n");
-	states.push(indent + "$pos = " + pos + ";\n");
-	states.push(indent + "$objsLen = " + objsLen + ";\n");
-	states.push(indent + "if (" + i + " < " + this.min + ") $pos = -1;\n");
-	return states.join("");
-};
-/*
-var pos1, objs1, flag = false;
-flag:
-for (var i = 0; i < this.max; ++i) {
-	pos1 = pos;
-	objs1 = [];
-	// child の処理
-	if (child の結果) {
-		if (pos === pos1 && this.max === Infinity)
-			throw new InfiniteLoopError();
-		pos0 = pos1;
-		objs0.concat(objs1);
+		var states = [];
+		states.push(makeVarState([[posV, "$pos"], [objsLenV, "$objsLen"]], indentLevel));
+		states.push(this.child.gen(ids, pos, objsLen, indentLevel));
+		states.push(indent + "if ($pos === -1) {\n");
+		states.push(indent + indentStr + "$pos = " + pos + ";\n");
+		states.push(indent + indentStr + "$objsLen = " + objsLen + ";\n");
+		states.push(indent + "}\n");
+		return states.join("");
 	} else {
-		if (this.min <= i) {
-			flag = true;
-		}
-		break flag;
+		pos = newId(ids, "pos");
+		objsLen = newId(ids, "objsLen");
+		var i = newId(ids, "i");
+
+		var states = [];
+		states.push(makeVarState([[pos, "$pos"], [objsLen, "$objsLen"]], indentLevel));
+		if (this.max != Infinity)
+			states.push(indent + "for (var " + i + " = 0; " + i + " < " + this.max + "; " + i + "++) {\n");
+		else
+			states.push(indent + "for (var " + i + " = 0; ; " + i + "++) {\n");
+		states.push(this.child.gen(ids, pos, objsLen, indentLevel + 1));
+		states.push(indent + indentStr + "if ($pos !== -1) {\n");
+		if (this.max === Infinity)
+			states.push(indent + indentStr + indentStr + "if ($pos === " + pos + ") throw new Error(\"Infinite loop detected.\");\n");
+		states.push(indent + indentStr + indentStr + pos + " = $pos;\n");
+		states.push(indent + indentStr + indentStr + objsLen + " = $objsLen;\n");
+		states.push(indent + indentStr + "} else {\n");
+		states.push(indent + indentStr + indentStr + "break;\n");
+		states.push(indent + indentStr + "}\n");
+		states.push(indent + "}\n");
+		states.push(indent + "$pos = " + pos + ";\n");
+		states.push(indent + "$objsLen = " + objsLen + ";\n");
+		states.push(indent + "if (" + i + " < " + this.min + ") $pos = -1;\n");
+		return states.join("");
 	}
-}
-if (flag) {
-	pass
-} else {
-	fail
-}
-*/
+};
 
 
 expressions.str.prototype.gen = function(ids, pos, objsLen, indentLevel) {
@@ -1422,7 +1411,7 @@ expressions.obj.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	return states.join("");
 };
 
-expressions.itm.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+expressions.pr.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var objsLenV;
 	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
@@ -1433,13 +1422,6 @@ expressions.itm.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	states.push(indent + indentStr + "$objs[" + objsLen + "] = {key: " + stringify(this.key) + ", value: $objs[" + objsLen + "]};\n");
 	states.push(indent + indentStr + "$objsLen = " + objsLen + " + 1;\n");
 	states.push(indent + "}\n");
-	return states.join("");
-};
-
-expressions.ci.prototype.gen = function(ids, pos, objsLen, indentLevel) {
-	var indent = makeIndent(indentLevel);
-	var states = [];
-	states.push(indent + "$objs[$objsLen++] = {key: " + stringify(this.key) + ", value: " + stringify(this.value) + "};\n");
 	return states.join("");
 };
 
@@ -1529,13 +1511,16 @@ expressions.mod.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 
 expressions.grd.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
-	var objsLenV;
+	var posV, objsLenV;
+	pos = pos || (posV = newId(ids, "pos"));
 	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
 	var states = [];
-	states.push(makeVarState([[objsLenV, "$objsLen"]], indentLevel));
+	states.push(makeVarState([[objsLenV, "$objsLen"], [posV, "$pos"]], indentLevel));
 	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
-	states.push(indent + "if ($pos !== -1 && !" + this.identifier + "($objs[" + objsLen + "]))\n");
-	states.push(indent + indentStr + "$pos = -1;\n");
+	states.push(indent + "if ($pos !== -1 && !" + this.identifier + "($objs[" + objsLen + "])) {\n");
+	states.push(indent + indentStr + "$pos = " + pos + ";\n");
+	states.push(indent + indentStr + "$matchingFail(\"a guarded expression\");\n");
+	states.push(indent + "}\n");
 	return states.join("");
 };
 
@@ -1555,43 +1540,18 @@ expressions.wst.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 expressions.rul.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	if (this.arguments) { // 引数付きルールの呼び出し
 		return this.body.gen(ids, pos, objsLen, indentLevel);
-//		var reference = this.getReference();
-//		if (reference.inline) // TODO
-//			return this.rule.body.gen(ids, pos, objsLen, indentLevel);
 	}
 	var indent = makeIndent(indentLevel);
 	var states = [];
-	states.push(indent + "rule$" + this.ruleSymbol + "();\n");
+	states.push(indent + "rule$" + this.ruleIdent + "();\n");
 	return states.join("");
 };
 
-/*
-var key = "r$" + pos;
-$readMemo(key);
-var pos0 = pos, objs0 = objs, rpos = -1;
-undet[pos0] = (undet[pos0] || 0) + 1;
-$memo[key] = null;
-while (true) {
-	pos = pos0;
-	objs = [];
-
-	hoge();
-
-	if (!succeed || pos <= rpos)
-		break;
-	rpos = pos;
-	$writeMemo(key, objs);
-}
-objs = objs0;
-$readMemo(key);
-if (--undet[pos0] !== 0)
-	delete $memo[key];
-//*/
 var genRule = function(rule, memoRules, useUndet, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var ids = {};
 	var key = "key";
-	var keyValue = "$pos * " + memoRules.length + " + " + memoRules.indexOf(rule.symbol);
+	var keyValue = "$pos * " + memoRules.length + " + " + memoRules.indexOf(rule.ident);
 	var pos = newId(ids, "pos");
 
 	var setMatchTable = "";
@@ -1607,7 +1567,7 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		var objs = newId(ids, "objs");
 
 		var states = [];
-		states.push("function rule$" + rule.symbol + "() {\n");
+		states.push("function rule$" + rule.ident + "() {\n");
 		states.push(makeVarState([[key, keyValue]], indentLevel + 1));
 		states.push(indent + indentStr + "if ($readMemo(" + key + ")) return;\n");
 		states.push(addIndent(setMatchTable, indentLevel + 1));
@@ -1638,7 +1598,7 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		var objsLen = newId(ids, "objsLen");
 
 		var states = [];
-		states.push("function rule$" + rule.symbol + "() {\n");
+		states.push("function rule$" + rule.ident + "() {\n");
 		states.push(makeVarState([[key, keyValue], [pos, "$pos"], [objsLen, "$objsLen"]], indentLevel + 1));
 		states.push(indent + indentStr + "if ($readMemo(" + key + ")) return;\n");
 		states.push(addIndent(setMatchTable, indentLevel + 1));
@@ -1664,17 +1624,8 @@ var genjs = function(rules, initializer, exportVariable) {
 	// 無名ルールに名前をつける
 	var aruleId = 0;
 	for (var i in arules)
-		if (!arules[i].symbol)
-			arules[i].symbol = "anonymous" + aruleId++;
-
-	/*
-	var rootEnv = {};
-	for (var s in rules) {
-		rootEnv[s] = {
-			rule: rules[s],
-			env: rootEnv,
-		};
-	}*/
+		if (!arules[i].ident)
+			arules[i].ident = "anonymous" + aruleId++;
 
 	for (var s in rules) {
 		if (rules[s].parameters) { // 引数付きルール
@@ -1707,12 +1658,12 @@ var genjs = function(rules, initializer, exportVariable) {
 		if (rules[s].recursive)
 			[].push.apply(newRules, rules[s].specializeds);
 	for (var i in newRules)
-		rules[newRules[i].symbol] = newRules[i];
+		rules[newRules[i].ident] = newRules[i];
 
 	var useUndet = false;
 	for (var s in rules) {
 		if (!rules[s].parameters) { // 引数なしルール
-			var b = rules[s].body.canLeftRecurs(rules[s].symbol, []) === 1;
+			var b = rules[s].body.canLeftRecurs(rules[s].ident, []) === 1;
 			rules[s].canLeftRecurs = b;
 			useUndet = useUndet || b;
 		}
@@ -1761,7 +1712,7 @@ var $failureObj = {};\n\
 				if (!expr.identifier) {
 					expr.identifier = "mod$" + modifierId++;
 					modifiers[expr.identifier] = expr.code;
-					states.push(makeIndent(2) + "function " + expr.identifier + "($) {\n" + expr.code + "\n" + indentStr + indentStr + "};" + "\n\n");
+					states.push(makeIndent(2) + "function " + expr.identifier + "($) {" + expr.code + "};" + "\n\n");
 				}
 			}
 		});
@@ -1828,6 +1779,8 @@ var $failureObj = {};\n\
 		$matchingFail("end of input");\n\
 	}\n\
 	if (!$ret) {\n\
+		if ($failMatchs.length === 0)\n\
+			$failMatchs.push("something");\n\
 		var $line = ($input.slice(0, $failPos).match(/\\n/g) || []).length;\n\
 		var $column = $failPos - $input.lastIndexOf("\\n", $failPos - 1) - 1;\n\
 		$ret = {success: false, error: "Line " + ($line + 1) + ", column " + $column + ": Expected " + $joinByOr($failMatchs) + " but " + (JSON.stringify($input[$failPos]) || "end of input") + " found."};\n\
@@ -1847,7 +1800,7 @@ function $joinByOr(strs) {
 	return strs.slice(0, strs.length - 1).join(", ") + " or " + strs[strs.length - 1];
 };
 
-var sign = "// Generated by Snake Parser 0.2\n";
+var sign = "// Generated by Snake Parser 0.2.0\n";
 
 module.exports = genjs;
 
