@@ -10,8 +10,8 @@
     }
     function rule(rule) {
         var lines = [];
-        lines.push("\t" + JSON.stringify(rule.symbol) + ": {");
-        lines.push("\t\tsymbol: " + JSON.stringify(rule.symbol) + ",");
+        lines.push("\t" + JSON.stringify(rule.ident) + ": {");
+        lines.push("\t\tident: " + JSON.stringify(rule.ident) + ",");
         if (rule.parameters)
             lines.push("\t\tparameters: " + JSON.stringify(rule.parameters) + ",");
         if (rule.name)
@@ -23,7 +23,7 @@
     function arrayToObject($) {
         var res = {};
         for (var i = 0, il = $.length; i < il; ++i)
-            res[$[i].symbol] = $[i];
+            res[$[i].ident] = $[i];
         return res;
     }
     function ensureMin($) {
@@ -59,9 +59,7 @@
         case "oc":
         case "seq":
             return $.op + "([" + $.a + "])";
-        case "ci":
-            return $.op + "(" + JSON.stringify($.a) + "," + JSON.stringify($.b) + ")";
-        case "itm":
+        case "pr":
             return $.op + "(" + JSON.stringify($.a) + "," + $.b + ")";
         case "mod":
         case "grd":
@@ -99,7 +97,7 @@ start
 
 Rule
     =   {
-            symbol:Identifier __
+            ident:Identifier __
             ?(parameters:RuleParameters __)
             ?(name:StringLiteral __)
             '=' __
@@ -126,8 +124,13 @@ SequenceExpression
     | LabelExpression __
 
 LabelExpression
-    = {op:=ci    a:IdentifierOrStringLiteral __ ':=' __ b:IdentifierOrStringLiteral} -> expr
-    | {op:=itm a:IdentifierOrStringLiteral __ ':'    __ b:ModifyExpression} -> expr
+    = {
+        op:=pr
+        a:IdentifierOrStringLiteral __
+        ':=' __
+        b:{ op:=ltr a:IdentifierOrStringLiteral } -> expr
+      } -> expr
+    | {op:=pr a:IdentifierOrStringLiteral __ ':'  __ b:ModifyExpression} -> expr
     | ModifyExpression
 
 ModifyExpression

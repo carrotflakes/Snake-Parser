@@ -1,3 +1,77 @@
+/*
+ * JavaScript Grammar
+ * ==================
+ *
+ * Based on grammar from ECMA-262, 5.1 Edition [1]. Generated parser builds a
+ * syntax tree compatible with Mozilla SpiderMonkey Parser API [2]. Properties
+ * and node types reflecting features not present in ECMA-262 are not included.
+ *
+ * Limitations:
+ *
+ *   * Non-BMP characters are completely ignored to avoid surrogate pair
+ *     handling.
+ *
+ *   * One can create identifiers containing illegal characters using Unicode
+ *     escape sequences. For example, "abcd\u0020efgh" is not a valid
+ *     identifier, but it is accepted by the parser.
+ *
+ *   * Strict mode is not recognized. This means that within strict mode code,
+ *     "implements", "interface", "let", "package", "private", "protected",
+ *     "public", "static" and "yield" can be used as names. Many other
+ *     restrictions and exceptions from Annex C are also not applied.
+ *
+ * All the limitations could be resolved, but the costs would likely outweigh
+ * the benefits.
+ *
+ * Many thanks to inimino [3] for his grammar [4] which helped me to solve some
+ * problems (such as automatic semicolon insertion) and also served to double
+ * check that I converted the original grammar correctly.
+ *
+ * [1] http://www.ecma-international.org/publications/standards/Ecma-262.htm
+ * [2] https://developer.mozilla.org/en-US/docs/SpiderMonkey/Parser_API
+ * [3] http://inimino.org/~inimino/blog/
+ * [4] http://boshi.inimino.org/3box/asof/1270029991384/PEG/ECMAScript_unified.peg
+ */
+
+{
+  var TYPES_TO_PROPERTY_NAMES = {
+    CallExpression:   "callee",
+    MemberExpression: "object",
+  };
+
+  function buildTree(first, rest, builder) {
+    var result = first, i;
+
+    for (i = 0; i < rest.length; i++) {
+      result = builder(result, rest[i]);
+    }
+
+    return result;
+  }
+
+  function buildBinaryExpression(first, rest) {
+    return buildTree(first, rest, function(result, element) {
+      return {
+        type:     "BinaryExpression",
+        operator: element.operator,
+        left:     result,
+        right:    element.right
+      };
+    });
+  }
+
+  function buildLogicalExpression(first, rest) {
+    return buildTree(first, rest, function(result, element) {
+      return {
+        type:     "LogicalExpression",
+        operator: element[1],
+        left:     result,
+        right:    element[3]
+      };
+    });
+  }
+}
+
 start
   = __ Program __
 
@@ -6,7 +80,7 @@ start
 SourceCharacter
   = .
 
-WhiteSpace
+WhiteSpace "whitespace"
   = "\t"
   | "\v"
   | "\f"
@@ -18,14 +92,14 @@ WhiteSpace
 LineTerminator
   = [\n\r\u2028\u2029]
 
-LineTerminatorSequence
+LineTerminatorSequence "end of line"
   = "\n"
   | "\r\n"
   | "\r"
   | "\u2028"
   | "\u2029"
 
-Comment
+Comment "comment"
   = MultiLineComment
   | SingleLineComment
 
@@ -41,10 +115,10 @@ SingleLineComment
 Identifier
   = !ReservedWord IdentifierName
 
-IdentifierName
+IdentifierName "identifier"
   = {
-      type:=Identifier
-      name:@(IdentifierStart *IdentifierPart) -> {return $.join("");}
+      name: @(IdentifierStart *IdentifierPart) -> { return $.join(""); }
+      type:= Identifier
     }
 
 IdentifierStart
@@ -130,29 +204,28 @@ Literal
   | RegularExpressionLiteral
 
 NullLiteral
-  = NullToken { type:=Literal value: \null }
+  = NullToken { type:= Literal value: \null }
 
 BooleanLiteral
-  = TrueToken  { type:=Literal value: \true  }
-  | FalseToken { type:=Literal value: \false }
+  = TrueToken  { type:= Literal value: \true  }
+  | FalseToken { type:= Literal value: \false }
 
 /*
  * The "!(IdentifierStart / DecimalDigit)" predicate is not part of the official
  * grammar, it comes from text in section 7.8.3.
  */
-NumericLiteral
+NumericLiteral "number"
   = HexIntegerLiteral !(IdentifierStart | DecimalDigit)
   | DecimalLiteral !(IdentifierStart | DecimalDigit)
 
 DecimalLiteral
   = {
-      type:=Literal
-      value:`(
+      value: `(
           DecimalIntegerLiteral "." *DecimalDigit ?ExponentPart
         | "." +DecimalDigit ?ExponentPart
-        | DecimalIntegerLiteral ?ExponentPart) -> {
-        return parseFloat($);
-      }
+        | DecimalIntegerLiteral ?ExponentPart
+        ) -> { return parseFloat($) }
+      type:= Literal
     }
 
 DecimalIntegerLiteral
@@ -169,27 +242,28 @@ ExponentPart
   = ExponentIndicator SignedInteger
 
 ExponentIndicator
-  = "eE"
+  = [eE]
 
 SignedInteger
   = ?[+-] +DecimalDigit
 
 HexIntegerLiteral
   = {
-      type:=Literal
-      "0" [xX]
-      value:`+HexDigit -> { return parseInt($, 16); }
+      ("0x" | "0X")
+      value: `+HexDigit -> { return parseInt($, 16) }
+      type:= Literal
     }
 
 HexDigit
   = [0-9a-fA-F]
 
-StringLiteral
+StringLiteral "string"
   = {
-      type:=Literal
-      value:@(
-          '"' *DoubleStringCharacter '"'
-        | "'" *SingleStringCharacter "'") -> { return $.join(""); }
+      value: (
+        '"' @*DoubleStringCharacter '"'
+      | "'" @*SingleStringCharacter "'"
+      ) -> { return $.join(""); }
+      type:= Literal
     }
 
 DoubleStringCharacter
@@ -207,7 +281,7 @@ LineContinuation
 
 EscapeSequence
   = CharacterEscapeSequence
-  | "0" !DecimalDigit \"\u0000"
+  | "0" !DecimalDigit \"\0"
   | HexEscapeSequence
   | UnicodeEscapeSequence
 
@@ -216,15 +290,15 @@ CharacterEscapeSequence
   | NonEscapeCharacter
 
 SingleEscapeCharacter
-  = `"'"
-  | `'"'
-  | `"\\"
+  = "'"
+  | '"'
+  | "\\"
   | "b"  \"\b"
   | "f"  \"\f"
   | "n"  \"\n"
   | "r"  \"\r"
   | "t"  \"\t"
-  | "v"  \"\x0B"  // IE does not recognize "\v".
+  | "v"  \"\x0B"   // IE does not recognize "\v".
 
 NonEscapeCharacter
   = !(EscapeCharacter | LineTerminator) `SourceCharacter
@@ -236,21 +310,21 @@ EscapeCharacter
   | "u"
 
 HexEscapeSequence
-  = "x" `2*HexDigit -> {
+  = "x"
+    `(HexDigit HexDigit) -> {
       return String.fromCharCode(parseInt($, 16));
     }
 
 UnicodeEscapeSequence
-  = "u" `4*HexDigit -> {
+  = "u"
+    `(HexDigit HexDigit HexDigit HexDigit) -> {
       return String.fromCharCode(parseInt($, 16));
     }
 
-RegularExpressionLiteral
+RegularExpressionLiteral "regular expression"
   = {
-      "/"
-      pattern:`RegularExpressionBody
-      "/"
-      flags:`RegularExpressionFlags
+      "/" pattern: `RegularExpressionBody "/"
+      flags: `RegularExpressionFlags
     } -> {
       var value;
 
@@ -417,7 +491,7 @@ EOF
 /* ----- A.3 Expressions ----- */
 
 PrimaryExpression
-  = ThisToken { type:=ThisExpression }
+  = ThisToken { type:= ThisExpression }
   | Identifier
   | Literal
   | ArrayLiteral
@@ -426,64 +500,63 @@ PrimaryExpression
 
 ArrayLiteral
   = {
-      type:=ArrayExpression
-      "[" __ @?Elision __ "]"
-    }
-  | {
-      type:=ArrayExpression
-      "[" __ @ElementList __ "]"
-    }
-  | {
-      type:=ArrayExpression
-      "[" __ @(ElementList __ "," __ ?(Elision __)) "]"
+      elements: @(
+        "[" __ ?(Elision __) "]"
+      | "[" __ ElementList __ "]"
+      | "[" __ ElementList __ "," __ ?(Elision __) "]"
+      )
+      type:= ArrayExpression
     }
 
 ElementList
-  = @(
-      (
-        ?(Elision __) AssignmentExpression
-      )
-      *(
-        __ "," __ ?(Elision __) AssignmentExpression
-      )
-    )
+  = ?(Elision __) AssignmentExpression
+    *(__ "," __ ?(Elision __) AssignmentExpression)
 
 Elision
   = "," \null *(__ "," \null)
 
 ObjectLiteral
-  = "{" __ "}" { type:=ObjectExpression properties:@() }
-  | "{" __ { type:=ObjectExpression properties:@PropertyNameAndValueList } __ "}"
-  | "{" __ { type:=ObjectExpression properties:@PropertyNameAndValueList } __ "," __ "}"
+  = {
+      properties: (
+        "{" __ "}" @()
+      | "{" __ PropertyNameAndValueList __ "}"
+      | "{" __ PropertyNameAndValueList __ "," __ "}"
+      )
+      type:= ObjectExpression
+    }
 
 PropertyNameAndValueList
-  = PropertyAssignment *(__ "," __ PropertyAssignment)
+  = @(PropertyAssignment *(__ "," __ PropertyAssignment))
 
 PropertyAssignment
   = {
-      kind:=init
-      key:PropertyName __ ":" __ value:AssignmentExpression
+      key: PropertyName
+      __ ":" __
+      value: AssignmentExpression
+      kind:= init
     }
   | {
-      kind:=get
-      GetToken __ key:PropertyName __
-      "(" __ ")" __
+      GetToken __
+      key: PropertyName __
       value: {
-        type:=  FunctionExpression
-        id:     \null
-        params: @()
-        "{" __ body:FunctionBody __ "}"
-      }
-    }
-  | {
-      kind:=set
-      SetToken __ key:PropertyName __
-      value: {
+        "(" __ ")" __
+        "{" __ body: FunctionBody __ "}"
         type:= FunctionExpression
         id:    \null
-        "(" __ params:@PropertySetParameterList __ ")" __
-        "{" __ body:FunctionBody __ "}"
+        params: @()
       }
+      kind:= get
+    }
+  | {
+      SetToken __
+      key:PropertyName __
+      value: {
+        "(" __ params:PropertySetParameterList __ ")" __
+        "{" __ body:FunctionBody __ "}"
+        type:= FunctionExpression
+        id:    \null
+      }
+      kind:= set
     }
 
 PropertyName
@@ -496,61 +569,80 @@ PropertySetParameterList
 
 MemberExpression
   = {
-      type:=MemberExpression
-      object:MemberExpression
-      (
-        __ "[" __ property:Expression __ "]"
-        computed: \true
-      | __ "." __ property:IdentifierName
-        computed: \false
+      first:(
+        PrimaryExpression
+      | FunctionExpression
+      | {
+          NewToken __
+          callee: MemberExpression __
+          arguments: Arguments
+          type:= NewExpression
+        }
       )
-    }
-  | {
-      type:=MemberExpression
-      object:(
-          PrimaryExpression
-        | FunctionExpression
-        | { type:=NewExpression NewToken __ callee:MemberExpression __ arguments:Arguments }
-        )
+      rest:@*(
+        {
+          __ "[" __ property: Expression __ "]"
+          computed: \true
+        }
+      | {
+          __ "." __
+          property: IdentifierName
+          computed: \false
+        }
+      )
+    } -> {
+      return buildTree($.first, $.rest, function(result, element) {
+        return {
+          type:     "MemberExpression",
+          object:   result,
+          property: element.property,
+          computed: element.computed
+        };
+      });
     }
 
 NewExpression
   = MemberExpression
   | {
-      type:=NewExpression
-      NewToken __ callee:NewExpression
-      arguments:@()
+      NewToken __
+      callee: NewExpression
+      type:= NewExpression
+      arguments: @()
     }
 
 CallExpression
-  = (
+  = {
+      first:{
+        callee: MemberExpression __
+        arguments: Arguments
+        type:= CallExpression
+      }
+      rest:@*(
         {
-          callee:CallExpression
-          __
-          type:=CallExpression
-          arguments:Arguments
+          __ arguments: Arguments
+          type:= CallExpression
         }
       | {
-          object:CallExpression
-          __
-          type:=MemberExpression
-          "[" __ property:Expression __ "]"
-          computed:\true
+          __ "[" __ property: Expression __ "]"
+          type:= MemberExpression
+          computed: \true
         }
       | {
-          object:CallExpression
-          type:=MemberExpression
-          __ "." __ property:IdentifierName
-          computed:\false
+          __ "." __ property: IdentifierName
+          type:= MemberExpression
+          computed: \false
         }
-    )
-  | {
-      type:=CallExpression
-      callee:MemberExpression __ arguments:Arguments
+      )
+    } -> {
+      return buildTree($.first, $.rest, function(result, element) {
+        element[TYPES_TO_PROPERTY_NAMES[element.type]] = result;
+
+        return element;
+      });
     }
 
 Arguments
-  = "(" __ @?(ArgumentList __) ")"
+  = "(" __ (ArgumentList __ | @()) ")"
 
 ArgumentList
   = @(AssignmentExpression *(__ "," __ AssignmentExpression))
@@ -561,9 +653,10 @@ LeftHandSideExpression
 
 PostfixExpression
   = {
-      type:=UpdateExpression
-      argument:LeftHandSideExpression _ operator:PostfixOperator
-      prefix:\false
+      argument: LeftHandSideExpression _
+      operator: PostfixOperator
+      type:= UpdateExpression
+      prefix: \false
     }
   | LeftHandSideExpression
 
@@ -574,13 +667,15 @@ PostfixOperator
 UnaryExpression
   = PostfixExpression
   | {
-      operator:UnaryOperator __ argument:UnaryExpression
-      prefix:\true
-    } -> { $.type = ($.operator === "++" || $.operator === "--")
-            ? "UpdateExpression"
-            : "UnaryExpression";
-          return $;
-        }
+      operator: UnaryOperator __
+      argument: UnaryExpression
+      prefix: \true
+    } -> {
+      $.type = ($.operator === "++" || $.operator === "--")
+        ? "UpdateExpression"
+        : "UnaryExpression";
+      return $;
+    }
 
 UnaryOperator
   = `DeleteToken
@@ -594,15 +689,10 @@ UnaryOperator
   | `"!"
 
 MultiplicativeExpression
-   = {
-       type:=BinaryExpression
-       left:MultiplicativeExpression
-       __
-       operator:MultiplicativeOperator
-       __
-       right:UnaryExpression
-     }
-   | UnaryExpression
+  = {
+      first:UnaryExpression
+      rest:@*{__ operator:MultiplicativeOperator __ right:UnaryExpression}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 MultiplicativeOperator
   = `("*" !"=")
@@ -611,14 +701,9 @@ MultiplicativeOperator
 
 AdditiveExpression
   = {
-      type:=BinaryExpression
-      left:AdditiveExpression
-      __
-      operator:AdditiveOperator
-      __
-      right:MultiplicativeExpression
-    }
-  | MultiplicativeExpression
+      first:MultiplicativeExpression
+      rest:@*{__ operator:AdditiveOperator __ right:MultiplicativeExpression}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 AdditiveOperator
   = `("+" ![+=])
@@ -626,14 +711,9 @@ AdditiveOperator
 
 ShiftExpression
   = {
-      type:=BinaryExpression
-      left:ShiftExpression
-      __
-      operator:ShiftOperator
-      __
-      right:AdditiveExpression
-    }
-  | AdditiveExpression
+      first:AdditiveExpression
+      rest:@*{__ operator:ShiftOperator __ right:AdditiveExpression}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 ShiftOperator
   = `("<<"  !"=")
@@ -642,14 +722,9 @@ ShiftOperator
 
 RelationalExpression
   = {
-      type:=BinaryExpression
-      left:RelationalExpression
-      __
-      operator:RelationalOperator
-      __
-      right:ShiftExpression
-    }
-  | ShiftExpression
+      first:ShiftExpression
+      rest:@*{__ operator:RelationalOperator __ right:ShiftExpression}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 RelationalOperator
   = `"<="
@@ -661,14 +736,9 @@ RelationalOperator
 
 RelationalExpressionNoIn
   = {
-      type:=BinaryExpression
-      left:RelationalExpressionNoIn
-      __
-      operator:RelationalOperatorNoIn
-      __
-      right:ShiftExpression
-    }
-  | ShiftExpression
+      first:ShiftExpression
+      rest:@*{__ operator:RelationalOperatorNoIn __ right:ShiftExpression}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 RelationalOperatorNoIn
   = `"<="
@@ -679,25 +749,15 @@ RelationalOperatorNoIn
 
 EqualityExpression
   = {
-      type:=BinaryExpression
-      left:EqualityExpression
-      __
-      operator:EqualityOperator
-      __
-      right:RelationalExpression
-    }
-  | RelationalExpression
+      first:RelationalExpression
+      rest:@*{__ operator:EqualityOperator __ right:RelationalExpression}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 EqualityExpressionNoIn
   = {
-      type:=BinaryExpression
-      left:EqualityExpressionNoIn
-      __
-      operator:EqualityOperator
-      __
-      right:RelationalExpressionNoIn
-    }
-  | RelationalExpressionNoIn
+      first:RelationalExpressionNoIn
+      rest:@*{__ operator:EqualityOperator __ right:RelationalExpressionNoIn}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 EqualityOperator
   = `"==="
@@ -707,176 +767,130 @@ EqualityOperator
 
 BitwiseANDExpression
   = {
-      type:=BinaryExpression
-      left:BitwiseANDExpression
-      __
-      operator:BitwiseANDOperator
-      __
-      right:EqualityExpression
-    }
-  | EqualityExpression
+      first:EqualityExpression
+      rest:@*{__ operator:BitwiseANDOperator __ right:EqualityExpression}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 BitwiseANDExpressionNoIn
   = {
-      type:=BinaryExpression
-      left:BitwiseANDExpressionNoIn
-      __
-      operator:BitwiseANDOperator
-      __
-      right:EqualityExpressionNoIn
-    }
-  | EqualityExpressionNoIn
+      first:EqualityExpressionNoIn
+      rest:@*{__ operator:BitwiseANDOperator __ right:EqualityExpressionNoIn}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 BitwiseANDOperator
   = `("&" ![&=])
 
 BitwiseXORExpression
   = {
-      type:=BinaryExpression
-      left:BitwiseXORExpression
-      __
-      operator:BitwiseXOROperator
-      __
-      right:BitwiseANDExpression
-    }
-  | BitwiseANDExpression
+      first:BitwiseANDExpression
+      rest:@*{__ operator:BitwiseXOROperator __ right:BitwiseANDExpression}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 BitwiseXORExpressionNoIn
   = {
-      type:=BinaryExpression
-      left:BitwiseXORExpressionNoIn
-      __
-      operator:BitwiseXOROperator
-      __
-      right:BitwiseANDExpressionNoIn
-    }
-  | BitwiseANDExpressionNoIn
+      first:BitwiseANDExpressionNoIn
+      rest:@*{__ operator:BitwiseXOROperator __ right:BitwiseANDExpressionNoIn}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 BitwiseXOROperator
   = `("^" !"=")
 
 BitwiseORExpression
   = {
-      type:=BinaryExpression
-      left:BitwiseORExpression
-      __
-      operator:BitwiseOROperator
-      __
-      right:BitwiseXORExpression
-    }
-  | BitwiseXORExpression
+      first:BitwiseXORExpression
+      rest:@*{__ operator:BitwiseOROperator __ right:BitwiseXORExpression}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 BitwiseORExpressionNoIn
   = {
-      type:=BinaryExpression
-      left:BitwiseORExpressionNoIn
-      __
-      operator:BitwiseOROperator
-      __
-      right:BitwiseXORExpressionNoIn
-    }
-  | BitwiseXORExpressionNoIn
+      first:BitwiseXORExpressionNoIn
+      rest:@*{__ operator:BitwiseOROperator __ right:BitwiseXORExpressionNoIn}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 BitwiseOROperator
   = `("|" ![|=])
 
 LogicalANDExpression
   = {
-      type:=BinaryExpression
-      left:LogicalANDExpression
-      __
-      operator:LogicalANDOperator
-      __
-      right:BitwiseORExpression
-    }
-  | BitwiseORExpression
+      first:BitwiseORExpression
+      rest:@*{__ operator:LogicalANDOperator __ right:BitwiseORExpression}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 LogicalANDExpressionNoIn
   = {
-      type:=BinaryExpression
-      left:LogicalANDExpressionNoIn
-      __
-      operator:LogicalANDOperator
-      __
-      right:BitwiseORExpressionNoIn
-    }
-  | BitwiseORExpressionNoIn
+      first:BitwiseORExpressionNoIn
+      rest:@*{__ operator:LogicalANDOperator __ right:BitwiseORExpressionNoIn}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 LogicalANDOperator
   = `"&&"
 
 LogicalORExpression
   = {
-      type:=BinaryExpression
-      left:LogicalORExpression
-      __
-      operator:LogicalOROperator
-      __
-      right:LogicalANDExpression
-    }
-  | LogicalANDExpression
+      first:LogicalANDExpression
+      rest:@*{__ operator:LogicalOROperator __ right:LogicalANDExpression}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 LogicalORExpressionNoIn
   = {
-      type:=BinaryExpression
-      left:LogicalORExpressionNoIn
-      __
-      operator:LogicalOROperator
-      __
-      right:LogicalANDExpressionNoIn
-    }
-  | LogicalANDExpressionNoIn
+      first:LogicalANDExpressionNoIn
+      rest:@*{__ operator:LogicalOROperator __ right:LogicalANDExpressionNoIn}
+    } -> { return buildBinaryExpression($.first, $.rest); }
 
 LogicalOROperator
   = `"||"
 
 ConditionalExpression
   = {
-      type:=ConditionalExpression
-      test:LogicalORExpression __
-      "?" __ consequent:AssignmentExpression __
-      ":" __ alternate:AssignmentExpression
+      test: LogicalORExpression __
+      "?" __
+      consequent: AssignmentExpression __
+      ":" __
+      alternate: AssignmentExpression
+      type:= ConditionalExpression
     }
   | LogicalORExpression
 
 ConditionalExpressionNoIn
   = {
-      type:=ConditionalExpression
-      test:LogicalORExpressionNoIn __
-      "?" __ consequent:AssignmentExpression __
-      ":" __ alternate:AssignmentExpressionNoIn
+      test: LogicalORExpressionNoIn __
+      "?" __
+      consequent: AssignmentExpression __
+      ":" __
+      alternate: AssignmentExpressionNoIn
+      type:= ConditionalExpression
     }
   | LogicalORExpressionNoIn
 
 AssignmentExpression
   = {
-      type:=AssignmentExpression
-      left:LeftHandSideExpression __
+      left: LeftHandSideExpression __
       "=" !"=" __
-      operator:\"="
-      right:AssignmentExpression
+      right: AssignmentExpression
+      type:= AssignmentExpression
+      operator: \"="
     }
   | {
-      type:=AssignmentExpression
-      left:LeftHandSideExpression __
-      operator:AssignmentOperator __
-      right:AssignmentExpression
+      left: LeftHandSideExpression __
+      operator: AssignmentOperator __
+      right: AssignmentExpression
+      type:= AssignmentExpression
     }
   | ConditionalExpression
 
 AssignmentExpressionNoIn
   = {
-      type:=AssignmentExpression
-      left:LeftHandSideExpression __
+      left: LeftHandSideExpression __
       "=" !"=" __
-      operator:\"="
-      right:AssignmentExpressionNoIn
+      right: AssignmentExpressionNoIn
+      type:= AssignmentExpression
+      operator: \"="
     }
   | {
-      type:=AssignmentExpression
-      left:LeftHandSideExpression __
-      operator:AssignmentOperator __
-      right:AssignmentExpressionNoIn
+      left: LeftHandSideExpression __
+      operator: AssignmentOperator __
+      right: AssignmentExpressionNoIn
+      type:= AssignmentExpression
     }
   | ConditionalExpressionNoIn
 
@@ -895,17 +909,19 @@ AssignmentOperator
 
 Expression
   = {
-      type:=SequenceExpression
-      expressions:@(AssignmentExpression +(__ "," __ AssignmentExpression))
+      expressions: @(AssignmentExpression *(__ "," __ AssignmentExpression))
+      type:="SequenceExpression"
+    } -> {
+      return $.expressions.length === 1 ? $.expressions[0] : $;
     }
-  | AssignmentExpression
 
 ExpressionNoIn
   = {
-      type:=SequenceExpression
-      expressions:@(AssignmentExpressionNoIn +(__ "," __ AssignmentExpressionNoIn))
+      expressions: @(AssignmentExpressionNoIn *(__ "," __ AssignmentExpressionNoIn))
+      type:="SequenceExpression"
+    } -> {
+      return $.expressions.length === 1 ? $.expressions[0] : $;
     }
-  | AssignmentExpressionNoIn
 
 /* ----- A.4 Statements ----- */
 
@@ -927,20 +943,18 @@ Statement
   | DebuggerStatement
 
 Block
-  = "{" __
-    {
-      type:=BlockStatement
-      body:(StatementList __ | \null)
+  = {
+      "{" __ body: (StatementList __ | @()) "}"
+      type:= BlockStatement
     }
-    "}"
 
 StatementList
   = @(Statement *(__ Statement))
 
 VariableStatement
   = {
-      type:=VariableDeclaration
-      VarToken __ declarations:VariableDeclarationList EOS
+      VarToken __ declarations: VariableDeclarationList EOS
+      type:= VariableDeclaration
     }
 
 VariableDeclarationList
@@ -951,253 +965,271 @@ VariableDeclarationListNoIn
 
 VariableDeclaration
   = {
-      type:=VariableDeclarator
-      id:Identifier
-      init:(__ Initialiser | \null)
+      id: Identifier
+      init: (__ Initialiser | \null)
+      type:= VariableDeclarator
     }
 
 VariableDeclarationNoIn
   = {
-      type:=VariableDeclarator
-      id:Identifier
-      init:(__ InitialiserNoIn | \null)
+      id: Identifier
+      init: (__ InitialiserNoIn | \null)
+      type:= VariableDeclarator
     }
 
 Initialiser
-  = "=" !"=" __ expression:AssignmentExpression
+  = "=" !"=" __ AssignmentExpression
 
 InitialiserNoIn
-  = "=" !"=" __ expression:AssignmentExpressionNoIn
+  = "=" !"=" __ AssignmentExpressionNoIn
 
 EmptyStatement
-  = ";" { type:=EmptyStatement }
+  = ";" { type:= EmptyStatement }
 
 ExpressionStatement
-  = !("{" | FunctionToken)
-    {
-      type:=ExpressionStatement
-      expression:Expression EOS
+  = {
+      !("{" | FunctionToken)
+      expression: Expression
+      EOS
+      type:= ExpressionStatement
     }
 
 IfStatement
   = {
-      type:=IfStatement
-      IfToken __ "(" __ test:Expression __ ")" __
-      consequent:Statement __
+      IfToken __ "(" __ test: Expression __ ")" __
+      consequent: Statement __
       ElseToken __
-      alternate:Statement
+      alternate: Statement
+      type:= IfStatement
     }
   | {
-      type:=IfStatement
-      IfToken __ "(" __ test:Expression __ ")" __
-      consequent:Statement
-      alternate:\null
+      IfToken __ "(" __ test: Expression __ ")" __
+      consequent: Statement
+      type:= IfStatement
+      alternate: \null
     }
 
 IterationStatement
   = {
-      type:=DoWhileStatement
       DoToken __
-      body:Statement __
-      WhileToken __ "(" __ test:Expression __ ")" EOS
+      body: Statement __
+      WhileToken __ "(" __ test: Expression __ ")" EOS
+      type:= DoWhileStatement
     }
   | {
-      type:=WhileStatement
-      WhileToken __ "(" __ test:Expression __ ")" __
-      body:Statement
+      WhileToken __ "(" __ test: Expression __ ")" __
+      body: Statement
+      type:= WhileStatement
     }
   | {
-      type:=ForStatement
       ForToken __
       "(" __
-      init:(ExpressionNoIn __ | \null) ";" __
-      test:(Expression __ | \null) ";" __
-      update:(Expression __ | \null)
+      init: (ExpressionNoIn __ | \null) ";" __
+      test: (Expression __ | \null) ";" __
+      update: (Expression __ | \null)
       ")" __
-      body:Statement
+      body: Statement
+      type:= ForStatement
     }
   | {
-      type:=ForStatement
       ForToken __
       "(" __
-      VarToken __
-      init:{type:=VariableDeclaration declarations:VariableDeclarationListNoIn}
-      __ ";" __
-      test:(Expression __ | \null) ";" __
-      update:(Expression __ | \null)
+      init: {
+        VarToken __ declarations: VariableDeclarationListNoIn __ ";" __
+        type:= VariableDeclaration
+      }
+      test: (Expression __ | \null) ";" __
+      update: (Expression __ | \null)
       ")" __
-      body:Statement
+      body: Statement
+      type:= ForStatement
     }
   | {
-      type:=ForInStatement
       ForToken __
       "(" __
-      left:LeftHandSideExpression __
+      left: LeftHandSideExpression __
       InToken __
-      right:Expression __
+      right: Expression __
       ")" __
-      body:Statement
+      body: Statement
+      type:= ForInStatement
     }
   | {
-      type:=ForInStatement
       ForToken __
       "(" __
-      VarToken __
-      left:{type:=VariableDeclaration declarations:VariableDeclarationListNoIn}
-      __ InToken __
-      right:Expression __
+      left: {
+        VarToken __ declarations: VariableDeclarationListNoIn __
+        type:= VariableDeclaration
+      }
+      InToken __
+      right: Expression __
       ")" __
-      body:Statement
+      body: Statement
+      type:= ForInStatement
     }
 
 ContinueStatement
-  = {
-      type:=ContinueStatement
-      ContinueToken EOS
-      label:\null
-    }
+  = ContinueToken EOS
+    { type:= ContinueStatement label: \null }
   | {
-      type:=ContinueStatement
-      ContinueToken _ label:Identifier EOS
+      ContinueToken _
+      label: Identifier EOS
+      type:= ContinueStatement
     }
 
 BreakStatement
-  = {
-      type:=BreakStatement
-      BreakToken EOS
-      label:\null
-    }
+  = BreakToken EOS
+    { type:= BreakStatement label: \null }
   | {
-      type:=BreakStatement
-      BreakToken _ label:Identifier EOS
+      BreakToken _
+      label: Identifier EOS
+      type:= BreakStatement
     }
 
 ReturnStatement
-  = {
-      type:=ReturnStatement
-      ReturnToken EOS
-      argument:\null
-    }
+  = ReturnToken EOS
+    { type:= ReturnStatement argument: \null }
   | {
-      type:=ReturnStatement
-      ReturnToken _ argument:Expression EOS
+      ReturnToken _
+      argument: Expression EOS
+      type:= ReturnStatement
     }
 
 WithStatement
   = {
-      type:=WithStatement
-      WithToken __ "(" __ object:Expression __ ")" __
-      body:Statement
+      WithToken __ "(" __ object: Expression __ ")" __
+      body: Statement
+      type:= WithStatement
     }
 
 SwitchStatement
   = {
-      type:=SwitchStatement
-      SwitchToken __ "(" __ discriminant:Expression __ ")" __
-      cases:CaseBlock
+      SwitchToken __ "(" __ discriminant: Expression __ ")" __
+      cases: CaseBlock
+      type:= SwitchStatement
     }
 
 CaseBlock
-  = "{" __ (CaseClauses __ | \null) "}"
-  | "{" __
-    @(
-      ?(CaseClauses __)
-      DefaultClause __
-      ?(CaseClauses __)
-    )
-    "}"
+  = "{" __ (CaseClauses __ | @()) "}"
+  | {
+      "{" __
+      before:(CaseClauses __ | @())
+      default_:DefaultClause __
+      after:(CaseClauses __ | @())
+      "}"
+    } -> { return $.before.concat($.default_, $.after); }
 
 CaseClauses
   = @(CaseClause *(__ CaseClause))
 
 CaseClause
   = {
-      type:=SwitchCase
-      CaseToken __ test:Expression __ ":" consequent:(__ StatementList | \null)
+      CaseToken __
+      test:Expression __
+      ":"
+      consequent:(__ StatementList | @())
+      type:= "SwitchCase"
     }
 
 DefaultClause
   = {
-      type:=SwitchCase
+      DefaultToken __
+      ":"
+      consequent:(__ StatementList | @())
+      type:="SwitchCase"
       test: \null
-      DefaultToken __ ":" consequent:@?(__ StatementList)
     }
 
 LabelledStatement
   = {
-      type:=LabeledStatement
       label:Identifier __ ":" __ body:Statement
+      type:="LabeledStatement"
     }
 
 ThrowStatement
   = {
-      type:=ThrowStatement
-      ThrowToken _ argument:Expression EOS
+      ThrowToken _
+      argument:Expression EOS
+      type:="ThrowStatement"
     }
 
 TryStatement
   = {
-      type:=TryStatement
-      TryToken __ block:Block __ handler:Catch __ finalizer:Finally
+      TryToken __
+      block:Block __
+      handler:Catch __
+      finalizer:Finally
+      type:="TryStatement"
     }
   | {
-      type:=TryStatement
-      TryToken __ block:Block __ handler:Catch
-      finalizer: \null
+      TryToken __
+      block:Block __
+      handler:Catch
+      type:="TryStatement"
+      finalizer:\null
     }
   | {
-      type:=TryStatement
-      TryToken __ block:Block __ finalizer:Finally
+      TryToken __
+      block:Block __
+      finalizer:Finally
+      type:="TryStatement"
       handler:\null
     }
 
 Catch
   = {
-      type:=CatchClause
-      CatchToken __ "(" __ param:Identifier __ ")" __ body:Block
+      CatchToken __ "(" __
+      param:Identifier __ ")" __
+      body:Block
+      type:="CatchClause"
     }
 
 Finally
   = FinallyToken __ Block
 
 DebuggerStatement
-  = DebuggerToken EOS { type:=DebuggerStatement }
+  = DebuggerToken EOS { type:="DebuggerStatement" }
 
 /* ----- A.5 Functions and Programs ----- */
 
 FunctionDeclaration
   = {
-      type:=FunctionDeclaration
-      FunctionToken __ id:Identifier __
-      "(" __ params:(FormalParameterList __ | \null) ")" __
+      FunctionToken __
+      id:Identifier __
+      "(" __ params:(FormalParameterList __ | @()) ")" __
       "{" __ body:FunctionBody __ "}"
+      type:="FunctionDeclaration"
     }
 
 FunctionExpression
   = {
-      type:=FunctionExpression
-      FunctionToken __ id:(Identifier __ | \null)
-      "(" __ params:@?(FormalParameterList __) ")" __
+      FunctionToken __
+      id:(Identifier __ | \null)
+      "(" __ params:(FormalParameterList __ | @()) ")" __
       "{" __ body:FunctionBody __ "}"
+      type:="FunctionExpression"
     }
 
 FormalParameterList
-  = @(Identifier *(__ "," __ Identifier))
+  = @(
+      Identifier
+      *(__ "," __ Identifier)
+    )
 
 FunctionBody
   = {
-      type:=BlockStatement
-      body:@?SourceElements
+      body:(SourceElements | @())
+      type:="BlockStatement"
     }
 
 Program
   = {
-      type:=Program
-      body:@?SourceElements
+      body:(SourceElements | @())
+      type:="Program"
     }
 
 SourceElements
-  = SourceElement *(__ SourceElement)
+  = @(SourceElement *(__ SourceElement))
 
 SourceElement
   = Statement
