@@ -125,7 +125,7 @@ SequenceExpression
 
 LabelExpression
     = {
-        op:=pr
+				op:=pr
         a:IdentifierOrStringLiteral __
         ':=' __
         b:{ op:=ltr a:IdentifierOrStringLiteral } -> expr
@@ -134,7 +134,7 @@ LabelExpression
     | ModifyExpression
 
 ModifyExpression
-    = {
+    =   {
             (
                 a:ModifyExpression __
                 (
@@ -203,7 +203,7 @@ StringLiteral "string literal"
     = `StringLiteralRaw -> eval
 
 StringLiteralRaw
-    = (
+    =   (
             '\''
             *(!LineTerminator [^'\\] | '\\x' 2*HexDigit | '\\u' 4*HexDigit | '\\' [^ux])
             '\''
