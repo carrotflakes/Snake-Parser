@@ -377,7 +377,7 @@ expressions.wst.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 };
 
 expressions.rul.prototype.gen = function(ids, pos, objsLen, indentLevel) {
-	if (this.arguments) { // 引数付きルールの呼び出し
+	if (this.arguments && this.rule) { // 引数付きルールの呼び出し
 		return this.body.gen(ids, pos, objsLen, indentLevel);
 	}
 	var indent = makeIndent(indentLevel);
@@ -391,6 +391,8 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 	var ids = {};
 	var key = "key";
 	var keyValue = "$pos * " + memoRules.length + " + " + memoRules.indexOf(rule.ident);
+	if (memoRules.indexOf(rule.ident) === -1)
+		key = null;
 	var pos = newId(ids, "pos");
 
 	var setMatchTable = "";
@@ -402,7 +404,7 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 			indentStr + "$matchTable[" + pos + "] = null;\n";
 	}
 
-	if (rule.canLeftRecurs) { // 左再帰対応
+	if (rule.leftRecurs) { // 左再帰対応
 		var objs = newId(ids, "objs");
 
 		var states = [];
@@ -439,15 +441,18 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		var states = [];
 		states.push("function rule$" + rule.ident + "() {\n");
 		states.push(makeVarState([[key, keyValue], [pos, "$pos"], [objsLen, "$objsLen"]], indentLevel + 1));
-		states.push(indent + indentStr + "if ($readMemo(" + key + ")) return;\n");
+		if (key)
+			states.push(indent + indentStr + "if ($readMemo(" + key + ")) return;\n");
 		states.push(addIndent(setMatchTable, indentLevel + 1));
 		states.push(rule.body.gen(ids, pos, objsLen, indentLevel + 1));
 		states.push(addIndent(unsetMatchTable, indentLevel + 1));
-		if (useUndet) {
-			states.push(indent + indentStr + "if (!$undet[" + pos + "])\n");
-			states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $objs.slice(" + objsLen + ", $objsLen));\n");
-		} else {
-			states.push(indent + indentStr + "$writeMemo(" + key + ", $objs.slice(" + objsLen + ", $objsLen));\n");
+		if (key) {
+			if (useUndet) {
+				states.push(indent + indentStr + "if (!$undet[" + pos + "])\n");
+				states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $objs.slice(" + objsLen + ", $objsLen));\n");
+			} else {
+				states.push(indent + indentStr + "$writeMemo(" + key + ", $objs.slice(" + objsLen + ", $objsLen));\n");
+			}
 		}
 		states.push(indent + "}");
 		return states.join("");
@@ -455,17 +460,6 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 };
 
 var genjs = function(rules, initializer, exportVariable) {
-	// 引数付きルールの引数を無名ルールとして抽出
-	var arules = [];
-	for (var s in rules)
-		rules[s].body.extractAnonymousRule(arules);
-
-	// 無名ルールに名前をつける
-	var aruleId = 0;
-	for (var i in arules)
-		if (!arules[i].ident)
-			arules[i].ident = "anonymous" + aruleId++;
-
 	for (var s in rules) {
 		if (rules[s].parameters) { // 引数付きルール
 			var shadowedRules = {};
@@ -492,18 +486,23 @@ var genjs = function(rules, initializer, exportVariable) {
 	}
 
 	// 再帰している引数付きルールの特殊化
-	var newRules = [];
+	var reduceds = [];
 	for (var s in rules)
 		if (rules[s].recursive)
-			[].push.apply(newRules, rules[s].specializeds);
-	for (var i in newRules)
-		rules[newRules[i].ident] = newRules[i];
+			[].push.apply(reduceds, rules[s].reduceds);
+	for (var i in reduceds) {
+		rules[reduceds[i].ruleIdent] = {
+			ident: reduceds[i].ruleIdent,
+			body: reduceds[i].body,
+			referenceCount: 1, //?
+		};
+	}
 
 	var useUndet = false;
 	for (var s in rules) {
 		if (!rules[s].parameters) { // 引数なしルール
 			var b = rules[s].body.canLeftRecurs(rules[s].ident, []) === 1;
-			rules[s].canLeftRecurs = b;
+			rules[s].leftRecurs = b;
 			useUndet = useUndet || b;
 		}
 	}
@@ -550,9 +549,12 @@ var $failureObj = {};\n\
 		rules[r].body.traverse(function(expr) {
 			if (expr instanceof expressions.mod || expr instanceof expressions.grd) {
 				if (!expr.identifier) {
-					expr.identifier = "mod$" + modifierId++;
-					modifiers[expr.identifier] = expr.code;
-					states.push(makeIndent(2) + "function " + expr.identifier + "($) {" + expr.code + "};" + "\n\n");
+					if (!modifiers[expr.code]) {
+						modifiers[expr.code] = expr.identifier = "mod$" + modifierId++;
+						states.push(makeIndent(2) + "function " + expr.identifier + "($) {" + expr.code + "};" + "\n\n");
+					} else {
+						expr.identifier = modifiers[expr.code];
+					}
 				}
 			}
 		});
