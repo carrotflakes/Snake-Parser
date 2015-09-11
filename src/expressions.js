@@ -184,15 +184,17 @@ RuleReference.prototype.prepare = function(rules) {
 	// 参照をカウント
 	rule.referenceCount = (rule.referenceCount || 0) + 1;
 
-	if (this.arguments) { // 引数付きルールの引数も見る
-		if (!rule.parameters)
-			throw new Error('Referenced rule ' + rule.ident + ' takes no arguments.');
-		for (var i in this.arguments)
-			this.arguments[i].prepare(rules);
-	} else { // 引数なしルール
-		if (rule.parameters)
+	if (rule.parameters) { // 引数付きルールの参照
+		if (!this.arguments || rule.parameters.length !== this.arguments.length) {
 			throw new Error('Referenced rule ' + rule.ident +
 											' takes ' + rule.parameters.length + ' arguments.');
+		}
+
+		for (var i in this.arguments)
+			this.arguments[i].prepare(rules);
+	} else { // 引数なしルールの参照
+		if (this.arguments)
+			throw new Error('Referenced rule ' + rule.ident + ' takes no arguments.');
 		this.body = rule.body;
 	}
 };
@@ -302,12 +304,6 @@ RuleReference.prototype.reduce = function(env, depth) {
 	} else if (this.arguments) { // これは引数付きルールの参照
 		if (depth === 32)
 			throw new Error("Parameterized rule reference nested too deep.");
-
-		// 引数チェック
-		if (!this.arguments || this.rule.parameters.length !== this.arguments.length) {
-			throw new Error('Referenced rule ' + this.ruleIdent +
-											' takes ' + this.rule.parameters.length + ' arguments.');
-		}
 
 		if (this.rule.recursive) { // 再帰
 			var arguments = [];
