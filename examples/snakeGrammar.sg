@@ -82,7 +82,10 @@
         case "pi":
             return $.op + "(" + $.a + ")";
         case "rul":
-            return $.op + "(" + JSON.stringify($.a) + ")";
+						if ($.b)
+                return $.op + "(" + JSON.stringify($.a) + ",[" + $.b + "])";
+						else
+                return $.op + "(" + JSON.stringify($.a) + ")";
         }
     }
 }

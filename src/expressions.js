@@ -147,39 +147,6 @@ RuleReference.prototype.getReference = function() {
 	return reference;
 };
 
-// extractAnonymousRule
-Expression.prototype.extractAnonymousRule = function(arules) {
-};
-
-OrderedChoice.prototype.extractAnonymousRule = function(arules) {
-	for (var i in this.children)
-		this.children[i].extractAnonymousRule(arules);
-};
-
-Sequence.prototype.extractAnonymousRule = OrderedChoice.prototype.extractAnonymousRule;
-
-Repeat.prototype.extractAnonymousRule = function(arules) {
-	this.child.extractAnonymousRule(arules);
-};
-
-Objectize.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
-Arraying.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
-Tokenize.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
-Property.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
-PositiveLookaheadAssertion.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
-NegativeLookaheadAssertion.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
-Modify.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
-Guard.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
-Waste.prototype.extractAnonymousRule = Repeat.prototype.extractAnonymousRule;
-
-RuleReference.prototype.extractAnonymousRule = function(arules) {
-	if (this.arguments) {
-		for(var i in this.arguments)
-			this.arguments[i].extractAnonymousRule(arules);
-		[].push.apply(arules, this.arguments);
-	}
-};
-
 
 // prepare 名前付きでないルールの結びつけ
 Expression.prototype.prepare = function(rules) {
@@ -217,13 +184,18 @@ RuleReference.prototype.prepare = function(rules) {
 	// 参照をカウント
 	rule.referenceCount = (rule.referenceCount || 0) + 1;
 
-	if (this.arguments) { // 引数付きルールの呼びだし
-		for (var i in this.arguments)
-			this.arguments[i].prepare(rules);
-	} else {
-		if (rule.parameters)
+	if (rule.parameters) { // 引数付きルールの参照
+		if (!this.arguments || rule.parameters.length !== this.arguments.length) {
 			throw new Error('Referenced rule ' + rule.ident +
 											' takes ' + rule.parameters.length + ' arguments.');
+		}
+
+		for (var i in this.arguments)
+			this.arguments[i].prepare(rules);
+	} else { // 引数なしルールの参照
+		if (this.arguments)
+			throw new Error('Referenced rule ' + rule.ident + ' takes no arguments.');
+		this.body = rule.body;
 	}
 };
 
@@ -253,13 +225,8 @@ Guard.prototype.expand = Repeat.prototype.expand;
 Waste.prototype.expand = Repeat.prototype.expand;
 
 RuleReference.prototype.expand = function(env) {
-	if (!this.rule) { // 多分、これは引数の参照
-		var body = env[this.ruleIdent];
-		if (!body)
-			throw new Error('Referenced argument ' + this.ruleIdent + ' not found.');
-		this.body = body;
-	} else if (this.arguments) { // これは引数付きルールの参照
-		var e = this.specialize(env, 1);
+	if (this.arguments) { // これは引数付きルールの参照
+		var e = this.reduce(env, 1);
 		if (e instanceof RuleReference) {
 			this.ruleIdent = e.ruleIdent;
 			this.arguments = e.arguments;
@@ -271,26 +238,18 @@ RuleReference.prototype.expand = function(env) {
 	} else { // これは引数付きでないルールの参照
 		this.body = this.rule.body; // 入れる必要無さそうだけどcanLeftRecursで使う
 	}
-
-		/*
-		// 引数付きルールの参照をカウント?
-		var reference = this.getReference();
-		reference.referenceCount += 1;
-		*/
-	 // 引数なしルールなのに引数を受け取った
-	//	throw new Error('Referenced rule ' + this.ruleIdent + ' takes no arguments.');
 };
 
-// specialize
-Expression.prototype.specialize = function(env, depth) {
+// reduce
+Expression.prototype.reduce = function(env, depth) {
 	return this;
 };
 
-OrderedChoice.prototype.specialize = function(env, depth) {
+OrderedChoice.prototype.reduce = function(env, depth) {
 	var changed = false;
 	var children = [];
 	for (var i in this.children) {
-		children[i] = this.children[i].specialize(env, depth);
+		children[i] = this.children[i].reduce(env, depth);
 		changed = changed || this.children[i] !== children[i];
 	}
 	if (!changed)
@@ -298,44 +257,45 @@ OrderedChoice.prototype.specialize = function(env, depth) {
 	return new this.constructor(children);
 };
 
-Sequence.prototype.specialize = OrderedChoice.prototype.specialize;
+Sequence.prototype.reduce = OrderedChoice.prototype.reduce;
 
-Repeat.prototype.specialize = function(env, depth) {
-	var child = this.child.specialize(env, depth); if (child === this.child)
-	return this;
+Repeat.prototype.reduce = function(env, depth) {
+	var child = this.child.reduce(env, depth);
+	if (child === this.child)
+		return this;
 	return new Repeat(this.min, this.max, child);
 };
 
-Objectize.prototype.specialize = function(env, depth) {
-	var child = this.child.specialize(env, depth);
+Objectize.prototype.reduce = function(env, depth) {
+	var child = this.child.reduce(env, depth);
 	if (child === this.child)
 		return this;
 	return new this.constructor(child);
 };
 
-Arraying.prototype.specialize = Objectize.prototype.specialize;
-Tokenize.prototype.specialize = Objectize.prototype.specialize;
-PositiveLookaheadAssertion.prototype.specialize = Objectize.prototype.specialize;
-NegativeLookaheadAssertion.prototype.specialize = Objectize.prototype.specialize;
-Waste.prototype.specialize = Objectize.prototype.specialize;
+Arraying.prototype.reduce = Objectize.prototype.reduce;
+Tokenize.prototype.reduce = Objectize.prototype.reduce;
+PositiveLookaheadAssertion.prototype.reduce = Objectize.prototype.reduce;
+NegativeLookaheadAssertion.prototype.reduce = Objectize.prototype.reduce;
+Waste.prototype.reduce = Objectize.prototype.reduce;
 
-Property.prototype.specialize = function(env, depth) {
-	var child = this.child.specialize(env, depth);
+Property.prototype.reduce = function(env, depth) {
+	var child = this.child.reduce(env, depth);
 	if (child === this.child)
 		return this;
 	return new Property(this.key, child);
 };
 
-Modify.prototype.specialize = function(env, depth) {
-	var child = this.child.specialize(env, depth);
+Modify.prototype.reduce = function(env, depth) {
+	var child = this.child.reduce(env, depth);
 	if (child === this.child)
 		return this;
 	return new this.constructor(child, this.identifier, this.code);
 };
 
-Guard.prototype.specialize = Modify.prototype.specialize;
+Guard.prototype.reduce = Modify.prototype.reduce;
 
-RuleReference.prototype.specialize = function(env, depth) {
+RuleReference.prototype.reduce = function(env, depth) {
 	if (this.rule === "argument") { // これは引数の参照
 		var body = env[this.ruleIdent];
 		if (!body)
@@ -345,57 +305,52 @@ RuleReference.prototype.specialize = function(env, depth) {
 		if (depth === 32)
 			throw new Error("Parameterized rule reference nested too deep.");
 
-		// 引数チェック
-		if (!this.arguments || this.rule.parameters.length !== this.arguments.length) {
-			throw new Error('Referenced rule ' + this.ruleIdent +
-											' takes ' + rule.parameters.length + ' arguments.');
-		}
-
 		if (this.rule.recursive) { // 再帰
 			var arguments = [];
 			for (var i in this.arguments) {
-				arguments[i] = this.arguments[i].specialize(env, depth + 1);
+				arguments[i] = this.arguments[i].reduce(env, depth + 1);
 			}
 
-			// すでに特殊化されていないかチェック
-			this.rule.specializeds = this.rule.specializeds || [];
-			var specialized = null;
-			findSpecialized:
-			for (var i in this.rule.specializeds) {
-				specialized = this.rule.specializeds[i];
-				for (var j in specialized.arguments) {
-					if (specialized.arguments.toString(j) !== arguments.toString()) {
-						specialized = null;
-						continue findSpecialized;
+			// すでに簡約されていないかチェック
+			this.rule.reduceds = this.rule.reduceds || [];
+			var reduced = null;
+			findReduced:
+			for (var i in this.rule.reduceds) {
+				reduced = this.rule.reduceds[i];
+				for (var j in reduced.arguments) {
+					if (reduced.arguments.toString(j) !== arguments.toString()) {
+						reduced = null;
+						continue findReduced;
 					}
 				}
 				break;
 			}
 
-			if (!specialized) {
-				specialized = {
-					ident: this.ruleIdent + "$" + this.rule.specializeds.length,
-					arguments: arguments,
-					body: null,
-				};
-				this.rule.specializeds.push(specialized);
+			if (!reduced) { // 簡約されていなかったので簡約する
+				reduced = new RuleReference(
+					this.ruleIdent + "$" + this.rule.reduceds.length,
+					arguments,
+					null,
+					null
+				);
+				this.rule.reduceds.push(reduced);
 
 				var env1 = {};
 				env1.__proto__ = env;
 				for (var i in arguments)
 					env1[this.rule.parameters[i]] = arguments[i];
-				specialized.body = this.rule.body.specialize(env1, depth + 1);
+				reduced.body = this.rule.body.reduce(env1, depth + 1);
 			}
-			this.specialized = specialized;
-			return new RuleReference(specialized.ident, null, specialized, specialized.body);
+			this.reduced = reduced;
+			return reduced;
 		} else { // 展開
 			var env1 = {};
 			env1.__proto__ = env;
 			for (var i in this.arguments) {
-				env1[this.rule.parameters[i]] = this.arguments[i].specialize(env, depth + 1);
+				env1[this.rule.parameters[i]] = this.arguments[i].reduce(env, depth + 1);
 			}
 
-			return this.rule.body.specialize(env1, depth + 1);
+			return this.rule.body.reduce(env1, depth + 1);
 		}
 	} else { // これは引数付きでないルールの参照
 		return this;
