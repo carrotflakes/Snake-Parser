@@ -120,7 +120,6 @@ RuleParameters
 ChoiceExpression
     = {op:=oc a:@(SequenceExpression __ +('|' __ SequenceExpression))} -> expr __
     | SequenceExpression __
-    | {op:=nop} -> expr
 
 SequenceExpression
     = {op:=seq a:@(LabelExpression +(__ LabelExpression))} -> expr __
@@ -157,7 +156,7 @@ ModifyExpression
     | OtherExpression
 
 OtherExpression
-    = '(' __ ChoiceExpression __ ')'
+    = '(' __ (ChoiceExpression | {op:=nop} -> expr) __ ')'
     |   { op:=str a:StringLiteral
         | op:=cc  '[' b:('^' \true | \false) a:CharacterClass ']'
         | op:=ltr '\\' __ a:(StringLiteral | NumericLiteral | BooleanLiteral | NullLiteral)
