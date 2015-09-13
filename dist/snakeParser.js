@@ -834,26 +834,25 @@ var initializer = '\
 	function ensureMax($) {\n\
 		return $ === undefined ? Infinity : $;\n\
 	};\n\
-	function characterClassChar($) {\n\
-		var str = $,\n\
-		len = str.length;\n\
-		if (len === 1)\n\
-			return str.charCodeAt();\n\
-		if (len === 4 || len === 6)\n\
-			return parseInt(str.substring(2), 16);\n\
-		if (str === "\\\\b")\n\
-			return "\\b".charCodeAt();\n\
-		if (str === "\\\\t")\n\
-			return "\\t".charCodeAt();\n\
-		if (str === "\\\\v")\n\
-			return "\\v".charCodeAt();\n\
-		if (str === "\\\\n")\n\
-			return "\\n".charCodeAt();\n\
-		if (str === "\\\\r")\n\
-			return "\\r".charCodeAt();\n\
-		if (str === "\\\\f")\n\
-			return "\\f".charCodeAt();\n\
-		return str.charCodeAt(1);\n\
+	function characterClassChar(str) {\n\
+        var len = str.length;\n\
+        if (len === 1)\n\
+            return str.charCodeAt();\n\
+        if (len === 4 || len === 6)\n\
+            return parseInt(str.substring(2), 16);\n\
+        if (str === "\\\\0")\n\
+            return 0;\n\
+        if (str === "\\\\t")\n\
+            return 9;\n\
+        if (str === "\\\\n")\n\
+            return 10;\n\
+        if (str === "\\\\v")\n\
+            return 11;\n\
+        if (str === "\\\\f")\n\
+            return 12;\n\
+        if (str === "\\\\r")\n\
+            return 13;\n\
+        return str.charCodeAt(1);\n\
 	};\n\
 	function nuturalNumber($) {\n\
 		return +$;\n\
@@ -1139,7 +1138,7 @@ var stringEscape = function(str) {
 			return "\\x" + ("0" + c.charCodeAt().toString(16)).slice(-2);
 		})
     .replace(/[\u0100-\uFFFF]/g, function(c) {
-			return "\\u" + ("0" + c.charCodeAt().toString(16)).slice(-4);
+			return "\\u" + ("000" + c.charCodeAt().toString(16)).slice(-4);
 		});
 };
 
