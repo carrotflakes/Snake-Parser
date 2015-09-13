@@ -125,15 +125,15 @@ var MatchString = function(s) {
 };
 extendsExpression(MatchString, "str");
 
-var MatchCharactorClass = function(cc, i) {
-	this.charactorClass = cc;
+var MatchCharacterClass = function(cc, i) {
+	this.characterClass = cc;
 	this.invert = !!i;
 };
-extendsExpression(MatchCharactorClass, "cc");
+extendsExpression(MatchCharacterClass, "cc");
 
-var MatchAnyCharactor = function() {
+var MatchAnyCharacter = function() {
 };
-extendsExpression(MatchAnyCharactor, "ac");
+extendsExpression(MatchAnyCharacter, "ac");
 
 var OrderedChoice = function(es) {
 	if (es instanceof Array)
@@ -476,8 +476,8 @@ MatchString.prototype.toString = function() {
 	return this._name + "(" + JSON.stringify(this.string) + ")";
 };
 
-MatchCharactorClass.prototype.toString = function() {
-	return this._name + "(" + JSON.stringify(this.charactorClass) + "," + +this.invert + ")";
+MatchCharacterClass.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.characterClass) + "," + +this.invert + ")";
 };
 
 Repeat.prototype.toString = function() {
@@ -640,8 +640,8 @@ MatchString.prototype.canLeftRecurs = function(rule, passedRules) {
 	return -1;
 };
 
-MatchCharactorClass.prototype.canLeftRecurs = MatchString.prototype.canLeftRecurs;
-MatchAnyCharactor.prototype.canLeftRecurs = MatchString.prototype.canLeftRecurs;
+MatchCharacterClass.prototype.canLeftRecurs = MatchString.prototype.canLeftRecurs;
+MatchAnyCharacter.prototype.canLeftRecurs = MatchString.prototype.canLeftRecurs;
 
 Repeat.prototype.canLeftRecurs = function(rule, passedRules) {
 	if (this.min === 0) {
@@ -700,7 +700,7 @@ MatchString.prototype.canAdvance = function() {
 	return this.string.length != 0;
 };
 
-MatchCharactorClass.prototype.canAdvance = function() {
+MatchCharacterClass.prototype.canAdvance = function() {
 	return true;
 };
 
@@ -764,7 +764,7 @@ MatchString.prototype.canProduce = function() {
 	return false;
 };
 
-MatchCharactorClass.prototype.canProduce = function() {
+MatchCharacterClass.prototype.canProduce = function() {
 	return false;
 };
 
@@ -835,24 +835,24 @@ var initializer = '\
 		return $ === undefined ? Infinity : $;\n\
 	};\n\
 	function characterClassChar(str) {\n\
-        var len = str.length;\n\
-        if (len === 1)\n\
-            return str.charCodeAt();\n\
-        if (len === 4 || len === 6)\n\
-            return parseInt(str.substring(2), 16);\n\
-        if (str === "\\\\0")\n\
-            return 0;\n\
-        if (str === "\\\\t")\n\
-            return 9;\n\
-        if (str === "\\\\n")\n\
-            return 10;\n\
-        if (str === "\\\\v")\n\
-            return 11;\n\
-        if (str === "\\\\f")\n\
-            return 12;\n\
-        if (str === "\\\\r")\n\
-            return 13;\n\
-        return str.charCodeAt(1);\n\
+		var len = str.length;\n\
+		if (len === 1)\n\
+			return str.charCodeAt();\n\
+		if (len === 4 || len === 6)\n\
+			return parseInt(str.substring(2), 16);\n\
+		if (str === "\\\\0")\n\
+ 			return 0;\n\
+ 		if (str === "\\\\t")\n\
+ 			return 9;\n\
+ 		if (str === "\\\\n")\n\
+ 			return 10;\n\
+ 		if (str === "\\\\v")\n\
+ 			return 11;\n\
+ 		if (str === "\\\\f")\n\
+ 			return 12;\n\
+ 		if (str === "\\\\r")\n\
+ 			return 13;\n\
+ 		return str.charCodeAt(1);\n\
 	};\n\
 	function nuturalNumber($) {\n\
 		return +$;\n\
@@ -1303,8 +1303,8 @@ expressions.cc.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 expressions.cc.prototype.makeCondition = function(c) {
 	var conds = [];
 	if (!this.invert) {
-		for (var i in this.charactorClass) {
-			var cc = this.charactorClass[i];
+		for (var i in this.characterClass) {
+			var cc = this.characterClass[i];
 			if (cc.type === "range")
 				conds.push(cc.start + " <= " + c + " && " + c + " <= " + cc.end);
 			else
@@ -1312,8 +1312,8 @@ expressions.cc.prototype.makeCondition = function(c) {
 		}
 		return conds.length === 0 ? "false" : conds.join(" || ");
 	} else {
-		for (var i in this.charactorClass) {
-			var cc = this.charactorClass[i];
+		for (var i in this.characterClass) {
+			var cc = this.characterClass[i];
 			if (cc.type === "range")
 				conds.push("(" + c + " < " + cc.start + " || " + cc.end + " < " + c + ")");
 			else
@@ -1324,7 +1324,7 @@ expressions.cc.prototype.makeCondition = function(c) {
 };
 
 expressions.cc.prototype.makeError = function() {
-	return (this.invert ? "[^" : "[") + this.charactorClass.map(
+	return (this.invert ? "[^" : "[") + this.characterClass.map(
 		function(x) {
 			if (x.type == "range")
 				return charCodeToRegexpClassChar(x.start) + "-" + charCodeToRegexpClassChar(x.end);

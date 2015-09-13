@@ -224,8 +224,8 @@ expressions.cc.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 expressions.cc.prototype.makeCondition = function(c) {
 	var conds = [];
 	if (!this.invert) {
-		for (var i in this.charactorClass) {
-			var cc = this.charactorClass[i];
+		for (var i in this.characterClass) {
+			var cc = this.characterClass[i];
 			if (cc.type === "range")
 				conds.push(cc.start + " <= " + c + " && " + c + " <= " + cc.end);
 			else
@@ -233,8 +233,8 @@ expressions.cc.prototype.makeCondition = function(c) {
 		}
 		return conds.length === 0 ? "false" : conds.join(" || ");
 	} else {
-		for (var i in this.charactorClass) {
-			var cc = this.charactorClass[i];
+		for (var i in this.characterClass) {
+			var cc = this.characterClass[i];
 			if (cc.type === "range")
 				conds.push("(" + c + " < " + cc.start + " || " + cc.end + " < " + c + ")");
 			else
@@ -245,7 +245,7 @@ expressions.cc.prototype.makeCondition = function(c) {
 };
 
 expressions.cc.prototype.makeError = function() {
-	return (this.invert ? "[^" : "[") + this.charactorClass.map(
+	return (this.invert ? "[^" : "[") + this.characterClass.map(
 		function(x) {
 			if (x.type == "range")
 				return charCodeToRegexpClassChar(x.start) + "-" + charCodeToRegexpClassChar(x.end);
