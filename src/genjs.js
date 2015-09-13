@@ -76,7 +76,7 @@ var makeErrorLogging = function(match, indentLevel) {
 };
 
 expressions.nop.prototype.gen = function(ids, pos, objsLen, indentLevel) {
-	return makeIndent(indentLevel) + "// ???\n";
+	return "";
 };
 
 expressions.oc.prototype.gen = function(ids, pos, objsLen, indentLevel) {
