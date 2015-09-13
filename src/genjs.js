@@ -210,13 +210,17 @@ expressions.str.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 
 expressions.cc.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
-	var c = "c";
 	var states = [];
-	states.push(indent + "var " + c + " = $input.charCodeAt($pos);\n");
-	states.push(indent + "if (" + this.makeCondition(c) + ")\n");
+	if (this.characterClass.length < 4) { // 適当
+		var c = "c";
+		states.push(indent + "var " + c + " = $input.charCodeAt($pos);\n");
+		states.push(indent + "if (" + this.makeCondition(c) + ")\n");
+	} else {
+		states.push(indent + "if (/" + this.makeRegexp() + "/.test($input.charAt($pos)))\n");
+	}
 	states.push(indent + indentStr + "$pos += 1;\n");
 	states.push(indent + "else\n");
-	states.push(makeErrorLogging(this.makeError(), indentLevel + 1));
+	states.push(makeErrorLogging(this.makeRegexp(), indentLevel + 1));
 //	states.push(indent + "}\n");
 	return states.join("");
 };
@@ -244,7 +248,7 @@ expressions.cc.prototype.makeCondition = function(c) {
 	}
 };
 
-expressions.cc.prototype.makeError = function() {
+expressions.cc.prototype.makeRegexp = function() {
 	return (this.invert ? "[^" : "[") + this.characterClass.map(
 		function(x) {
 			if (x.type == "range")
