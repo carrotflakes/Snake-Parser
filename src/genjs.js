@@ -59,7 +59,7 @@ var stringEscape = function(str) {
 			return "\\x" + ("0" + c.charCodeAt().toString(16)).slice(-2);
 		})
     .replace(/[\u0100-\uFFFF]/g, function(c) {
-			return "\\u" + ("0" + c.charCodeAt().toString(16)).slice(-4);
+			return "\\u" + ("000" + c.charCodeAt().toString(16)).slice(-4);
 		});
 };
 
