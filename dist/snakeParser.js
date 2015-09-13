@@ -1143,6 +1143,34 @@ var stringEscape = function(str) {
 		});
 };
 
+var charCodeToRegexpClassChar = function(cc) {
+	switch (cc) {
+	case 92: // backslash
+	case 47: // slash
+	case 93: // closing bracket
+	case 94: // caret
+	case 45: // dash
+		return "\\" + String.fromCharCode(cc);
+	case 0: // null
+		return "\\0";
+	case 9: // horizontal tab
+		return "\\t";
+	case 10: // line feed
+		return "\\n";
+	case 11: // vertical tab
+		return "\\v";
+	case 12: // form feed
+		return "\\f";
+	case 13: // carriage return
+		return "\\r";
+	}
+	if (0x00 <= cc && cc <= 0x08 || cc === 0x0e || cc === 0x0f || 0x10 <= cc && cc <= 0x1f || 0x80 <= cc && cc <= 0xFF)
+		return "\\x" + ("0" + cc.toString(16)).slice(-2);
+	if (0x100 <= cc && cc <= 0xffff)
+		return "\\u" + ("000" + cc.toString(16)).slice(-4);
+	return String.fromCharCode(cc);
+};
+
 var stringify = function(object) {
 	return JSON.stringify(object)
 		.replace(/\u2028/g, "\\u2028")
@@ -1156,7 +1184,7 @@ var makeErrorLogging = function(match, indentLevel) {
 };
 
 expressions.nop.prototype.gen = function(ids, pos, objsLen, indentLevel) {
-	return makeIndent(indentLevel) + "// ???\n";
+	return "";
 };
 
 expressions.oc.prototype.gen = function(ids, pos, objsLen, indentLevel) {
@@ -1263,41 +1291,46 @@ expressions.str.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 expressions.cc.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var c = "c";
-	var conds = [];
-	for (var i in this.charactorClass) {
-		var cc = this.charactorClass[i];
-		if (cc.type === "range")
-			conds.push("(" + cc.start + " <= " + c + " && " + c + " <= " + cc.end + ")");
-		else
-			conds.push(c + " === " + cc.char);
-	}
 	var states = [];
 	states.push(indent + "var " + c + " = $input.charCodeAt($pos);\n");
-	if (!this.invert) {
-		if (conds.length === 0)
-			states.push(indent + "if (false)\n");
-		else
-			states.push(indent + "if (" + conds.join(" || ") + ")\n");
-	} else {
-		if (conds.length === 0)
-			states.push(indent + "if (true)\n");
-		else
-			states.push(indent + "if (!isNaN(" + c + ") && !(" + conds.join(" || ") + "))\n");
-	}
+	states.push(indent + "if (" + this.makeCondition(c) + ")\n");
 	states.push(indent + indentStr + "$pos += 1;\n");
 	states.push(indent + "else\n");
-	states.push(makeErrorLogging(stringEscape(this.makeError()), indentLevel + 1));
+	states.push(makeErrorLogging(this.makeError(), indentLevel + 1));
 //	states.push(indent + "}\n");
 	return states.join("");
+};
+
+expressions.cc.prototype.makeCondition = function(c) {
+	var conds = [];
+	if (!this.invert) {
+		for (var i in this.charactorClass) {
+			var cc = this.charactorClass[i];
+			if (cc.type === "range")
+				conds.push(cc.start + " <= " + c + " && " + c + " <= " + cc.end);
+			else
+				conds.push(c + " === " + cc.char);
+		}
+		return conds.length === 0 ? "false" : conds.join(" || ");
+	} else {
+		for (var i in this.charactorClass) {
+			var cc = this.charactorClass[i];
+			if (cc.type === "range")
+				conds.push("(" + c + " < " + cc.start + " || " + cc.end + " < " + c + ")");
+			else
+				conds.push(c + " !== " + cc.char);
+		}
+		return conds.length === 0 ? true : "!isNaN(" + c + ") && " + conds.join(" && ");
+	}
 };
 
 expressions.cc.prototype.makeError = function() {
 	return (this.invert ? "[^" : "[") + this.charactorClass.map(
 		function(x) {
 			if (x.type == "range")
-				return String.fromCharCode(x.start) + "-" + String.fromCharCode(x.end);
+				return charCodeToRegexpClassChar(x.start) + "-" + charCodeToRegexpClassChar(x.end);
 			else
-				return String.fromCharCode(x.char);
+				return charCodeToRegexpClassChar(x.char);
 		}).join("") + "]";
 };
 
