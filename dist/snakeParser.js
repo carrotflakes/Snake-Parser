@@ -1198,14 +1198,16 @@ expressions.oc.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	states.push(makeVarState([[posV, "$pos"], [objsLenV, "$objsLen"]], indentLevel));
 	var ids1 = {}; ids1.__proto__ = ids;
 	states.push(this.children[0].gen(ids1, pos, objsLen, indentLevel));
+	var nest = 0;
 	for (var i = 1; i < this.children.length; ++i) {
-		states.push(indent + "if ($pos === -1) {\n");
-		states.push(indent + indentStr + "$pos = " + pos + ";\n");
-		states.push(indent + indentStr + "$objsLen = " + objsLen + ";\n");
+		states.push(makeIndent(indentLevel + nest++) + "if ($pos === -1) {\n");
+		states.push(makeIndent(indentLevel + nest) + "$pos = " + pos + ";\n");
+		states.push(makeIndent(indentLevel + nest) + "$objsLen = " + objsLen + ";\n");
 		var ids1 = {}; ids1.__proto__ = ids;
-		states.push(this.children[i].gen(ids1, pos, objsLen, indentLevel + 1));
-		states.push(indent + "}\n");
+		states.push(this.children[i].gen(ids1, pos, objsLen, indentLevel + nest));
 	}
+	while (nest)
+		states.push(makeIndent(indentLevel + --nest) + "}\n");
 	return states.join("");
 };
 
@@ -1217,12 +1219,14 @@ expressions.seq.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var states = [];
 	var ids1 = {}; ids1.__proto__ = ids;
 	states.push(this.children[0].gen(ids1, pos, objsLen, indentLevel));
+	var nest = 0;
 	for (var i = 1; i < this.children.length; ++i) {
 		var ids1 = {}; ids1.__proto__ = ids;
-		states.push(indent + "if ($pos !== -1) {\n");
-		states.push(this.children[i].gen(ids1, null, null, indentLevel + 1));
-		states.push(indent + "}\n");
+		states.push(makeIndent(indentLevel + nest++) + "if ($pos !== -1) {\n");
+		states.push(this.children[i].gen(ids1, null, null, indentLevel + nest));
 	}
+	while (nest)
+		states.push(makeIndent(indentLevel + --nest) + "}\n");
 	return states.join("");
 };
 
