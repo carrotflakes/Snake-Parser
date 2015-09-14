@@ -173,10 +173,13 @@ expressions.rep.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 
 		var states = [];
 		states.push(makeVarState([[pos, "$pos"], [objsLen, "$objsLen"]], indentLevel));
-		if (this.max != Infinity)
+		if (this.max != Infinity) {
 			states.push(indent + "for (var " + i + " = 0; " + i + " < " + this.max + "; " + i + "++) {\n");
-		else
+		} else if (0 < this.min) {
 			states.push(indent + "for (var " + i + " = 0; ; " + i + "++) {\n");
+		} else {
+			states.push(indent + "while (true) {\n");
+		}
 		states.push(this.child.gen(ids, pos, objsLen, indentLevel + 1));
 		states.push(indent + indentStr + "if ($pos !== -1) {\n");
 		if (this.max === Infinity)
@@ -189,7 +192,8 @@ expressions.rep.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 		states.push(indent + "}\n");
 		states.push(indent + "$pos = " + pos + ";\n");
 		states.push(indent + "$objsLen = " + objsLen + ";\n");
-		states.push(indent + "if (" + i + " < " + this.min + ") $pos = -1;\n");
+		if (0 < this.min)
+			states.push(indent + "if (" + i + " < " + this.min + ") $pos = -1;\n");
 		return states.join("");
 	}
 };
