@@ -108,9 +108,15 @@ function buildParser() {
 	var grammar = grammarEditor.getValue();
 
 	var t = new Date().getTime();
-	br = SnakeParser.buildParser(grammar);
+	try {
+    br = SnakeParser.buildParser(grammar);
+  } catch (e) {
+    br = {
+      success: false,
+      error: e.message,
+    };
+  }
 	t = new Date().getTime() - t;
-	
 
 	if (br.success) {
 		try {
