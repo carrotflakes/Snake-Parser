@@ -15,7 +15,8 @@ var extendsExpression = function(cls, name) {
 
 
 // Classes extends Expression
-var Nop = function() {
+var Nop = function(succeed) {
+	this.succeed = succeed === undefined ? true : succeed;
 };
 extendsExpression(Nop, "nop");
 

@@ -1,4 +1,5 @@
 var expressions = require("./expressions");
+var ruleOptimize = require("./optimize");
 
 var indentStr = "\t";
 
@@ -104,7 +105,10 @@ var makeErrorLogging = function(match, indentLevel) {
 };
 
 expressions.nop.prototype.gen = function(ids, pos, objsLen, indentLevel) {
-	return "";
+	if (this.succeed)
+		return "";
+	else
+		return makeIndent(indentLevel) + "$pos = -1;\n";
 };
 
 expressions.oc.prototype.gen = function(ids, pos, objsLen, indentLevel) {
@@ -607,8 +611,10 @@ var $failureObj = {};\n\
 
 	// rules
 	for (var key in rules) {
-		if (!rules[key].parameters)
+		if (!rules[key].parameters) {
+			ruleOptimize(rules[key]);
 			states.push(makeIndent(2) + genRule(rules[key], memoRules, useUndet, 2) + ";\n\n");
+		}
 	}
 
 	states.push(addIndent('function $matchingFail(match) {\n\
