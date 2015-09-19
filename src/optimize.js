@@ -1,8 +1,6 @@
 var expressions = require("./expressions");
 
-// produceを引数に
-
-expressions.nop.prototype.optimize = function() {
+expressions.nop.prototype.optimize = function(disuseProduce) {
 	return {
 		expression: this,
 		advance: 0,
@@ -12,7 +10,7 @@ expressions.nop.prototype.optimize = function() {
 	};
 };
 
-expressions.str.prototype.optimize = function() {
+expressions.str.prototype.optimize = function(disuseProduce) {
 	if (this.string.length === 0) {
 		return {
 			expression: new expressions.nop(),
@@ -29,7 +27,7 @@ expressions.str.prototype.optimize = function() {
 	};
 };
 
-expressions.cc.prototype.optimize = function() {
+expressions.cc.prototype.optimize = function(disuseProduce) {
 	if (this.characterClass.length === 0) {
 		if (!this.invert) {
 			return { // 必ず失敗
@@ -55,7 +53,7 @@ expressions.cc.prototype.optimize = function() {
 	};
 };
 
-expressions.ac.prototype.optimize = function() {
+expressions.ac.prototype.optimize = function(disuseProduce) {
 	return {
 		expression: this,
 		advance: 2,
@@ -64,13 +62,13 @@ expressions.ac.prototype.optimize = function() {
 	};
 };
 
-expressions.oc.prototype.optimize = function() {
+expressions.oc.prototype.optimize = function(disuseProduce) {
 	var advance = null;
 	var produce = null;
 	var success = 0;
 	var children = [];
 	for (var i = 0; i < this.children.length; ++i) {
-		var res = this.children[i].optimize();
+		var res = this.children[i].optimize(disuseProduce);
 		if (res.success === 0)
 			continue;
 		if (res.expression instanceof expressions.oc) { // 子供がocなら展開する
@@ -111,14 +109,14 @@ expressions.oc.prototype.optimize = function() {
 	}
 };
 
-expressions.seq.prototype.optimize = function() {
+expressions.seq.prototype.optimize = function(disuseProduce) {
 	var advance = 0;
 	var produce = 0;
 	var success = 2;
 	var children = [];
 	var constant = [];
 	for (var i = 0; i < this.children.length; ++i) {
-		var res = this.children[i].optimize();
+		var res = this.children[i].optimize(disuseProduce);
 		if (res.advance === 0 && res.produce === 0 && res.success === 2)
 			continue;
 		if (res.expression instanceof expressions.seq) { // 子供がseqなら展開する
@@ -152,7 +150,7 @@ expressions.seq.prototype.optimize = function() {
 	};
 };
 
-expressions.rep.prototype.optimize = function() {
+expressions.rep.prototype.optimize = function(disuseProduce) {
 	if (this.max === 0) {
 		return {
 			expression: new expressions.nop(),
@@ -161,7 +159,7 @@ expressions.rep.prototype.optimize = function() {
 			success: 2,
 		};
 	}
-	var res = this.child.optimize();
+	var res = this.child.optimize(disuseProduce);
 	this.child = res.expression;
 	if (this.max === Infinity && res.success === 2)
 		throw new Error("Repeat expression will infinite loop.");
@@ -177,8 +175,10 @@ expressions.rep.prototype.optimize = function() {
 	return res;
 };
 
-expressions.obj.prototype.optimize = function() {
-	var res = this.child.optimize();
+expressions.obj.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(disuseProduce);
+	if (disuseProduce)
+		return res;
 	if (res.constant) { // 定数化
 		var value = {};
 		for (var i in res.constant)
@@ -194,8 +194,10 @@ expressions.obj.prototype.optimize = function() {
 	return res;
 };
 
-expressions.arr.prototype.optimize = function() {
-	var res = this.child.optimize();
+expressions.arr.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(disuseProduce);
+	if (disuseProduce)
+		return res;
 	if (res.constant) { // 定数化
 		var value = {};
 		res.expression = new expressions.ltr(res.constant);
@@ -208,8 +210,10 @@ expressions.arr.prototype.optimize = function() {
 	return res;
 };
 
-expressions.pr.prototype.optimize = function() {
-	var res = this.child.optimize();
+expressions.pr.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(disuseProduce);
+	if (disuseProduce)
+		return res;
 	if (res.constant) { // 定数化
 		res.expression = new expressions.ltr({key: this.key, value: res.constant[0]});
 		res.advance = 0;
@@ -225,8 +229,10 @@ expressions.pr.prototype.optimize = function() {
 	return res;
 };
 
-expressions.tkn.prototype.optimize = function() {
-	var res = this.child.optimize();
+expressions.tkn.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(disuseProduce);
+	if (disuseProduce)
+		return res;
 	this.child = res.expression;
 	res.produce = 2;
 	res.expression = this;
@@ -234,7 +240,15 @@ expressions.tkn.prototype.optimize = function() {
 	return res;
 };
 
-expressions.ltr.prototype.optimize = function() {
+expressions.ltr.prototype.optimize = function(disuseProduce) {
+	if (disuseProduce) {
+		return {
+			expression: new expressions.nop(),
+			advance: 0,
+			produce: 0,
+			success: 2,
+		};
+	}
 	return {
 		expression: this,
 		advance: 0,
@@ -244,8 +258,8 @@ expressions.ltr.prototype.optimize = function() {
 	};
 };
 
-expressions.pla.prototype.optimize = function() {
-	var res = this.child.optimize();
+expressions.pla.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(true);
 	if (res.success === 0) {
 		res.expression = new expressions.nop(false);
 	} else if (res.success === 2) {
@@ -260,8 +274,8 @@ expressions.pla.prototype.optimize = function() {
 	return res;
 };
 
-expressions.nla.prototype.optimize = function() {
-	var res = this.child.optimize();
+expressions.nla.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(true);
 	if (res.success === 0) {
 		res.expression = new expressions.nop(false);
 	} else if (res.success === 2) {
@@ -277,8 +291,8 @@ expressions.nla.prototype.optimize = function() {
 	return res;
 };
 
-expressions.mod.prototype.optimize = function() {
-	var res = this.child.optimize();
+expressions.mod.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(disuseProduce);
 	this.child = res.expression;
 	res.produce = 2;
 	res.expression = this;
@@ -286,8 +300,8 @@ expressions.mod.prototype.optimize = function() {
 	return res;
 };
 
-expressions.grd.prototype.optimize = function() {
-	var res = this.child.optimize();
+expressions.grd.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(false);
 	this.child = res.expression;
 	res.produce = 2;
 	res.success = 1;
@@ -296,8 +310,8 @@ expressions.grd.prototype.optimize = function() {
 	return res;
 };
 
-expressions.wst.prototype.optimize = function() {
-	var res = this.child.optimize();
+expressions.wst.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(true);
 	this.child = res.expression;
 	res.produce = 0;
 	res.expression = this;
@@ -305,7 +319,7 @@ expressions.wst.prototype.optimize = function() {
 	return res;
 };
 
-expressions.rul.prototype.optimize = function() {
+expressions.rul.prototype.optimize = function(disuseProduce) {
 	return {
 		expression: this,
 		advance: 1,
@@ -315,7 +329,7 @@ expressions.rul.prototype.optimize = function() {
 };
 
 var ruleOptimize = function(rule) {
-	rule.body = rule.body.optimize().expression;
+	rule.body = rule.body.optimize(false).expression;
 };
 
 module.exports = ruleOptimize;
