@@ -44,22 +44,29 @@
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-var buildParser = __webpack_require__(1);
-var expressions = __webpack_require__(2);
+/* WEBPACK VAR INJECTION */(function(global) {module.exports = global["SnakeParser"] = __webpack_require__(1);
+/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
-window.SnakeParser = {
+/***/ },
+/* 1 */
+/***/ function(module, exports, __webpack_require__) {
+
+var buildParser = __webpack_require__(2);
+var expressions = __webpack_require__(3);
+
+module.exports = {
 	buildParser: buildParser,
 	expressions: expressions,
 };
 
 
 /***/ },
-/* 1 */
+/* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
-var grammarParse = __webpack_require__(3);
-var expressions = __webpack_require__(2);
-var genjs = __webpack_require__(4);
+var grammarParse = __webpack_require__(4);
+var expressions = __webpack_require__(3);
+var genjs = __webpack_require__(5);
 
 var buildParser = function(grammarSource) {
 	var er = grammarParse(grammarSource, {expressions: expressions});
@@ -96,7 +103,7 @@ module.exports = buildParser;
 
 
 /***/ },
-/* 2 */
+/* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
 var expressions = {};
@@ -816,11 +823,11 @@ module.exports = expressions;
 
 
 /***/ },
-/* 3 */
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-var expressions = __webpack_require__(2);
-var genjs = __webpack_require__(4);
+var expressions = __webpack_require__(3);
+var genjs = __webpack_require__(5);
 
 var initializer = '\
 	function arrayToObject($) {\n\
@@ -1075,11 +1082,11 @@ module.exports = eval(code);
 
 
 /***/ },
-/* 4 */
+/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
-var expressions = __webpack_require__(2);
-var ruleOptimize = __webpack_require__(5);
+var expressions = __webpack_require__(3);
+var ruleOptimize = __webpack_require__(6);
 
 var indentStr = "\t";
 
@@ -1779,10 +1786,10 @@ module.exports = genjs;
 
 
 /***/ },
-/* 5 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
-var expressions = __webpack_require__(2);
+var expressions = __webpack_require__(3);
 
 expressions.nop.prototype.optimize = function(disuseProduce) {
 	return {
