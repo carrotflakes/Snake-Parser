@@ -106,31 +106,20 @@ window.setInterval(function() {
 
 function buildParser() {
 	var grammar = grammarEditor.getValue();
+	code = null;
+	parser = null;
 
-	var t = new Date().getTime();
 	try {
-    br = SnakeParser.buildParser(grammar);
-  } catch (e) {
-    br = {
-      success: false,
-      error: e.message,
-    };
-  }
-	t = new Date().getTime() - t;
+		var t = new Date().getTime();
+    code = SnakeParser.buildParser(grammar);
+		parser = eval(code);
+		t = new Date().getTime() - t;
 
-	if (br.success) {
-		try {
-			parser = eval(code = br.code);
-			syntaxMessageElm.innerHTML = ("Parser built successfully.\n" + t + "ms").replace(/\n/g, "<br>");
-		} catch (e) {
-			parser = null;
-			syntaxMessageElm.innerHTML = (e.message).replace(/\n/g, "<br>");
-		}
-	} else {
-		syntaxMessageElm.innerHTML = (br.error + "\n" + t + "ms").replace(/\n/g, "<br>");
-		code = null;
+		syntaxMessageElm.innerHTML = ("Parser built successfully.\n" + t + "ms").replace(/\n/g, "<br>");
+  } catch (e) {
+		syntaxMessageElm.innerHTML = e.message.replace(/\n/g, "<br>");
 		parser = null;
-	}
+  }
 
 	resultMessageElm.innerHTML = "";
 };
@@ -141,32 +130,20 @@ function parse() {
 		return;
 
 	var resultElem = document.getElementById("result");
-	
+
 	resultElem.value = "";
-	
+
 	var inputText = inputTextEditor.getValue();
 
-	var result;
-	var t = new Date().getTime();
 	try {
-		result = parser(inputText);
-	} catch (e) {
-		result = {
-			success: false,
-			error: e.message
-		};
-	}
-	t = new Date().getTime() - t;
+		var t = new Date().getTime();
+		var result = parser(inputText);
+		t = new Date().getTime() - t;
 
-	//console.dir(result);
-
-	if (result.success) {
 		resultMessageElm.innerHTML = ("Input parsed successfully.\n" + t + "ms").replace(/\n/g, "<br>");
-
-		resultElem.value = JSON.stringify(result.content, null, "  ");
-	} else {
-		resultMessageElm.innerHTML = (result.error + "\n" + t + "ms").replace(/\n/g, "<br>");
-
+		resultElem.value = JSON.stringify(result, null, "  ");
+	} catch (e) {
+		resultMessageElm.innerHTML = e.message.replace(/\n/g, "<br>");
 		resultElem.value = "";
 	}
 };

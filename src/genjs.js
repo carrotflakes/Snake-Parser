@@ -655,30 +655,20 @@ var $failureObj = {};\n\
 	} : $failureObj;\n\
 }', 2) + "\n\n");
 
-	states.push(addIndent('	var $ret;\n\
-	try {\n\
-		rule$start();\n\
-	} catch (e) {\n\
-		if (e.message === "Infinite loop detected.")\n\
-			$ret = {success: false, error: e.message}, $pos = -1;\n\
-		else\n\
-			throw e;\n\
-	}\n\
+	states.push(addIndent('	rule$start();\n\
 	if ($pos !== -1) {\n\
 		if ($pos === $inputLength) {\n\
 			$objs.length = $objsLen;\n\
-			$ret = {success: true, content: $objs[0]};\n\
+			return $objs[0];\n\
 		}\n\
 		$matchingFail("end of input");\n\
 	}\n\
-	if (!$ret) {\n\
-		if ($failMatchs.length === 0)\n\
-			$failMatchs.push("something");\n\
-		var $line = ($input.slice(0, $failPos).match(/\\n/g) || []).length;\n\
-		var $column = $failPos - $input.lastIndexOf("\\n", $failPos - 1) - 1;\n\
-		$ret = {success: false, error: "Line " + ($line + 1) + ", column " + $column + ": Expected " + $joinByOr($failMatchs) + " but " + (JSON.stringify($input[$failPos]) || "end of input") + " found."};\n\
-	}\n\
-	return $ret;\n\
+	if ($failMatchs.length === 0)\n\
+		$failMatchs.push("something");\n\
+	var $line = ($input.slice(0, $failPos).match(/\\n/g) || []).length;\n\
+	var $column = $failPos - $input.lastIndexOf("\\n", $failPos - 1) - 1;\n\
+	var $errorMessage = "Line " + ($line + 1) + ", column " + $column + ": Expected " + $joinByOr($failMatchs) + " but " + (JSON.stringify($input[$failPos]) || "end of input") + " found.";\n\
+	throw new Error($errorMessage);\n\
 };\n', 1));
 	states.push(indentStr + "return $parse;\n");
 	states.push("})();\n");
