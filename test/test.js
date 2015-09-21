@@ -236,5 +236,19 @@ start = `*. -> mod -? assert';
 			assert.equal(parse(""), undefined);
 			assert.equal(parse("ababa"), undefined);
 		});
+
+		it("Left recursive", function() {
+			var grammar = 'start = a a = @?(a `.)';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse("ok!"), [[[[], "o"], "k"], "!"]);
+
+			var grammar = 'start = a a = @?(b \\1 `.) b = @?(a \\2 `.)';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse("ok!"), [[[[], 1, "o"], 2, "k"], 1, "!"]);
+
+			var grammar = 'start = a a = ?@(a b "!") b = ?@(b `[a-z])';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse("a!bc!d!"), [[[["a"]],[["b"],"c"]],["d"]]);
+		});
 	});
 });
