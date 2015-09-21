@@ -181,8 +181,8 @@ expressions.obj.prototype.optimize = function(disuseProduce) {
 		return res;
 	if (res.constant) { // 定数化
 		var value = {};
-		for (var i in res.constant)
-			value[res.constant[i].key] = res.constant[i].value;
+		for (var i = 0; i < res.constant.length; i += 2)
+			value[res.constant[i + 1]] = res.constant[i];
 		res.expression = new expressions.ltr(value);
 		res.constant = [value];
 	} else {
@@ -214,14 +214,14 @@ expressions.pr.prototype.optimize = function(disuseProduce) {
 	var res = this.child.optimize(disuseProduce);
 	if (disuseProduce)
 		return res;
+	this.child = res.expression;
 	if (res.constant) { // 定数化
-		res.expression = new expressions.ltr({key: this.key, value: res.constant[0]});
+		res.expression = this;
 		res.advance = 0;
 		res.produce = 2;
 		res.success = 2;
-		res.constant = [res.expression.value];
+		res.constant = [res.constant[0], this.key];
 	} else {
-		this.child = res.expression;
 		res.produce = 2;
 		res.expression = this;
 		res.constant = undefined;

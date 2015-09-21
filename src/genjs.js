@@ -291,8 +291,8 @@ expressions.obj.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
 	states.push(indent + "if ($pos !== -1) {\n");
 	states.push(indent + indentStr + "var " + obj + " = {};\n");
-	states.push(indent + indentStr + "for (var i = " + objsLen + "; i < $objsLen; i++)\n");
-	states.push(indent + indentStr + indentStr + obj + "[$objs[i].key] = $objs[i].value;\n");
+	states.push(indent + indentStr + "for (var i = " + objsLen + "; i < $objsLen; i += 2)\n");
+	states.push(indent + indentStr + indentStr + obj + "[$objs[i + 1]] = $objs[i];\n");
 	states.push(indent + indentStr + "$objsLen = " + objsLen + " + 1;\n");
 	states.push(indent + indentStr + "$objs[" + objsLen + "] = " + obj + ";\n");
 	states.push(indent + "}\n");
@@ -301,16 +301,23 @@ expressions.obj.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 
 expressions.pr.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
-	var objsLenV;
-	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
-	var states = [];
-	states.push(makeVarState([[objsLenV, "$objsLen"]], indentLevel));
-	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
-	states.push(indent + "if ($pos !== -1) {\n");
-	states.push(indent + indentStr + "$objs[" + objsLen + "] = {key: " + stringify(this.key) + ", value: $objs[" + objsLen + "]};\n");
-	states.push(indent + indentStr + "$objsLen = " + objsLen + " + 1;\n");
-	states.push(indent + "}\n");
-	return states.join("");
+	if (this.child instanceof expressions.ltr) {
+		var states = [];
+		states.push(indent + "$objs[$objsLen++] = " + stringify(this.child.value) + ";\n");
+		states.push(indent + "$objs[$objsLen++] = " + stringify(this.key) + ";\n");
+		return states.join("");
+	} else {
+		var objsLenV;
+		objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
+		var states = [];
+		states.push(makeVarState([[objsLenV, "$objsLen"]], indentLevel));
+		states.push(this.child.gen(ids, pos, objsLen, indentLevel));
+		states.push(indent + "if ($pos !== -1) {\n");
+		states.push(indent + indentStr + "$objs[" + objsLen + " + 1] = " + stringify(this.key) + ";\n");
+		states.push(indent + indentStr + "$objsLen = " + objsLen + " + 2;\n");
+		states.push(indent + "}\n");
+		return states.join("");
+	}
 };
 
 expressions.arr.prototype.gen = function(ids, pos, objsLen, indentLevel) {
