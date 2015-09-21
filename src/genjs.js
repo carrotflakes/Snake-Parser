@@ -143,12 +143,18 @@ expressions.seq.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var states = [];
 	var ids1 = {}; ids1.__proto__ = ids;
-	states.push(this.children[0].gen(ids1, pos, objsLen, indentLevel));
+	var checkSuccess = false;
 	var nest = 0;
-	for (var i = 1; i < this.children.length; ++i) {
+	for (var i = 0; i < this.children.length; ++i) {
 		var ids1 = {}; ids1.__proto__ = ids;
-		states.push(makeIndent(indentLevel + nest++) + "if ($pos !== -1) {\n");
-		states.push(this.children[i].gen(ids1, null, null, indentLevel + nest));
+		if (checkSuccess)
+			states.push(makeIndent(indentLevel + nest++) + "if ($pos !== -1) {\n");
+		states.push(this.children[i].gen(ids1, pos, objsLen, indentLevel + nest));
+		if (!this.children[i].neverAdvance)
+			pos = null;
+		if (!this.children[i].neverProduce)
+			objsLen = null;
+		checkSuccess = !this.children[i].alwaysSuccess;
 	}
 	while (nest)
 		states.push(makeIndent(indentLevel + --nest) + "}\n");

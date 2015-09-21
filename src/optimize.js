@@ -122,6 +122,9 @@ expressions.seq.prototype.optimize = function(disuseProduce) {
 		if (res.expression instanceof expressions.seq) { // 子供がseqなら展開する
 			[].push.apply(children, res.expression.children);
 		} else {
+			res.expression.neverAdvance = res.advance === 0;
+			res.expression.neverProduce = res.produce === 0;
+			res.expression.alwaysSuccess = res.success === 2;
 			children.push(res.expression);
 		}
 		advance = Math.max(advance, res.advance);
