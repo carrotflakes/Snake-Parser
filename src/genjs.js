@@ -319,6 +319,8 @@ expressions.pr.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 		states.push(makeVarState([[objsLenV, "$objsLen"]], indentLevel));
 		states.push(this.child.gen(ids, pos, objsLen, indentLevel));
 		states.push(indent + "if ($pos !== -1) {\n");
+		states.push(indent + indentStr + "if ($objsLen === " + objsLen + ")\n");
+		states.push(indent + indentStr + indentStr + "$objs[" + objsLen + "] = undefined;\n");
 		states.push(indent + indentStr + "$objs[" + objsLen + " + 1] = " + stringify(this.key) + ";\n");
 		states.push(indent + indentStr + "$objsLen = " + objsLen + " + 2;\n");
 		states.push(indent + "}\n");
