@@ -14,26 +14,25 @@ var initializer = '\
 	function ensureMax($) {\n\
 		return $ === undefined ? Infinity : $;\n\
 	};\n\
-	function characterClassChar($) {\n\
-		var str = $,\n\
-		len = str.length;\n\
+	function characterClassChar(str) {\n\
+		var len = str.length;\n\
 		if (len === 1)\n\
 			return str.charCodeAt();\n\
 		if (len === 4 || len === 6)\n\
 			return parseInt(str.substring(2), 16);\n\
-		if (str === "\\\\b")\n\
-			return "\\b".charCodeAt();\n\
-		if (str === "\\\\t")\n\
-			return "\\t".charCodeAt();\n\
-		if (str === "\\\\v")\n\
-			return "\\v".charCodeAt();\n\
-		if (str === "\\\\n")\n\
-			return "\\n".charCodeAt();\n\
-		if (str === "\\\\r")\n\
-			return "\\r".charCodeAt();\n\
-		if (str === "\\\\f")\n\
-			return "\\f".charCodeAt();\n\
-		return str.charCodeAt(1);\n\
+		if (str === "\\\\0")\n\
+ 			return 0;\n\
+ 		if (str === "\\\\t")\n\
+ 			return 9;\n\
+ 		if (str === "\\\\n")\n\
+ 			return 10;\n\
+ 		if (str === "\\\\v")\n\
+ 			return 11;\n\
+ 		if (str === "\\\\f")\n\
+ 			return 12;\n\
+ 		if (str === "\\\\r")\n\
+ 			return 13;\n\
+ 		return str.charCodeAt(1);\n\
 	};\n\
 	function nuturalNumber($) {\n\
 		return +$;\n\
@@ -123,7 +122,7 @@ var rules = {
 	},
 	"ChoiceExpression": {
 		ident: "ChoiceExpression",
-		body: oc([seq([mod(obj(seq([pr("op",ltr("oc")),pr("a",arr(seq([rul("SequenceExpression"),rul("__"),rep(1,Infinity,seq([str("|"),rul("__"),rul("SequenceExpression")]))])))])),"expr",null),rul("__")]),seq([rul("SequenceExpression"),rul("__")]),mod(obj(pr("op",ltr("nop"))),"expr",null)]),
+		body: oc([seq([mod(obj(seq([pr("op",ltr("oc")),pr("a",arr(seq([rul("SequenceExpression"),rul("__"),rep(1,Infinity,seq([str("|"),rul("__"),rul("SequenceExpression")]))])))])),"expr",null),rul("__")]),seq([rul("SequenceExpression"),rul("__")])]),
 	},
 	"SequenceExpression": {
 		ident: "SequenceExpression",
@@ -139,7 +138,7 @@ var rules = {
 	},
 	"OtherExpression": {
 		ident: "OtherExpression",
-		body: oc([seq([str("("),rul("__"),rul("ChoiceExpression"),rul("__"),str(")")]),mod(obj(oc([seq([pr("op",ltr("str")),pr("a",rul("StringLiteral"))]),seq([pr("op",ltr("cc")),str("["),pr("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),pr("a",rul("CharacterClass")),str("]")]),seq([pr("op",ltr("ltr")),str("\\"),rul("__"),pr("a",oc([rul("StringLiteral"),rul("NumericLiteral"),rul("BooleanLiteral"),rul("NullLiteral")]))]),seq([pr("op",ltr("arr")),str("@"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("obj")),str("{"),rul("__"),pr("a",rul("ChoiceExpression")),rul("__"),str("}")]),seq([pr("op",ltr("tkn")),str("`"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("pla")),str("&"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("nla")),str("!"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("?"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",ltr(1))]),seq([pr("op",ltr("rep")),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",mod(ltr(0),null,"return Infinity"))]),seq([pr("op",ltr("rep")),pr("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("b",ltr("min"))]),seq([pr("op",ltr("rep")),pr("a",mod(rep(0,1,rul("NaturalNumber")),"ensureMin",null)),str(","),pr("b",mod(rep(0,1,rul("NaturalNumber")),"ensureMax",null)),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("+"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(1)),pr("b",mod(ltr(0),null,"return Infinity"))]),seq([pr("op",ltr("ac")),str(".")]),seq([pr("op",ltr("pi")),str("$"),pr("a",rul("Identifier"))]),seq([pr("op",ltr("rul")),nla(rul("Rule")),pr("a",rul("Identifier")),rep(0,1,seq([rul("__"),pr("b",rul("RuleArguments"))]))])])),"expr",null)]),
+		body: oc([seq([str("("),rul("__"),oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)]),rul("__"),str(")")]),mod(obj(oc([seq([pr("op",ltr("str")),pr("a",rul("StringLiteral"))]),seq([pr("op",ltr("cc")),str("["),pr("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),pr("a",rul("CharacterClass")),str("]")]),seq([pr("op",ltr("ltr")),str("\\"),rul("__"),pr("a",oc([rul("StringLiteral"),rul("NumericLiteral"),rul("BooleanLiteral"),rul("NullLiteral")]))]),seq([pr("op",ltr("arr")),str("@"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("obj")),str("{"),rul("__"),pr("a",rul("ChoiceExpression")),rul("__"),str("}")]),seq([pr("op",ltr("tkn")),str("`"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("pla")),str("&"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("nla")),str("!"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("?"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",ltr(1))]),seq([pr("op",ltr("rep")),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",mod(ltr(0),null,"return Infinity"))]),seq([pr("op",ltr("rep")),pr("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("b",ltr("min"))]),seq([pr("op",ltr("rep")),pr("a",mod(rep(0,1,rul("NaturalNumber")),"ensureMin",null)),str(","),pr("b",mod(rep(0,1,rul("NaturalNumber")),"ensureMax",null)),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("+"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(1)),pr("b",mod(ltr(0),null,"return Infinity"))]),seq([pr("op",ltr("ac")),str(".")]),seq([pr("op",ltr("pi")),str("$"),pr("a",rul("Identifier"))]),seq([pr("op",ltr("rul")),nla(rul("Rule")),pr("a",rul("Identifier")),rep(0,1,seq([rul("__"),pr("b",rul("RuleArguments"))]))])])),"expr",null)]),
 	},
 	"RuleArguments": {
 		ident: "RuleArguments",

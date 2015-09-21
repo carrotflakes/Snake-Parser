@@ -6,6 +6,11 @@ module.exports = {
     path: __dirname + "/dist",
     filename: "snakeParser.js",
     sourcePrefix: "",
+  },
+  module: {
+    loaders: [
+      { test: /snakeParser\.js/, loader: "expose?SnakeParser" }
+    ]
   }
 };
 

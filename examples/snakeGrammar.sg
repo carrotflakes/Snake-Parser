@@ -32,20 +32,24 @@
     function ensureMax($) {
         return $ === undefined ? Infinity : $;
     }
-    function characterClassChar($) {
-        var str = $,
-        len = str.length;
-        if (len === 1) {
+    function characterClassChar(str) {
+        var len = str.length;
+        if (len === 1)
             return str.charCodeAt();
-        } else if (len === 6) {
+        if (len === 4 || len === 6)
             return parseInt(str.substring(2), 16);
-        } else if (str === "\\n") {
-            return 10;
-        } else if (str === "\\t") {
+        if (str === "\\0")
+            return 0;
+        if (str === "\\t")
             return 9;
-        } else if (str === "\\r") {
+        if (str === "\\n")
+            return 10;
+        if (str === "\\v")
+            return 11;
+        if (str === "\\f")
+            return 12;
+        if (str === "\\r")
             return 13;
-        }
         return str.charCodeAt(1);
     }
     function nuturalNumber($) {
@@ -120,7 +124,6 @@ RuleParameters
 ChoiceExpression
     = {op:=oc a:@(SequenceExpression __ +('|' __ SequenceExpression))} -> expr __
     | SequenceExpression __
-    | {op:=nop} -> expr
 
 SequenceExpression
     = {op:=seq a:@(LabelExpression +(__ LabelExpression))} -> expr __
@@ -157,7 +160,7 @@ ModifyExpression
     | OtherExpression
 
 OtherExpression
-    = '(' __ ChoiceExpression __ ')'
+    = '(' __ (ChoiceExpression | {op:=nop} -> expr) __ ')'
     |   { op:=str a:StringLiteral
         | op:=cc  '[' b:('^' \true | \false) a:CharacterClass ']'
         | op:=ltr '\\' __ a:(StringLiteral | NumericLiteral | BooleanLiteral | NullLiteral)
@@ -226,10 +229,12 @@ CharacterClass
         }
 
 CharacterClassChar
-    = `([^\]\\]
-    | '\\x' 2*HexDigit
-    | '\\u' 4*HexDigit
-    | '\\' [^ux]) -> characterClassChar
+    = `(
+        [^\]\\]
+      | '\\x' 2*HexDigit
+      | '\\u' 4*HexDigit
+      | '\\' [^ux]
+      ) -> characterClassChar
 
 CodeBlock "code block"
     = "{" `Code "}"

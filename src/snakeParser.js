@@ -1,7 +1,7 @@
 var buildParser = require("./build");
 var expressions = require("./expressions");
 
-window.SnakeParser = {
+module.exports = {
 	buildParser: buildParser,
 	expressions: expressions,
 };

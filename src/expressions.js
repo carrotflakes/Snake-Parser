@@ -15,7 +15,8 @@ var extendsExpression = function(cls, name) {
 
 
 // Classes extends Expression
-var Nop = function() {
+var Nop = function(succeed) {
+	this.succeed = succeed === undefined ? true : succeed;
 };
 extendsExpression(Nop, "nop");
 
@@ -24,15 +25,15 @@ var MatchString = function(s) {
 };
 extendsExpression(MatchString, "str");
 
-var MatchCharactorClass = function(cc, i) {
-	this.charactorClass = cc;
+var MatchCharacterClass = function(cc, i) {
+	this.characterClass = cc;
 	this.invert = !!i;
 };
-extendsExpression(MatchCharactorClass, "cc");
+extendsExpression(MatchCharacterClass, "cc");
 
-var MatchAnyCharactor = function() {
+var MatchAnyCharacter = function() {
 };
-extendsExpression(MatchAnyCharactor, "ac");
+extendsExpression(MatchAnyCharacter, "ac");
 
 var OrderedChoice = function(es) {
 	if (es instanceof Array)
@@ -375,8 +376,8 @@ MatchString.prototype.toString = function() {
 	return this._name + "(" + JSON.stringify(this.string) + ")";
 };
 
-MatchCharactorClass.prototype.toString = function() {
-	return this._name + "(" + JSON.stringify(this.charactorClass) + "," + +this.invert + ")";
+MatchCharacterClass.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.characterClass) + "," + +this.invert + ")";
 };
 
 Repeat.prototype.toString = function() {
@@ -539,8 +540,8 @@ MatchString.prototype.canLeftRecurs = function(rule, passedRules) {
 	return -1;
 };
 
-MatchCharactorClass.prototype.canLeftRecurs = MatchString.prototype.canLeftRecurs;
-MatchAnyCharactor.prototype.canLeftRecurs = MatchString.prototype.canLeftRecurs;
+MatchCharacterClass.prototype.canLeftRecurs = MatchString.prototype.canLeftRecurs;
+MatchAnyCharacter.prototype.canLeftRecurs = MatchString.prototype.canLeftRecurs;
 
 Repeat.prototype.canLeftRecurs = function(rule, passedRules) {
 	if (this.min === 0) {
@@ -599,7 +600,7 @@ MatchString.prototype.canAdvance = function() {
 	return this.string.length != 0;
 };
 
-MatchCharactorClass.prototype.canAdvance = function() {
+MatchCharacterClass.prototype.canAdvance = function() {
 	return true;
 };
 
@@ -663,7 +664,7 @@ MatchString.prototype.canProduce = function() {
 	return false;
 };
 
-MatchCharactorClass.prototype.canProduce = function() {
+MatchCharacterClass.prototype.canProduce = function() {
 	return false;
 };
 
