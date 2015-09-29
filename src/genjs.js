@@ -489,7 +489,7 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		states.push(indent + indentStr + indentStr + indentStr + "break;\n");
 		states.push(indent + indentStr + indentStr + "rpos = $pos;\n");
 		states.push(indent + indentStr + indentStr + "$objs.length = $objsLen;\n");
-		states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $objs);\n");
+		states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs);\n");
 		states.push(indent + indentStr + "}\n");
 		states.push(indent + indentStr + "$objs = " + objs + ";\n");
 		states.push(indent + indentStr + "$objsLen = $objs.length;\n");
@@ -513,9 +513,9 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		if (key) {
 			if (useUndet) {
 				states.push(indent + indentStr + "if (!$undet[" + pos + "])\n");
-				states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $objs.slice(" + objsLen + ", $objsLen));\n");
+				states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs.slice(" + objsLen + ", $objsLen));\n");
 			} else {
-				states.push(indent + indentStr + "$writeMemo(" + key + ", $objs.slice(" + objsLen + ", $objsLen));\n");
+				states.push(indent + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs.slice(" + objsLen + ", $objsLen));\n");
 			}
 		}
 		states.push(indent + "}");
@@ -664,7 +664,7 @@ var $failureObj = {};\n\
 }', 2) + "\n\n");
 
 	states.push(addIndent('function $writeMemo(key, objs) {\n\
-	$memo[key] = ($pos !== -1) ? {\n\
+	$memo[key] = objs ? {\n\
 		pos: $pos,\n\
 		objs: objs\n\
 	} : $failureObj;\n\
