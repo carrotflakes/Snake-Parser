@@ -165,7 +165,7 @@ expressions.rep.prototype.optimize = function(disuseProduce) {
 	var res = this.child.optimize(disuseProduce);
 	this.child = res.expression;
 	if (this.max === Infinity && res.success === 2)
-		throw new Error("Repeat expression will infinite loop.");
+		throw new Error("Infinite loop detected.");
 	if (this.min === 0)
 		res.success = Math.max(1, res.success);
 	res.expression = this;
