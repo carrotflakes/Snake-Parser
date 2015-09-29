@@ -2070,7 +2070,7 @@ expressions.nla.prototype.optimize = function(disuseProduce) {
 };
 
 expressions.mod.prototype.optimize = function(disuseProduce) {
-	var res = this.child.optimize(disuseProduce);
+	var res = this.child.optimize(false);
 	this.child = res.expression;
 	res.produce = 2;
 	res.expression = this;
