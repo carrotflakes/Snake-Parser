@@ -165,7 +165,7 @@ OtherExpression
         | op:=cc  '[' b:('^' \true | \false) a:CharacterClass ']'
         | op:=ltr '\\' __ a:(StringLiteral | NumericLiteral | BooleanLiteral | NullLiteral)
         | op:=arr '@' __ a:OtherExpression
-        | op:=obj '{' __ a:ChoiceExpression __ '}'
+        | op:=obj '{' __ a:(ChoiceExpression | {op:=nop} -> expr) __ '}'
         | op:=tkn '`' __ a:OtherExpression
         | op:=pla '&' __ a:OtherExpression
         | op:=nla '!' __ a:OtherExpression
@@ -285,3 +285,4 @@ HexIntegerLiteral
 
 HexDigit
     = [0-9a-fA-F]
+
