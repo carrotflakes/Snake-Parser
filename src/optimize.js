@@ -187,6 +187,7 @@ expressions.obj.prototype.optimize = function(disuseProduce) {
 		for (var i = 0; i < res.constant.length; i += 2)
 			value[res.constant[i + 1]] = res.constant[i];
 		res.expression = new expressions.ltr(value);
+		res.produce = 2;
 		res.constant = [value];
 	} else {
 		this.child = res.expression;
@@ -204,6 +205,7 @@ expressions.arr.prototype.optimize = function(disuseProduce) {
 	if (res.constant) { // 定数化
 		var value = {};
 		res.expression = new expressions.ltr(res.constant);
+		res.produce = 2;
 		res.constant = [res.constant];
 	} else {
 		this.child = res.expression;
