@@ -165,7 +165,7 @@ expressions.rep.prototype.optimize = function(disuseProduce) {
 	var res = this.child.optimize(disuseProduce);
 	this.child = res.expression;
 	if (this.max === Infinity && res.success === 2)
-		throw new Error("Repeat expression will infinite loop.");
+		throw new Error("Infinite loop detected.");
 	if (this.min === 0)
 		res.success = Math.max(1, res.success);
 	res.expression = this;
@@ -187,6 +187,7 @@ expressions.obj.prototype.optimize = function(disuseProduce) {
 		for (var i = 0; i < res.constant.length; i += 2)
 			value[res.constant[i + 1]] = res.constant[i];
 		res.expression = new expressions.ltr(value);
+		res.produce = 2;
 		res.constant = [value];
 	} else {
 		this.child = res.expression;
@@ -204,6 +205,7 @@ expressions.arr.prototype.optimize = function(disuseProduce) {
 	if (res.constant) { // 定数化
 		var value = {};
 		res.expression = new expressions.ltr(res.constant);
+		res.produce = 2;
 		res.constant = [res.constant];
 	} else {
 		this.child = res.expression;
@@ -295,7 +297,7 @@ expressions.nla.prototype.optimize = function(disuseProduce) {
 };
 
 expressions.mod.prototype.optimize = function(disuseProduce) {
-	var res = this.child.optimize(disuseProduce);
+	var res = this.child.optimize(false);
 	this.child = res.expression;
 	res.produce = 2;
 	res.expression = this;

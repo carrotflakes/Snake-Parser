@@ -948,7 +948,7 @@ var rules = {
 	},
 	"OtherExpression": {
 		ident: "OtherExpression",
-		body: oc([seq([str("("),rul("__"),oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)]),rul("__"),str(")")]),mod(obj(oc([seq([pr("op",ltr("str")),pr("a",rul("StringLiteral"))]),seq([pr("op",ltr("cc")),str("["),pr("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),pr("a",rul("CharacterClass")),str("]")]),seq([pr("op",ltr("ltr")),str("\\"),rul("__"),pr("a",oc([rul("StringLiteral"),rul("NumericLiteral"),rul("BooleanLiteral"),rul("NullLiteral")]))]),seq([pr("op",ltr("arr")),str("@"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("obj")),str("{"),rul("__"),pr("a",rul("ChoiceExpression")),rul("__"),str("}")]),seq([pr("op",ltr("tkn")),str("`"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("pla")),str("&"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("nla")),str("!"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("?"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",ltr(1))]),seq([pr("op",ltr("rep")),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",mod(ltr(0),null,"return Infinity"))]),seq([pr("op",ltr("rep")),pr("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("b",ltr("min"))]),seq([pr("op",ltr("rep")),pr("a",mod(rep(0,1,rul("NaturalNumber")),"ensureMin",null)),str(","),pr("b",mod(rep(0,1,rul("NaturalNumber")),"ensureMax",null)),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("+"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(1)),pr("b",mod(ltr(0),null,"return Infinity"))]),seq([pr("op",ltr("ac")),str(".")]),seq([pr("op",ltr("pi")),str("$"),pr("a",rul("Identifier"))]),seq([pr("op",ltr("rul")),nla(rul("Rule")),pr("a",rul("Identifier")),rep(0,1,seq([rul("__"),pr("b",rul("RuleArguments"))]))])])),"expr",null)]),
+		body: oc([seq([str("("),rul("__"),oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)]),rul("__"),str(")")]),mod(obj(oc([seq([pr("op",ltr("str")),pr("a",rul("StringLiteral"))]),seq([pr("op",ltr("cc")),str("["),pr("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),pr("a",rul("CharacterClass")),str("]")]),seq([pr("op",ltr("ltr")),str("\\"),rul("__"),pr("a",oc([rul("StringLiteral"),rul("NumericLiteral"),rul("BooleanLiteral"),rul("NullLiteral")]))]),seq([pr("op",ltr("arr")),str("@"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("obj")),str("{"),rul("__"),pr("a",oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)])),rul("__"),str("}")]),seq([pr("op",ltr("tkn")),str("`"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("pla")),str("&"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("nla")),str("!"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("?"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",ltr(1))]),seq([pr("op",ltr("rep")),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",mod(ltr(0),null,"return Infinity"))]),seq([pr("op",ltr("rep")),pr("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("b",ltr("min"))]),seq([pr("op",ltr("rep")),pr("a",mod(rep(0,1,rul("NaturalNumber")),"ensureMin",null)),str(","),pr("b",mod(rep(0,1,rul("NaturalNumber")),"ensureMax",null)),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("+"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(1)),pr("b",mod(ltr(0),null,"return Infinity"))]),seq([pr("op",ltr("ac")),str(".")]),seq([pr("op",ltr("pi")),str("$"),pr("a",rul("Identifier"))]),seq([pr("op",ltr("rul")),nla(rul("Rule")),pr("a",rul("Identifier")),rep(0,1,seq([rul("__"),pr("b",rul("RuleArguments"))]))])])),"expr",null)]),
 	},
 	"RuleArguments": {
 		ident: "RuleArguments",
@@ -1069,6 +1069,7 @@ module.exports = eval(code);
 
 var expressions = __webpack_require__(3);
 var ruleOptimize = __webpack_require__(6);
+var jsLiteralify = __webpack_require__(7);
 
 var indentStr = "\t";
 
@@ -1159,12 +1160,6 @@ var charCodeToRegexpClassChar = function(cc) {
 	if (0x100 <= cc && cc <= 0xffff)
 		return "\\u" + ("000" + cc.toString(16)).slice(-4);
 	return String.fromCharCode(cc);
-};
-
-var stringify = function(object) {
-	return JSON.stringify(object)
-		.replace(/\u2028/g, "\\u2028")
-		.replace(/\u2029/g, "\\u2029");
 };
 
 var makeErrorLogging = function(match, indentLevel) {
@@ -1285,12 +1280,12 @@ expressions.str.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var states = [];
 	if (this.string.length !== 1)
-		states.push(indent + "if ($input.substr($pos, " + this.string.length + ") === " + stringify(this.string) + ")\n");
+		states.push(indent + "if ($input.substr($pos, " + this.string.length + ") === " + jsLiteralify(this.string) + ")\n");
 	else
 		states.push(indent + "if ($input.charCodeAt($pos) === " + this.string.charCodeAt() + ")\n");
 	states.push(indent + indentStr + "$pos += " + this.string.length + ";\n");
 	states.push(indent + "else\n");
-	states.push(makeErrorLogging(stringify(this.string), indentLevel + 1));
+	states.push(makeErrorLogging(jsLiteralify(this.string), indentLevel + 1));
 //	states.push(indent + "}\n");
 	return states.join("");
 };
@@ -1378,8 +1373,8 @@ expressions.pr.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	if (this.child instanceof expressions.ltr) {
 		var states = [];
-		states.push(indent + "$objs[$objsLen++] = " + stringify(this.child.value) + ";\n");
-		states.push(indent + "$objs[$objsLen++] = " + stringify(this.key) + ";\n");
+		states.push(indent + "$objs[$objsLen++] = " + jsLiteralify(this.child.value) + ";\n");
+		states.push(indent + "$objs[$objsLen++] = " + jsLiteralify(this.key) + ";\n");
 		return states.join("");
 	} else {
 		var objsLenV;
@@ -1390,7 +1385,7 @@ expressions.pr.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 		states.push(indent + "if ($pos !== -1) {\n");
 		states.push(indent + indentStr + "if ($objsLen === " + objsLen + ")\n");
 		states.push(indent + indentStr + indentStr + "$objs[" + objsLen + "] = undefined;\n");
-		states.push(indent + indentStr + "$objs[" + objsLen + " + 1] = " + stringify(this.key) + ";\n");
+		states.push(indent + indentStr + "$objs[" + objsLen + " + 1] = " + jsLiteralify(this.key) + ";\n");
 		states.push(indent + indentStr + "$objsLen = " + objsLen + " + 2;\n");
 		states.push(indent + "}\n");
 		return states.join("");
@@ -1427,7 +1422,7 @@ expressions.tkn.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 expressions.ltr.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var states = [];
-	states.push(indent + "$objs[$objsLen++] = " + stringify(this.value) + ";\n");
+	states.push(indent + "$objs[$objsLen++] = " + jsLiteralify(this.value) + ";\n");
 	return states.join("");
 };
 
@@ -1532,8 +1527,8 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 	var unsetMatchTable = "";
 	if (rule.name) {
 		setMatchTable = "if (!$matchTable[" + pos + "])\n" +
-			indentStr + "$matchTable[" + pos + "] = " + JSON.stringify(rule.name) + ";\n"
-		unsetMatchTable = "if ($matchTable[" + pos + "] === " + JSON.stringify(rule.name) + ")\n" +
+			indentStr + "$matchTable[" + pos + "] = " + jsLiteralify(rule.name) + ";\n"
+		unsetMatchTable = "if ($matchTable[" + pos + "] === " + jsLiteralify(rule.name) + ")\n" +
 			indentStr + "$matchTable[" + pos + "] = null;\n";
 	}
 
@@ -1558,7 +1553,7 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		states.push(indent + indentStr + indentStr + indentStr + "break;\n");
 		states.push(indent + indentStr + indentStr + "rpos = $pos;\n");
 		states.push(indent + indentStr + indentStr + "$objs.length = $objsLen;\n");
-		states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $objs);\n");
+		states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs);\n");
 		states.push(indent + indentStr + "}\n");
 		states.push(indent + indentStr + "$objs = " + objs + ";\n");
 		states.push(indent + indentStr + "$objsLen = $objs.length;\n");
@@ -1582,9 +1577,9 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		if (key) {
 			if (useUndet) {
 				states.push(indent + indentStr + "if (!$undet[" + pos + "])\n");
-				states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $objs.slice(" + objsLen + ", $objsLen));\n");
+				states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs.slice(" + objsLen + ", $objsLen));\n");
 			} else {
-				states.push(indent + indentStr + "$writeMemo(" + key + ", $objs.slice(" + objsLen + ", $objsLen));\n");
+				states.push(indent + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs.slice(" + objsLen + ", $objsLen));\n");
 			}
 		}
 		states.push(indent + "}");
@@ -1733,7 +1728,7 @@ var $failureObj = {};\n\
 }', 2) + "\n\n");
 
 	states.push(addIndent('function $writeMemo(key, objs) {\n\
-	$memo[key] = ($pos !== -1) ? {\n\
+	$memo[key] = objs ? {\n\
 		pos: $pos,\n\
 		objs: objs\n\
 	} : $failureObj;\n\
@@ -1767,7 +1762,7 @@ function $joinByOr(strs) {
 	return strs.slice(0, strs.length - 1).join(", ") + " or " + strs[strs.length - 1];
 };
 
-var sign = "/*\n * Generated by Snake Parser 0.2.2\n */";
+var sign = "/*\n * Generated by Snake Parser 0.2.3\n */";
 
 module.exports = genjs;
 
@@ -1943,7 +1938,7 @@ expressions.rep.prototype.optimize = function(disuseProduce) {
 	var res = this.child.optimize(disuseProduce);
 	this.child = res.expression;
 	if (this.max === Infinity && res.success === 2)
-		throw new Error("Repeat expression will infinite loop.");
+		throw new Error("Infinite loop detected.");
 	if (this.min === 0)
 		res.success = Math.max(1, res.success);
 	res.expression = this;
@@ -1965,6 +1960,7 @@ expressions.obj.prototype.optimize = function(disuseProduce) {
 		for (var i = 0; i < res.constant.length; i += 2)
 			value[res.constant[i + 1]] = res.constant[i];
 		res.expression = new expressions.ltr(value);
+		res.produce = 2;
 		res.constant = [value];
 	} else {
 		this.child = res.expression;
@@ -1982,6 +1978,7 @@ expressions.arr.prototype.optimize = function(disuseProduce) {
 	if (res.constant) { // 定数化
 		var value = {};
 		res.expression = new expressions.ltr(res.constant);
+		res.produce = 2;
 		res.constant = [res.constant];
 	} else {
 		this.child = res.expression;
@@ -2073,7 +2070,7 @@ expressions.nla.prototype.optimize = function(disuseProduce) {
 };
 
 expressions.mod.prototype.optimize = function(disuseProduce) {
-	var res = this.child.optimize(disuseProduce);
+	var res = this.child.optimize(false);
 	this.child = res.expression;
 	res.produce = 2;
 	res.expression = this;
@@ -2114,6 +2111,49 @@ var ruleOptimize = function(rule) {
 };
 
 module.exports = ruleOptimize;
+
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+function stringLiteralify(string) {
+	return JSON.stringify(string)
+		.replace(/\u2028/g, "\\u2028")
+		.replace(/\u2029/g, "\\u2029");
+}
+
+var objectToString = Object.prototype.toString;
+
+function jsLiteralify(object) {
+	if (object === null)
+		return "null";
+
+	switch (typeof object) {
+	case "string":
+		return stringLiteralify(object);
+
+	case "number":
+	case "boolean":
+		return JSON.stringify(object);
+
+	case "undefined":
+		return "undefined";
+	}
+
+	switch (objectToString.call(object)) {
+	case "[object Object]":
+		var members = Object.keys(object).map(function (key) {
+			return stringLiteralify(key) + ":" + jsLiteralify(object[key]);
+		});
+		return "{" + members.join(",") + "}";
+
+	case "[object Array]":
+		return "[" + object.map(jsLiteralify).join(",") + "]";
+	}
+}
+
+module.exports = jsLiteralify;
 
 
 /***/ }

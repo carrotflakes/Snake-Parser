@@ -32,6 +32,9 @@ describe("SnakeParser", function() {
 
 		it("Others", function() {
 			assert.throws(function() {
+				SnakeParser.buildParser('a b');
+			}, Error);
+			assert.throws(function() {
 				SnakeParser.buildParser('{');
 			}, Error);
 			assert.throws(function() {
@@ -63,44 +66,44 @@ describe("SnakeParser", function() {
 			var code = SnakeParser.buildParser('start = "yo"');
 			var parse = eval(code);
 			assert.equal(parse("yo"), undefined);
+			assert.throws(parse.bind(null, ""), Error);
+			assert.throws(parse.bind(null, "y"), Error);
+			assert.throws(parse.bind(null, "yoo"), Error);
+			assert.throws(parse.bind(null, "mo"), Error);
 
 			var code = SnakeParser.buildParser('start = "y" "o"');
 			var parse = eval(code);
 			assert.equal(parse("yo"), undefined);
+			assert.throws(parse.bind(null, ""), Error);
+			assert.throws(parse.bind(null, "y"), Error);
+			assert.throws(parse.bind(null, "yoo"), Error);
+			assert.throws(parse.bind(null, "mo"), Error);
 
 			var code = SnakeParser.buildParser('start = ..');
 			var parse = eval(code);
 			assert.equal(parse("yo"), undefined);
-
-			var code = SnakeParser.buildParser('start = [y] [^y]');
-			var parse = eval(code);
-			assert.equal(parse("yo"), undefined);
-		});
-
-		it("Unmatch", function() {
-			var code = SnakeParser.buildParser('start = "yo"');
-			var parse = eval(code);
 			assert.throws(parse.bind(null, ""), Error);
-			assert.throws(parse.bind(null, "y"), Error);
 			assert.throws(parse.bind(null, "yoo"), Error);
-			assert.throws(parse.bind(null, "mo"), Error);
 
-			var code = SnakeParser.buildParser('start = "y" "o"');
+			var code = SnakeParser.buildParser('start = [12b-d]');
 			var parse = eval(code);
-			assert.throws(parse.bind(null, ""), Error);
-			assert.throws(parse.bind(null, "y"), Error);
-			assert.throws(parse.bind(null, "yoo"), Error);
-			assert.throws(parse.bind(null, "mo"), Error);
+			assert.equal(parse("1"), undefined);
+			assert.equal(parse("2"), undefined);
+			assert.equal(parse("b"), undefined);
+			assert.equal(parse("c"), undefined);
+			assert.equal(parse("d"), undefined);
+			assert.throws(parse.bind(null, "a"), Error);
+			assert.throws(parse.bind(null, "e"), Error);
 
-			var code = SnakeParser.buildParser('start = .');
+			var code = SnakeParser.buildParser('start = [^12b-d]');
 			var parse = eval(code);
-			assert.throws(parse.bind(null, ""), Error);
-			assert.throws(parse.bind(null, "aa"), Error);
-
-			var code = SnakeParser.buildParser('start = [a] [^a]');
-			var parse = eval(code);
-			assert.throws(parse.bind(null, "aa"), Error);
-			assert.throws(parse.bind(null, "bb"), Error);
+			assert.equal(parse("a"), undefined);
+			assert.equal(parse("e"), undefined);
+			assert.throws(parse.bind(null, "1"), Error);
+			assert.throws(parse.bind(null, "2"), Error);
+			assert.throws(parse.bind(null, "b"), Error);
+			assert.throws(parse.bind(null, "c"), Error);
+			assert.throws(parse.bind(null, "d"), Error);
 		});
 
 		it("Quantification", function() {
@@ -184,22 +187,22 @@ describe("SnakeParser", function() {
 			var parse = eval(SnakeParser.buildParser(grammar));
 			assert.equal(parse(""), "yo");
 
-			var grammar = 'start = @(\\"a" \\123 \\null)';
+			var grammar = 'start = @(`. `. `.)';
 			var parse = eval(SnakeParser.buildParser(grammar));
-			assert.deepEqual(parse(""), ["a", 123, null]);
+			assert.deepEqual(parse("abc"), ["a", "b", "c"]);
 
-			var grammar = 'start = { a:\\1 b:=yo "c":="d"}';
+			var grammar = 'start = { a:`. b:=yo "c":="d"}';
 			var parse = eval(SnakeParser.buildParser(grammar));
-			assert.deepEqual(parse(""), {a:1, b:"yo", c:"d"});
+			assert.deepEqual(parse("x"), {a:"x", b:"yo", c:"d"});
 
-			var grammar = 'start = \\"yo" -> { return $ + "!"; } -> { return $ + "?"; }';
+			var grammar = 'start = `*. -> { return $ + "!"; } -> { return $ + "?"; }';
 			var parse = eval(SnakeParser.buildParser(grammar));
-			assert.equal(parse(""), "yo!?");
+			assert.equal(parse("yo"), "yo!?");
 
-			var grammar = 'start = `*. -? { return $ === "ok"; }';
+			var grammar = 'start = `*. -? { return $ === $.split("").reverse().join(""); }';
 			var parse = eval(SnakeParser.buildParser(grammar));
-			assert.equal(parse("ok"), "ok");
-			assert.throws(parse.bind(null, "ng"), Error);
+			assert.equal(parse("wow"), "wow");
+			assert.throws(parse.bind(null, "yeah"), Error);
 
 			var grammar = '{ function mod(x) { return x + "!"; } function assert(x) { return x === "yo!"; } }\n\
 start = `*. -> mod -? assert';
@@ -235,6 +238,28 @@ start = `*. -> mod -? assert';
 			var parse = eval(SnakeParser.buildParser(grammar));
 			assert.equal(parse(""), undefined);
 			assert.equal(parse("ababa"), undefined);
+		});
+
+		it("Left recursive", function() {
+			var grammar = 'start = a a = @?(a `.)';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse("ok!"), [[[[], "o"], "k"], "!"]);
+
+			var grammar = 'start = a a = @?(b \\1 `.) b = @?(a \\2 `.)';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse("ok!"), [[[[], 1, "o"], 2, "k"], 1, "!"]);
+
+			var grammar = 'start = a a = ?@(a b "!") b = ?@(b `[a-z])';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse("a!bc!d!"), [[[["a"]],[["b"],"c"]],["d"]]);
+		});
+	});
+
+	describe("optimization", function() {
+		it("Literals", function() {
+			var grammar = 'start = {a:\\"a" b:@(\\1 \\true \\null {} @())}';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse(""), {a:"a", b:[1, true, null, {}, []]});
 		});
 	});
 });
