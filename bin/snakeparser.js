@@ -99,7 +99,9 @@ readStream(inputStream, function(input) {
 	// Build parser
 
 	try {
-		var source = SnakeParser.buildParser(input, {});
+		var source = SnakeParser.buildParser(input, {
+			exportVariable: exportVar,
+		});
 	} catch (e) {
 		abort(e.message);
 	}
@@ -115,11 +117,7 @@ readStream(inputStream, function(input) {
 		var outputStream = process.stdout;
 	}
 
-	if (exportVar !== "") {
-		outputStream.write(exportVar + " = " + source);
-	} else {
-		outputStream.write(source);
-	}
+	outputStream.write(source);
 
 	if (outputStream !== process.stdout) {
 		outputStream.end();

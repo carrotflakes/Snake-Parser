@@ -518,7 +518,9 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 	}
 };
 
-var genjs = function(rules, initializer, exportVariable) {
+var genjs = function(rules, initializer, options) {
+	options = options || {};
+
 	for (var s in rules) {
 		if (rules[s].parameters) { // 引数付きルール
 			var shadowedRules = {};
@@ -575,8 +577,6 @@ var genjs = function(rules, initializer, exportVariable) {
 	}
 
 	var states = [];
-	if (exportVariable)
-		states.push(exportVariable + " = ");
 	states.push("(function() {\n");
 	states.push(indentStr + "\"use strict\";\n");
 	states.push(addIndent(sign, 1));
@@ -681,7 +681,13 @@ var $failureObj = {};\n\
 	throw new Error($errorMessage);\n\
 };\n', 1));
 	states.push(indentStr + "return $parse;\n");
-	states.push("})();\n");
+	states.push("})()");
+
+	if (options.exportVariable) {
+		states.unshift(options.exportVariable + " = ");
+		states.push(";\n");
+	}
+
 	return states.join("");
 };
 
