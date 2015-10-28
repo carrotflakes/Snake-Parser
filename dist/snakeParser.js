@@ -630,11 +630,13 @@ Sequence.prototype.canLeftRecurs = function(rule, passedRules) {
 };
 
 MatchString.prototype.canLeftRecurs = function(rule, passedRules) {
-	return -1;
+	return this.string.length !== 0 ? -1 : 0;
 };
 
-MatchCharacterClass.prototype.canLeftRecurs = MatchString.prototype.canLeftRecurs;
-MatchAnyCharacter.prototype.canLeftRecurs = MatchString.prototype.canLeftRecurs;
+MatchCharacterClass.prototype.canLeftRecurs = function(rule, passedRules) {
+	return -1;
+};
+MatchAnyCharacter.prototype.canLeftRecurs = MatchCharacterClass.prototype.canLeftRecurs;
 
 Repeat.prototype.canLeftRecurs = function(rule, passedRules) {
 	if (this.min === 0) {
