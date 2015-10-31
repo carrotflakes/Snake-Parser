@@ -1,0 +1,39 @@
+{
+  "name": "snakeparser",
+  "version": "0.2.3",
+  "description": "Casual parser generator inspired by PEG.js",
+  "main": "src/snakeParser.js",
+  "bin": "bin/snakeparser.js",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "expose-loader": "^0.7.0"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/carrotflakes/Snake-Parser.git"
+  },
+  "keywords": [
+    "parser",
+    "generator",
+    "PEG",
+    "packrat"
+  ],
+  "author": "carrotflakes",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/carrotflakes/Snake-Parser/issues"
+  },
+  "homepage": "https://github.com/carrotflakes/Snake-Parser#readme",
+  "files": [
+    "README.md",
+    "LICENSE",
+    "package.json",
+    "test",
+    "src",
+    "bin"
+  ]
+}
