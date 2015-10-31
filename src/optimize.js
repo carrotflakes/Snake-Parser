@@ -170,10 +170,10 @@ expressions.rep.prototype.optimize = function(disuseProduce) {
 		res.success = Math.max(1, res.success);
 	res.expression = this;
 	if (res.constant) { // 定数化
-		var constant = [];
+		var newConstant = [];
 		for (var i = 0; i < this.max; ++i)
-			constant[i] = res.constant;
-		res.constant = constant;
+			[].push.apply(newConstant, res.constant);
+		res.constant = newConstant;
 	}
 	return res;
 };
