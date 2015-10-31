@@ -261,5 +261,11 @@ start = `*. -> mod -? assert';
 			var parse = eval(SnakeParser.buildParser(grammar));
 			assert.deepEqual(parse(""), {a:"a", b:[1, true, null, {}, []]});
 		});
+
+		it("SubtleLiterals", function() {
+			var grammar = 'start = {a:() b:@3*\\0}';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse(""), {a:undefined, b:[0, 0, 0]});
+		});
 	});
 });
