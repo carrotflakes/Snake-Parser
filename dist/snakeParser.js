@@ -813,7 +813,7 @@ module.exports = expressions;
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-module.exports = "0.2.4";
+module.exports = "0.2.4.1";
 
 
 /***/ },
