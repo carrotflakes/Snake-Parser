@@ -1,14 +1,14 @@
-# Snake Parser
+# snake parser
 
-Snake ParserはJavaScript製のパーサジェネレータです。
+snake parserはJavaScript製のパーサジェネレータです。
 構造を持ったテキストを入力としてJavaScript上でデータを得たいときに使用します。
 データとは、文字列や数値、オブジェクト、配列等で構成された構造的な値を指します。
 テキストからデータを取り出すためには、どのように取り出すかを記述した*文法*が必要です。
-Snake Parserは文法を入力として、パースするためのJavaScriptコード(パーサ)を出力します。
+snake parserは文法を入力として、パースするためのJavaScriptコード(パーサ)を出力します。
 パーサはjsファイルに書き出して使用できます。
 
 ブラウザ上で試すことができます。  
-https://carrotflakes.github.io/Snake-Parser/
+https://carrotflakes.github.io/snake-parser/
 
 
 ## 特徴
@@ -17,12 +17,22 @@ https://carrotflakes.github.io/Snake-Parser/
 - 左再帰をそのまま表現可能(ただし、使うと遅い)
 
 
-## インストール
+## npm install
+あなたのプロダクトで snake parser の生成したパーサを使用したい場合はグローバルインストールをしてください。
+もし、プロダクトの実行時に snake parser を使用したい場合はローカルインストールをしてください。
+
+### グローバルインストール
 
     % npm install -g snakeparser
 
+### ローカルインストール
+
+	$ cd your/project
+    $ npm install snakeparser
+
+
 ## `snakeparser` コマンド
-インストール後、 `snakeparser` コマンドが使用可能になります。以下のように使用します。
+グローバルインストール後、 `snakeparser` コマンドが使用可能になります。以下のように使用します。
 
     $ snakeparser [文法ファイル [出力パス]]
 
@@ -30,6 +40,25 @@ https://carrotflakes.github.io/Snake-Parser/
 出力パスを省略すれば、文法ファイルの拡張子を `.js` にしたものが出力パスに設定されます。
 また文法ファイルと出力パスを両方省略すれば標準入力から文法を受け取って標準出力からコードを出力するようになります。
 出力コードの内容は、変数 `module.export` へのパーサ関数の代入になります。`snakeparser` コマンドのオプション `-export-variable` (`-e`) を使うと代入する変数名を変更できます。
+
+
+## JavaScript API
+Node.js 内で snake parser を使用する例です。
+
+```
+var SnakeParser = require('snakeparser');
+
+// Your grammar
+var grammar = 'start = `+("a" | "b")';
+
+// Build parser
+var parserSource = SnakeParser.buildParser(grammar);
+var parser = eval(parserSource);
+
+// Use parser
+console.log(parser("abab"));
+// abab
+```
 
 
 ## 文法
@@ -136,7 +165,7 @@ rule2<x, y> = ...
 括弧内の `A:B` や `A:=B` をプロパティとするオブジェクトを返り値にします。
 
 ##### `A:B` `"A":B`
-`{...}` によってオブジェクトが作られるとき、パージング表現 `B` の返り値を、文字列 `A` をキーとしてオブジェクトに格納します。
+`{...}` によってオブジェクトが作られるとき、パージング表現 `B` の返り値を、文字列 `A` をキーとしてオブジェクトに格納します。`B` の返り値がない場合、無視されます。
 
 ##### `A:=B` `"A":="B"`
 `{...}` によってオブジェクトが作られるとき、文字列 `B` を、文字列 `A` をキーとしてオブジェクトに格納します。
