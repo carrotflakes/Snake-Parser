@@ -98,15 +98,6 @@ var rul = function(a, b) {
 };
 
 
-for (var s in rules) {
-	rules[s] = {
-		ident: s,
-		body: rules[s],
-		name: null,
-		parameters: null,
-	};
-}
-
 var rules = {
 	"start": {
 		ident: "start",

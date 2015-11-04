@@ -5,8 +5,17 @@ expressions.nop.prototype.optimize = function(disuseProduce) {
 		expression: this,
 		advance: 0,
 		produce: 0,
-		success: this.succeed ? 2 : 0,
-		constant: this.succeed ? [] : undefined,
+		success: 2,
+		constant: [],
+	};
+};
+
+expressions.fl.prototype.optimize = function(disuseProduce) {
+	return {
+		expression: this,
+		advance: 0,
+		produce: 0,
+		success: 0,
 	};
 };
 
@@ -31,7 +40,7 @@ expressions.cc.prototype.optimize = function(disuseProduce) {
 	if (this.characterClass.length === 0) {
 		if (!this.invert) {
 			return { // 必ず失敗
-				expression: new expressions.nop(false),
+				expression: new expressions.fl(),
 				advance: 0,
 				produce: 0,
 				success: 0,
@@ -86,7 +95,7 @@ expressions.oc.prototype.optimize = function(disuseProduce) {
 	}
 	if (children.length === 0) {
 		return {
-			expression: new expressions.nop(false),
+			expression: new expressions.fl(),
 			advance: 0,
 			produce: 0,
 			success: 0,
@@ -137,7 +146,7 @@ expressions.seq.prototype.optimize = function(disuseProduce) {
 	}
 	if (success === 0) { // 必ず失敗
 		return {
-			expression: new expressions.nop(false),
+			expression: new expressions.fl(),
 			advance: 0,
 			produce: 0,
 			success: 0,
@@ -266,9 +275,9 @@ expressions.ltr.prototype.optimize = function(disuseProduce) {
 expressions.pla.prototype.optimize = function(disuseProduce) {
 	var res = this.child.optimize(true);
 	if (res.success === 0) {
-		res.expression = new expressions.nop(false);
+		res.expression = new expressions.fl();
 	} else if (res.success === 2) {
-		res.expression = new expressions.nop(true);
+		res.expression = new expressions.nop();
 	} else {
 		this.child = res.expression;
 		res.expression = this;
@@ -282,9 +291,9 @@ expressions.pla.prototype.optimize = function(disuseProduce) {
 expressions.nla.prototype.optimize = function(disuseProduce) {
 	var res = this.child.optimize(true);
 	if (res.success === 0) {
-		res.expression = new expressions.nop(false);
+		res.expression = new expressions.fl();
 	} else if (res.success === 2) {
-		res.expression = new expressions.nop(true);
+		res.expression = new expressions.nop();
 	} else {
 		this.child = res.expression;
 		res.expression = this;

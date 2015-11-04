@@ -15,13 +15,6 @@ var addIndent = function(str, level) {
 	return indent + str.replace(/\n(?!$)/g, "\n" + indent);
 };
 
-var getId = function(ids, name) {
-	if (name in ids)
-		return ids[name];
-	else
-		return (ids[name] = 0);
-};
-
 var newId = function(ids, name) {
 	if (name in ids)
 		return name + ++ids[name];
@@ -100,10 +93,11 @@ var makeErrorLogging = function(match, indentLevel) {
 };
 
 expressions.nop.prototype.gen = function(ids, pos, objsLen, indentLevel) {
-	if (this.succeed)
-		return "";
-	else
-		return makeIndent(indentLevel) + "$pos = -1;\n";
+	return "";
+};
+
+expressions.fl.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	return makeIndent(indentLevel) + "$pos = -1;\n";
 };
 
 expressions.oc.prototype.gen = function(ids, pos, objsLen, indentLevel) {
@@ -601,18 +595,18 @@ var $failureObj = {};\n\
 	states.push(initializer);
 	states.push("\n\n");
 
-	// modifiers?
-	var modifiers = {};
-	var modifierId = 0;
+	// modifiers and guards
+	var functions = {};
+	var functionId = 0;
 	for (var r in rules) {
 		rules[r].body.traverse(function(expr) {
 			if (expr instanceof expressions.mod || expr instanceof expressions.grd) {
 				if (!expr.identifier) {
-					if (!modifiers[expr.code]) {
-						modifiers[expr.code] = expr.identifier = "mod$" + modifierId++;
+					if (!functions[expr.code]) {
+						functions[expr.code] = expr.identifier = "func$" + functionId++;
 						states.push(makeIndent(2) + "function " + expr.identifier + "($) {" + expr.code + "};" + "\n\n");
 					} else {
-						expr.identifier = modifiers[expr.code];
+						expr.identifier = functions[expr.code];
 					}
 				}
 			}
