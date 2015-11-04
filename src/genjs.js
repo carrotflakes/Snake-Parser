@@ -181,8 +181,11 @@ expressions.rep.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 		}
 		states.push(this.child.gen(ids, pos, objsLen, indentLevel + 1));
 		states.push(indent + indentStr + "if ($pos !== -1) {\n");
-		if (this.max === Infinity)
-			states.push(indent + indentStr + indentStr + "if ($pos === " + pos + ") throw new Error(\"Infinite loop detected.\");\n");
+		if (this.max === Infinity) {
+			states.push(indent + indentStr + indentStr + "if ($pos === " + pos + ") {\n");
+			states.push(indent + indentStr + indentStr + indentStr + "throw new Error(\"Infinite loop detected.\");\n");
+			states.push(indent + indentStr + indentStr + "}\n");
+		}
 		states.push(indent + indentStr + indentStr + pos + " = $pos;\n");
 		states.push(indent + indentStr + indentStr + objsLen + " = $objsLen;\n");
 		states.push(indent + indentStr + "} else {\n");
@@ -191,8 +194,11 @@ expressions.rep.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 		states.push(indent + "}\n");
 		states.push(indent + "$pos = " + pos + ";\n");
 		states.push(indent + "$objsLen = " + objsLen + ";\n");
-		if (0 < this.min)
-			states.push(indent + "if (" + i + " < " + this.min + ") $pos = -1;\n");
+		if (0 < this.min) {
+			states.push(indent + "if (" + i + " < " + this.min + ") {\n");
+			states.push(indent + indentStr + "$pos = -1;\n");
+			states.push(indent + "}\n");
+		}
 		return states.join("");
 	}
 };
@@ -205,13 +211,13 @@ expressions.str.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var states = [];
 	if (this.string.length !== 1)
-		states.push(indent + "if ($input.substr($pos, " + this.string.length + ") === " + jsLiteralify(this.string) + ")\n");
+		states.push(indent + "if ($input.substr($pos, " + this.string.length + ") === " + jsLiteralify(this.string) + ") {\n");
 	else
-		states.push(indent + "if ($input.charCodeAt($pos) === " + this.string.charCodeAt() + ")\n");
+		states.push(indent + "if ($input.charCodeAt($pos) === " + this.string.charCodeAt() + ") {\n");
 	states.push(indent + indentStr + "$pos += " + this.string.length + ";\n");
-	states.push(indent + "else\n");
+	states.push(indent + "} else {\n");
 	states.push(makeErrorLogging(jsLiteralify(this.string), indentLevel + 1));
-//	states.push(indent + "}\n");
+	states.push(indent + "}\n");
 	return states.join("");
 };
 
@@ -221,14 +227,14 @@ expressions.cc.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	if (this.characterClass.length < 4) { // 適当
 		var c = "c";
 		states.push(indent + "var " + c + " = $input.charCodeAt($pos);\n");
-		states.push(indent + "if (" + this.makeCondition(c) + ")\n");
+		states.push(indent + "if (" + this.makeCondition(c) + ") {\n");
 	} else {
-		states.push(indent + "if (/" + this.makeRegexp() + "/.test($input.charAt($pos)))\n");
+		states.push(indent + "if (/" + this.makeRegexp() + "/.test($input.charAt($pos))) {\n");
 	}
 	states.push(indent + indentStr + "$pos += 1;\n");
-	states.push(indent + "else\n");
+	states.push(indent + "} else {\n");
 	states.push(makeErrorLogging(this.makeRegexp(), indentLevel + 1));
-//	states.push(indent + "}\n");
+	states.push(indent + "}\n");
 	return states.join("");
 };
 
@@ -268,11 +274,11 @@ expressions.cc.prototype.makeRegexp = function() {
 expressions.ac.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var states = [];
-	states.push(indent + "if ($pos < $inputLength)\n");
+	states.push(indent + "if ($pos < $inputLength) {\n");
 	states.push(indent + indentStr + "$pos += 1;\n");
-	states.push(indent + "else\n");
+	states.push(indent + "} else {\n");
 	states.push(makeErrorLogging(".", indentLevel + 1));
-//	states.push(indent + "}\n");
+	states.push(indent + "}\n");
 	return states.join("");
 };
 
@@ -423,9 +429,7 @@ expressions.wst.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var states = [];
 	states.push(makeVarState([[objsLenV, "$objsLen"]], indentLevel));
 	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
-//	states.push(indent + "if ($succeed) {\n");
 	states.push(indent + "$objsLen = " + objsLen + ";\n");
-//	states.push(indent + "}\n");
 	return states.join("");
 };
 
@@ -451,10 +455,12 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 	var setMatchTable = "";
 	var unsetMatchTable = "";
 	if (rule.name) {
-		setMatchTable = "if (!$matchTable[" + pos + "])\n" +
-			indentStr + "$matchTable[" + pos + "] = " + jsLiteralify(rule.name) + ";\n"
-		unsetMatchTable = "if ($matchTable[" + pos + "] === " + jsLiteralify(rule.name) + ")\n" +
-			indentStr + "$matchTable[" + pos + "] = null;\n";
+		setMatchTable = "if (!$matchTable[" + pos + "]) {\n" +
+			indentStr + "$matchTable[" + pos + "] = " + jsLiteralify(rule.name) + ";\n" +
+			"}\n";
+		unsetMatchTable = "if ($matchTable[" + pos + "] === " + jsLiteralify(rule.name) + ") {\n" +
+			indentStr + "$matchTable[" + pos + "] = null;\n" +
+			"}\n";
 	}
 
 	if (rule.leftRecurs) { // 左再帰対応
@@ -463,7 +469,9 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		var states = [];
 		states.push("function rule$" + rule.ident + "() {\n");
 		states.push(makeVarState([[key, keyValue]], indentLevel + 1));
-		states.push(indent + indentStr + "if ($readMemo(" + key + ")) return;\n");
+		states.push(indent + indentStr + "if ($readMemo(" + key + ")){\n");
+		states.push(indent + indentStr + indentStr + "return;\n");
+		states.push(indent + indentStr + "}\n");
 		states.push(addIndent(setMatchTable, indentLevel + 1));
 		states.push(indent + indentStr + "$objs.length = $objsLen;\n");
 		states.push(makeVarState([[pos, "$pos"], [objs, "$objs"], ["rpos", "-1"]], indentLevel + 1));
@@ -474,8 +482,9 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		states.push(indent + indentStr + indentStr + "$objs = [];\n");
 		states.push(indent + indentStr + indentStr + "$objsLen = 0;\n");
 		states.push(rule.body.gen(ids, pos, "0", indentLevel + 2));
-		states.push(indent + indentStr + indentStr + "if ($pos === -1 || $pos <= rpos)\n");
+		states.push(indent + indentStr + indentStr + "if ($pos === -1 || $pos <= rpos) {\n");
 		states.push(indent + indentStr + indentStr + indentStr + "break;\n");
+		states.push(indent + indentStr + indentStr + "}\n");
 		states.push(indent + indentStr + indentStr + "rpos = $pos;\n");
 		states.push(indent + indentStr + indentStr + "$objs.length = $objsLen;\n");
 		states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs);\n");
@@ -483,8 +492,9 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		states.push(indent + indentStr + "$objs = " + objs + ";\n");
 		states.push(indent + indentStr + "$objsLen = $objs.length;\n");
 		states.push(indent + indentStr + "$readMemo(" + key + ");\n");
-		states.push(indent + indentStr + "if (--$undet[" + pos + "])\n");
+		states.push(indent + indentStr + "if (--$undet[" + pos + "]) {\n");
 		states.push(indent + indentStr + indentStr + "delete $memo[" + key + "];\n");
+		states.push(indent + indentStr + "}\n");
 		states.push(addIndent(unsetMatchTable, indentLevel + 1));
 		states.push(indent + "}");
 		return states.join("");
@@ -494,15 +504,19 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		var states = [];
 		states.push("function rule$" + rule.ident + "() {\n");
 		states.push(makeVarState([[key, keyValue], [pos, "$pos"], [objsLen, "$objsLen"]], indentLevel + 1));
-		if (key)
-			states.push(indent + indentStr + "if ($readMemo(" + key + ")) return;\n");
+		if (key) {
+			states.push(indent + indentStr + "if ($readMemo(" + key + ")) {\n");
+			states.push(indent + indentStr + indentStr + "return;\n");
+			states.push(indent + indentStr + "}\n");
+		}
 		states.push(addIndent(setMatchTable, indentLevel + 1));
 		states.push(rule.body.gen(ids, pos, objsLen, indentLevel + 1));
 		states.push(addIndent(unsetMatchTable, indentLevel + 1));
 		if (key) {
 			if (useUndet) {
-				states.push(indent + indentStr + "if (!$undet[" + pos + "])\n");
+				states.push(indent + indentStr + "if (!$undet[" + pos + "]) {\n");
 				states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs.slice(" + objsLen + ", $objsLen));\n");
+				states.push(indent + indentStr + "}\n");
 			} else {
 				states.push(indent + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs.slice(" + objsLen + ", $objsLen));\n");
 			}
@@ -625,8 +639,9 @@ var $failureObj = {};\n\
 	if ($errorMask === 0 && $failPos <= $pos) {\n\
 		match = $matchTable[$pos] ? $matchTable[$pos] : match;\n\
 		if ($failPos === $pos) {\n\
-			if ($failMatchs.indexOf(match) === -1)\n\
+			if ($failMatchs.indexOf(match) === -1) {\n\
 				$failMatchs.push(match);\n\
+			}\n\
 		} else {\n\
 			$failMatchs = [match];\n\
 			$failPos = $pos;\n\
@@ -642,8 +657,9 @@ var $failureObj = {};\n\
 	if (res !== undefined) {\n\
 		if (res !== $failureObj) {\n\
 			$pos = res.pos;\n\
-			for (var i = 0, il = res.objs.length; i < il; ++i)\n\
+			for (var i = 0, il = res.objs.length; i < il; ++i) {\n\
 				$objs[$objsLen++] = res.objs[i];\n\
+			}\n\
 		} else {\n\
 			$pos = -1;\n\
 		}\n\
@@ -667,8 +683,9 @@ var $failureObj = {};\n\
 		}\n\
 		$matchingFail("end of input");\n\
 	}\n\
-	if ($failMatchs.length === 0)\n\
+	if ($failMatchs.length === 0) {\n\
 		$failMatchs.push("something");\n\
+	}\n\
 	var $line = ($input.slice(0, $failPos).match(/\\n/g) || []).length;\n\
 	var $column = $failPos - $input.lastIndexOf("\\n", $failPos - 1) - 1;\n\
 	var $errorMessage = "Line " + ($line + 1) + ", column " + $column + ": Expected " + $joinByOr($failMatchs) + " but " + (JSON.stringify($input[$failPos]) || "end of input") + " found.";\n\
