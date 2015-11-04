@@ -163,7 +163,7 @@ OtherExpression
     = '(' __ (ChoiceExpression | {op:=nop} -> expr) __ ')'
     |   { op:=str a:StringLiteral
         | op:=cc  '[' b:('^' \true | \false) a:CharacterClass ']'
-        | op:=ltr '\\' __ a:(StringLiteral | NumericLiteral | BooleanLiteral | NullLiteral)
+        | op:=ltr '\\' __ a:Literal
         | op:=arr '@' __ a:OtherExpression
         | op:=obj '{' __ a:(ChoiceExpression | {op:=nop} -> expr) __ '}'
         | op:=tkn '`' __ a:OtherExpression
@@ -245,6 +245,35 @@ Code
 NaturalNumber "natural number"
     = `([1-9] *[0-9] | "0") -> nuturalNumber
 
+
+Literal
+    = StringLiteral
+    | NumericLiteral
+    | BooleanLiteral
+    | NullLiteral
+    | ArrayLiteral
+    | ObjectLiteral
+
+ArrayLiteral "array literal"
+    = "[" __ @?(Literal *(__ "," __ Literal) __) "]"
+
+ObjectLiteral "object literal"
+    =   "{" __
+        @?(ObjectLiteralProperty *(__ "," __ ObjectLiteralProperty) __)
+            -> {
+                var ret = {};
+                for (var i = 0; i < $.length; ++i)
+                    ret[$[i].key] = $[i].value;
+                return ret;
+            }
+        "}"
+
+ObjectLiteralProperty
+    = {
+        key: IdentifierOrStringLiteral
+        __ ":" __
+        value: Literal
+    }
 
 NullLiteral
     = "null" \null
