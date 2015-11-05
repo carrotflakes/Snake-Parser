@@ -1,5 +1,5 @@
 var assert = require("assert");
-require("../dist/snakeParser");
+var SnakeParser = require("../src/snakeParser");
 
 describe("SnakeParser", function() {
 	describe("invalid grammar", function() {
@@ -187,6 +187,10 @@ describe("SnakeParser", function() {
 			var parse = eval(SnakeParser.buildParser(grammar));
 			assert.equal(parse(""), "yo");
 
+			var grammar = 'start = \\[1, "2", [], {}, {a:3, b:"4"}]';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse(""), [1, "2", [], {}, {a:3, b:"4"}]);
+
 			var grammar = 'start = @(`. `. `.)';
 			var parse = eval(SnakeParser.buildParser(grammar));
 			assert.deepEqual(parse("abc"), ["a", "b", "c"]);
@@ -203,6 +207,10 @@ describe("SnakeParser", function() {
 			var parse = eval(SnakeParser.buildParser(grammar));
 			assert.equal(parse("wow"), "wow");
 			assert.throws(parse.bind(null, "yeah"), Error);
+
+			var grammar = 'start = ~*`.';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.equal(parse("yeah"), "yeah");
 
 			var grammar = '{ function mod(x) { return x + "!"; } function assert(x) { return x === "yo!"; } }\n\
 start = `*. -> mod -? assert';
