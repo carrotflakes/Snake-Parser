@@ -129,11 +129,11 @@ IdentifierStart
 
 IdentifierPart
   = IdentifierStart
-  | UnicodeCombiningMark
-  | UnicodeDigit
-  | UnicodeConnectorPunctuation
-  | "\u200C"
-  | "\u200D"
+  | `UnicodeCombiningMark
+  | `UnicodeDigit
+  | `UnicodeConnectorPunctuation
+  | `"\u200C"
+  | `"\u200D"
 
 UnicodeLetter
   = Lu
@@ -211,7 +211,7 @@ BooleanLiteral
   | FalseToken { type:= Literal value: \false }
 
 /*
- * The "!(IdentifierStart / DecimalDigit)" predicate is not part of the official
+ * The "!(IdentifierStart | DecimalDigit)" predicate is not part of the official
  * grammar, it comes from text in section 7.8.3.
  */
 NumericLiteral "number"
@@ -259,9 +259,9 @@ HexDigit
 
 StringLiteral "string"
   = {
-      value: (
-        '"' @*DoubleStringCharacter '"'
-      | "'" @*SingleStringCharacter "'"
+      value: @(
+        '"' *DoubleStringCharacter '"'
+      | "'" *SingleStringCharacter "'"
       ) -> { return $.join(""); }
       type:= Literal
     }
@@ -290,9 +290,9 @@ CharacterEscapeSequence
   | NonEscapeCharacter
 
 SingleEscapeCharacter
-  = "'"
-  | '"'
-  | "\\"
+  = `"'"
+  | `'"'
+  | `"\\"
   | "b"  \"\b"
   | "f"  \"\f"
   | "n"  \"\n"
@@ -491,7 +491,7 @@ EOF
 /* ----- A.3 Expressions ----- */
 
 PrimaryExpression
-  = ThisToken { type:= ThisExpression }
+  = ThisToken \{ type: "ThisExpression" }
   | Identifier
   | Literal
   | ArrayLiteral
@@ -518,7 +518,7 @@ Elision
 ObjectLiteral
   = {
       properties: (
-        "{" __ "}" @()
+        "{" __ "}" \[]
       | "{" __ PropertyNameAndValueList __ "}"
       | "{" __ PropertyNameAndValueList __ "," __ "}"
       )
@@ -541,9 +541,9 @@ PropertyAssignment
       value: {
         "(" __ ")" __
         "{" __ body: FunctionBody __ "}"
-        type:= FunctionExpression
-        id:    \null
-        params: @()
+        type:=  FunctionExpression
+        id:     \null
+        params: \[]
       }
       kind:= get
     }
@@ -607,7 +607,7 @@ NewExpression
       NewToken __
       callee: NewExpression
       type:= NewExpression
-      arguments: @()
+      arguments: \[]
     }
 
 CallExpression
@@ -642,7 +642,7 @@ CallExpression
     }
 
 Arguments
-  = "(" __ (ArgumentList __ | @()) ")"
+  = "(" __ (ArgumentList __ | \[]) ")"
 
 ArgumentList
   = @(AssignmentExpression *(__ "," __ AssignmentExpression))
@@ -661,8 +661,8 @@ PostfixExpression
   | LeftHandSideExpression
 
 PostfixOperator
-  = "++"
-  | "--"
+  = `"++"
+  | `"--"
 
 UnaryExpression
   = PostfixExpression
@@ -690,8 +690,8 @@ UnaryOperator
 
 MultiplicativeExpression
   = {
-      first:UnaryExpression
-      rest:@*{__ operator:MultiplicativeOperator __ right:UnaryExpression}
+      first: UnaryExpression
+      rest: @*{ __ operator: MultiplicativeOperator __ right: UnaryExpression }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 MultiplicativeOperator
@@ -701,8 +701,8 @@ MultiplicativeOperator
 
 AdditiveExpression
   = {
-      first:MultiplicativeExpression
-      rest:@*{__ operator:AdditiveOperator __ right:MultiplicativeExpression}
+      first: MultiplicativeExpression
+      rest: @*{ __ operator: AdditiveOperator __ right: MultiplicativeExpression }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 AdditiveOperator
@@ -711,8 +711,8 @@ AdditiveOperator
 
 ShiftExpression
   = {
-      first:AdditiveExpression
-      rest:@*{__ operator:ShiftOperator __ right:AdditiveExpression}
+      first: AdditiveExpression
+      rest: @*{ __ operator: ShiftOperator __ right: AdditiveExpression }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 ShiftOperator
@@ -722,8 +722,8 @@ ShiftOperator
 
 RelationalExpression
   = {
-      first:ShiftExpression
-      rest:@*{__ operator:RelationalOperator __ right:ShiftExpression}
+      first: ShiftExpression
+      rest: @*{ __ operator: RelationalOperator __ right: ShiftExpression }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 RelationalOperator
@@ -736,8 +736,8 @@ RelationalOperator
 
 RelationalExpressionNoIn
   = {
-      first:ShiftExpression
-      rest:@*{__ operator:RelationalOperatorNoIn __ right:ShiftExpression}
+      first: ShiftExpression
+      rest: @*{ __ operator: RelationalOperatorNoIn __ right: ShiftExpression }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 RelationalOperatorNoIn
@@ -749,14 +749,14 @@ RelationalOperatorNoIn
 
 EqualityExpression
   = {
-      first:RelationalExpression
-      rest:@*{__ operator:EqualityOperator __ right:RelationalExpression}
+      first: RelationalExpression
+      rest: @*{ __ operator: EqualityOperator __ right: RelationalExpression }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 EqualityExpressionNoIn
   = {
-      first:RelationalExpressionNoIn
-      rest:@*{__ operator:EqualityOperator __ right:RelationalExpressionNoIn}
+      first: RelationalExpressionNoIn
+      rest: @*{ __ operator: EqualityOperator __ right: RelationalExpressionNoIn }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 EqualityOperator
@@ -767,14 +767,14 @@ EqualityOperator
 
 BitwiseANDExpression
   = {
-      first:EqualityExpression
-      rest:@*{__ operator:BitwiseANDOperator __ right:EqualityExpression}
+      first: EqualityExpression
+      rest: @*{ __ operator: BitwiseANDOperator __ right: EqualityExpression }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 BitwiseANDExpressionNoIn
   = {
-      first:EqualityExpressionNoIn
-      rest:@*{__ operator:BitwiseANDOperator __ right:EqualityExpressionNoIn}
+      first: EqualityExpressionNoIn
+      rest: @*{ __ operator: BitwiseANDOperator __ right: EqualityExpressionNoIn }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 BitwiseANDOperator
@@ -782,14 +782,14 @@ BitwiseANDOperator
 
 BitwiseXORExpression
   = {
-      first:BitwiseANDExpression
-      rest:@*{__ operator:BitwiseXOROperator __ right:BitwiseANDExpression}
+      first: BitwiseANDExpression
+      rest: @*{ __ operator: BitwiseXOROperator __ right: BitwiseANDExpression }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 BitwiseXORExpressionNoIn
   = {
-      first:BitwiseANDExpressionNoIn
-      rest:@*{__ operator:BitwiseXOROperator __ right:BitwiseANDExpressionNoIn}
+      first: BitwiseANDExpressionNoIn
+      rest: @*{ __ operator: BitwiseXOROperator __ right: BitwiseANDExpressionNoIn }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 BitwiseXOROperator
@@ -797,14 +797,14 @@ BitwiseXOROperator
 
 BitwiseORExpression
   = {
-      first:BitwiseXORExpression
-      rest:@*{__ operator:BitwiseOROperator __ right:BitwiseXORExpression}
+      first: BitwiseXORExpression
+      rest: @*{ __ operator: BitwiseOROperator __ right: BitwiseXORExpression }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 BitwiseORExpressionNoIn
   = {
-      first:BitwiseXORExpressionNoIn
-      rest:@*{__ operator:BitwiseOROperator __ right:BitwiseXORExpressionNoIn}
+      first: BitwiseXORExpressionNoIn
+      rest: @*{ __ operator: BitwiseOROperator __ right: BitwiseXORExpressionNoIn }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 BitwiseOROperator
@@ -812,14 +812,14 @@ BitwiseOROperator
 
 LogicalANDExpression
   = {
-      first:BitwiseORExpression
-      rest:@*{__ operator:LogicalANDOperator __ right:BitwiseORExpression}
+      first: BitwiseORExpression
+      rest: @*{ __ operator: LogicalANDOperator __ right: BitwiseORExpression }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 LogicalANDExpressionNoIn
   = {
-      first:BitwiseORExpressionNoIn
-      rest:@*{__ operator:LogicalANDOperator __ right:BitwiseORExpressionNoIn}
+      first: BitwiseORExpressionNoIn
+      rest: @*{ __ operator: LogicalANDOperator __ right: BitwiseORExpressionNoIn }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 LogicalANDOperator
@@ -827,14 +827,14 @@ LogicalANDOperator
 
 LogicalORExpression
   = {
-      first:LogicalANDExpression
-      rest:@*{__ operator:LogicalOROperator __ right:LogicalANDExpression}
+      first: LogicalANDExpression
+      rest: @*{ __ operator: LogicalOROperator __ right: LogicalANDExpression }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 LogicalORExpressionNoIn
   = {
-      first:LogicalANDExpressionNoIn
-      rest:@*{__ operator:LogicalOROperator __ right:LogicalANDExpressionNoIn}
+      first: LogicalANDExpressionNoIn
+      rest: @*{ __ operator: LogicalOROperator __ right: LogicalANDExpressionNoIn }
     } -> { return buildBinaryExpression($.first, $.rest); }
 
 LogicalOROperator
@@ -909,19 +909,17 @@ AssignmentOperator
 
 Expression
   = {
-      expressions: @(AssignmentExpression *(__ "," __ AssignmentExpression))
-      type:="SequenceExpression"
-    } -> {
-      return $.expressions.length === 1 ? $.expressions[0] : $;
+      expressions: @(AssignmentExpression +(__ "," __ AssignmentExpression))
+      type:= SequenceExpression
     }
+  | AssignmentExpression
 
 ExpressionNoIn
   = {
-      expressions: @(AssignmentExpressionNoIn *(__ "," __ AssignmentExpressionNoIn))
+      expressions: @(AssignmentExpressionNoIn +(__ "," __ AssignmentExpressionNoIn))
       type:="SequenceExpression"
-    } -> {
-      return $.expressions.length === 1 ? $.expressions[0] : $;
     }
+  | AssignmentExpressionNoIn
 
 /* ----- A.4 Statements ----- */
 
@@ -944,7 +942,7 @@ Statement
 
 Block
   = {
-      "{" __ body: (StatementList __ | @()) "}"
+      "{" __ body: (StatementList __ | \[]) "}"
       type:= BlockStatement
     }
 
@@ -984,7 +982,7 @@ InitialiserNoIn
   = "=" !"=" __ AssignmentExpressionNoIn
 
 EmptyStatement
-  = ";" { type:= EmptyStatement }
+  = ";" \{ type: "EmptyStatement" }
 
 ExpressionStatement
   = {
@@ -1005,8 +1003,8 @@ IfStatement
   | {
       IfToken __ "(" __ test: Expression __ ")" __
       consequent: Statement
-      type:= IfStatement
       alternate: \null
+      type:= IfStatement
     }
 
 IterationStatement
@@ -1070,7 +1068,7 @@ IterationStatement
 
 ContinueStatement
   = ContinueToken EOS
-    { type:= ContinueStatement label: \null }
+    \{ type: "ContinueStatement", label: null }
   | {
       ContinueToken _
       label: Identifier EOS
@@ -1079,7 +1077,7 @@ ContinueStatement
 
 BreakStatement
   = BreakToken EOS
-    { type:= BreakStatement label: \null }
+    \{ type: "BreakStatement", label: null }
   | {
       BreakToken _
       label: Identifier EOS
@@ -1088,7 +1086,7 @@ BreakStatement
 
 ReturnStatement
   = ReturnToken EOS
-    { type:= ReturnStatement argument: \null }
+    \{ type: "ReturnStatement", argument: null }
   | {
       ReturnToken _
       argument: Expression EOS
@@ -1110,122 +1108,120 @@ SwitchStatement
     }
 
 CaseBlock
-  = "{" __ (CaseClauses __ | @()) "}"
-  | {
+  = @(
       "{" __
-      before:(CaseClauses __ | @())
-      default_:DefaultClause __
-      after:(CaseClauses __ | @())
+      ?(CaseClauses __)
+      ?(
+        DefaultClause __
+        ?(CaseClauses __)
+      )
       "}"
-    } -> { return $.before.concat($.default_, $.after); }
+    )
 
 CaseClauses
-  = @(CaseClause *(__ CaseClause))
+  = CaseClause *(__ CaseClause)
 
 CaseClause
   = {
       CaseToken __
-      test:Expression __
+      test: Expression __
       ":"
-      consequent:(__ StatementList | @())
-      type:= "SwitchCase"
+      consequent: (__ StatementList | \[])
+      type:= SwitchCase
     }
 
 DefaultClause
   = {
       DefaultToken __
       ":"
-      consequent:(__ StatementList | @())
-      type:="SwitchCase"
+      consequent:(__ StatementList | \[])
+      type:= SwitchCase
       test: \null
     }
 
 LabelledStatement
   = {
-      label:Identifier __ ":" __ body:Statement
-      type:="LabeledStatement"
+      label: Identifier __ ":" __ body: Statement
+      type:= LabeledStatement
     }
 
 ThrowStatement
   = {
       ThrowToken _
-      argument:Expression EOS
-      type:="ThrowStatement"
+      argument: Expression EOS
+      type:= ThrowStatement
     }
 
 TryStatement
   = {
       TryToken __
-      block:Block __
-      handler:Catch __
-      finalizer:Finally
-      type:="TryStatement"
+      block: Block __
+      handler: Catch __
+      finalizer: Finally
+      type:= TryStatement
     }
   | {
       TryToken __
-      block:Block __
-      handler:Catch
-      type:="TryStatement"
-      finalizer:\null
+      block: Block __
+      handler: Catch
+      type:= TryStatement
+      finalizer: \null
     }
   | {
       TryToken __
-      block:Block __
-      finalizer:Finally
-      type:="TryStatement"
-      handler:\null
+      block: Block __
+      finalizer: Finally
+      type:= TryStatement
+      handler: \null
     }
 
 Catch
   = {
       CatchToken __ "(" __
-      param:Identifier __ ")" __
-      body:Block
-      type:="CatchClause"
+      param: Identifier __ ")" __
+      body: Block
+      type:= CatchClause
     }
 
 Finally
   = FinallyToken __ Block
 
 DebuggerStatement
-  = DebuggerToken EOS { type:="DebuggerStatement" }
+  = DebuggerToken EOS \{ type: "DebuggerStatement" }
 
 /* ----- A.5 Functions and Programs ----- */
 
 FunctionDeclaration
   = {
       FunctionToken __
-      id:Identifier __
-      "(" __ params:(FormalParameterList __ | @()) ")" __
-      "{" __ body:FunctionBody __ "}"
-      type:="FunctionDeclaration"
+      id: Identifier __
+      "(" __ params: (FormalParameterList __ | \[]) ")" __
+      "{" __ body: FunctionBody __ "}"
+      type:= FunctionDeclaration
     }
 
 FunctionExpression
   = {
       FunctionToken __
-      id:(Identifier __ | \null)
-      "(" __ params:(FormalParameterList __ | @()) ")" __
-      "{" __ body:FunctionBody __ "}"
-      type:="FunctionExpression"
+      id: (Identifier __ | \null)
+      "(" __ params: (FormalParameterList __ | \[]) ")" __
+      "{" __ body: FunctionBody __ "}"
+      type:= FunctionExpression
     }
 
 FormalParameterList
-  = @(
-      Identifier
-      *(__ "," __ Identifier)
-    )
+  = @(Identifier *(__ "," __ Identifier))
 
 FunctionBody
   = {
-      body:(SourceElements | @())
-      type:="BlockStatement"
+      body: (SourceElements | \[])
+      type:= BlockStatement
     }
 
 Program
   = {
-      body:(SourceElements | @())
-      type:="Program"
+      body: (SourceElements | \[])
+      type:= Program
     }
 
 SourceElements
