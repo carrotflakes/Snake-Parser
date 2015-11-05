@@ -1618,7 +1618,7 @@ var $failureObj = {};\n\
 	$pos = -1;\n\
 }', 2) + "\n\n");
 
-	states.push(addIndent($joinByOr.toString() + ";", 2) + "\n\n");
+	states.push(addIndent($joinWithOr.toString() + ";", 2) + "\n\n");
 
 	states.push(addIndent('function $readMemo(key) {\n\
 	var res = $memo[key];\n\
@@ -1656,7 +1656,7 @@ var $failureObj = {};\n\
 	}\n\
 	var $line = ($input.slice(0, $failPos).match(/\\n/g) || []).length;\n\
 	var $column = $failPos - $input.lastIndexOf("\\n", $failPos - 1) - 1;\n\
-	var $errorMessage = "Line " + ($line + 1) + ", column " + $column + ": Expected " + $joinByOr($failMatchs) + " but " + (JSON.stringify($input[$failPos]) || "end of input") + " found.";\n\
+	var $errorMessage = "Line " + ($line + 1) + ", column " + $column + ": Expected " + $joinWithOr($failMatchs) + " but " + (JSON.stringify($input[$failPos]) || "end of input") + " found.";\n\
 	throw new Error($errorMessage);\n\
 };\n', 1));
 	states.push(indentStr + "return $parse;\n");
@@ -1670,7 +1670,7 @@ var $failureObj = {};\n\
 	return states.join("");
 };
 
-function $joinByOr(strs) {
+function $joinWithOr(strs) {
 	if (strs.length === 0)
 		return "";
 	if (strs.length === 1)
