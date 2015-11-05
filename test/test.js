@@ -268,4 +268,12 @@ start = `*. -> mod -? assert';
 			assert.deepEqual(parse(""), {a:undefined, b:[0, 0, 0]});
 		});
 	});
+
+	describe("infinite loop", function() {
+		it("Infinite loop", function() {
+			var grammar = 'start = *?"a"';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.throws(parse.bind(null, "a"), Error);
+		});
+	});
 });

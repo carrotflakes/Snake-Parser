@@ -155,6 +155,7 @@ var Repeat = function(min, max, e) {
 	if (this.min < 0 || this.max < this.min)
 		throw new Error("Invalid repeat expression.");
 	this.child = e;
+	this.possibleInfiniteLoop = this.max === Infinity;
 };
 extendsExpression(Repeat, "rep");
 
@@ -1149,7 +1150,7 @@ expressions.rep.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 		}
 		states.push(this.child.gen(ids, pos, objsLen, indentLevel + 1));
 		states.push(indent + indentStr + "if ($pos !== -1) {\n");
-		if (this.max === Infinity) {
+		if (this.possibleInfiniteLoop) {
 			states.push(indent + indentStr + indentStr + "if ($pos === " + pos + ") {\n");
 			states.push(indent + indentStr + indentStr + indentStr + "throw new Error(\"Infinite loop detected.\");\n");
 			states.push(indent + indentStr + indentStr + "}\n");
@@ -1861,19 +1862,30 @@ expressions.rep.prototype.optimize = function(disuseProduce) {
 			success: 2,
 		};
 	}
+
 	var res = this.child.optimize(disuseProduce);
 	this.child = res.expression;
+
 	if (this.max === Infinity && res.success === 2)
 		throw new Error("Infinite loop detected.");
-	if (this.min === 0)
-		res.success = Math.max(1, res.success);
-	res.expression = this;
+
+	if (res.advance === 2)
+		this.possibleInfiniteLoop = false; // advanceの更新が必要!
+
+	if (this.min === 0) {
+		res.advance = Math.min(res.advance, 1);
+		res.success = Math.max(res.success, 1);
+	}
+
 	if (res.constant) { // 定数化
 		var newConstant = [];
 		for (var i = 0; i < this.max; ++i)
 			[].push.apply(newConstant, res.constant);
 		res.constant = newConstant;
 	}
+
+	res.expression = this;
+
 	return res;
 };
 

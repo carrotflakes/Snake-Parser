@@ -171,19 +171,30 @@ expressions.rep.prototype.optimize = function(disuseProduce) {
 			success: 2,
 		};
 	}
+
 	var res = this.child.optimize(disuseProduce);
 	this.child = res.expression;
+
 	if (this.max === Infinity && res.success === 2)
 		throw new Error("Infinite loop detected.");
-	if (this.min === 0)
-		res.success = Math.max(1, res.success);
-	res.expression = this;
+
+	if (res.advance === 2)
+		this.possibleInfiniteLoop = false;
+
+	if (this.min === 0) {
+		res.advance = Math.min(res.advance, 1);
+		res.success = Math.max(res.success, 1);
+	}
+
 	if (res.constant) { // 定数化
 		var newConstant = [];
 		for (var i = 0; i < this.max; ++i)
 			[].push.apply(newConstant, res.constant);
 		res.constant = newConstant;
 	}
+
+	res.expression = this;
+
 	return res;
 };
 

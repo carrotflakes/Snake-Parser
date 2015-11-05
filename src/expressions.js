@@ -62,6 +62,7 @@ var Repeat = function(min, max, e) {
 	if (this.min < 0 || this.max < this.min)
 		throw new Error("Invalid repeat expression.");
 	this.child = e;
+	this.possibleInfiniteLoop = this.max === Infinity;
 };
 extendsExpression(Repeat, "rep");
 

@@ -181,7 +181,7 @@ expressions.rep.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 		}
 		states.push(this.child.gen(ids, pos, objsLen, indentLevel + 1));
 		states.push(indent + indentStr + "if ($pos !== -1) {\n");
-		if (this.max === Infinity) {
+		if (this.possibleInfiniteLoop) {
 			states.push(indent + indentStr + indentStr + "if ($pos === " + pos + ") {\n");
 			states.push(indent + indentStr + indentStr + indentStr + "throw new Error(\"Infinite loop detected.\");\n");
 			states.push(indent + indentStr + indentStr + "}\n");
