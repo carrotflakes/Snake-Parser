@@ -646,7 +646,8 @@ var $failureObj = {};\n\
 				$failMatchs.push(match);\n\
 			}\n\
 		} else {\n\
-			$failMatchs = [match];\n\
+			$failMatchs.length = 0;\n\
+			$failMatchs[0] = match;\n\
 			$failPos = $pos;\n\
 		}\n\
 	}\n\
