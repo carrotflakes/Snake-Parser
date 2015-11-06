@@ -345,7 +345,10 @@ expressions.tkn.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	states.push(makeVarState([[posV, "$pos"]], indentLevel));
 	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
 	states.push(indent + "if ($pos !== -1) {\n");
-	states.push(indent + indentStr + "$objs[$objsLen++] = $input.substring(" + pos + ", $pos);\n");
+	if (this.product !== undefined)
+		states.push(indent + indentStr + "$objs[$objsLen++] = " + jsLiteralify(this.product) + ";\n");
+	else
+		states.push(indent + indentStr + "$objs[$objsLen++] = $input.substring(" + pos + ", $pos);\n");
 	states.push(indent + "}\n");
 	return states.join("");
 };
