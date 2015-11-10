@@ -1391,7 +1391,7 @@ expressions.grd.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
 	states.push(indent + "if ($pos !== -1 && !" + this.identifier + "($objs[" + objsLen + "])) {\n");
 	states.push(indent + indentStr + "$pos = " + pos + ";\n");
-	states.push(indent + indentStr + "$matchingFail(\"a guarded expression\");\n");
+	states.push(makeErrorLogging("a guarded expression", indentLevel + 1));
 	states.push(indent + "}\n");
 	return states.join("");
 };
