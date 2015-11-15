@@ -707,10 +707,12 @@ var $failureObj = {};\n\
 };
 
 function $joinWithOr(strs) {
-	if (strs.length === 0)
+	if (strs.length === 0) {
 		return "";
-	if (strs.length === 1)
+	}
+	if (strs.length === 1) {
 		return strs[0];
+	}
 	return strs.slice(0, strs.length - 1).join(", ") + " or " + strs[strs.length - 1];
 }
 
