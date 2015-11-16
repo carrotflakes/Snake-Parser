@@ -691,7 +691,7 @@ var $failureObj = {};\n\
 		$failMatchs.push("something");\n\
 	}\n\
 	var $line = ($input.slice(0, $failPos).match(/\\n/g) || []).length;\n\
-	var $column = $failPos - $input.lastIndexOf("\\n", $failPos - 1) - 1;\n\
+	var $column = $failPos - $input.lastIndexOf("\\n", $failPos - 1);\n\
 	var $errorMessage = "Line " + ($line + 1) + ", column " + $column + ": Expected " + $joinWithOr($failMatchs) + " but " + (JSON.stringify($input[$failPos]) || "end of input") + " found.";\n\
 	throw new Error($errorMessage);\n\
 }\n', 1));
