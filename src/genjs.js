@@ -637,9 +637,7 @@ var $failureObj = {};\n\
 	if ($failPos <= $pos) {\n\
 		match = $matchTable[$pos] ? $matchTable[$pos] : match;\n\
 		if ($failPos === $pos) {\n\
-			if ($failMatchs.indexOf(match) === -1) {\n\
-				$failMatchs.push(match);\n\
-			}\n\
+			$failMatchs.push(match);\n\
 		} else {\n\
 			$failMatchs.length = 0;\n\
 			$failMatchs[0] = match;\n\
@@ -685,6 +683,9 @@ var $failureObj = {};\n\
 	if ($failMatchs.length === 0) {\n\
 		$failMatchs.push("something");\n\
 	}\n\
+	$failMatchs = $failMatchs.filter(function (x, i, self) {\n\
+		return self.indexOf(x) === i;\n\
+	});\n\
 	var $line = ($input.slice(0, $failPos).match(/\\n/g) || []).length;\n\
 	var $column = $failPos - $input.lastIndexOf("\\n", $failPos - 1);\n\
 	var $errorMessage = "Line " + ($line + 1) + ", column " + $column + ": Expected " + $joinWithOr($failMatchs) + " but " + (JSON.stringify($input[$failPos]) || "end of input") + " found.";\n\
