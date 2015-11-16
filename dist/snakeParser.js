@@ -1338,9 +1338,7 @@ expressions.pla.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
 	var states = [];
 	states.push(makeVarState([[posV, "$pos"], [objsLenV, "$objsLen"]], indentLevel));
-	states.push(indent + "$errorMask += 1;\n");
 	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
-	states.push(indent + "$errorMask -= 1;\n");
 	states.push(indent + "if ($pos !== -1) {\n");
 	states.push(addIndent("$objsLen = " + objsLen + ";\n" +
 												"$pos = " + pos + ";\n", indentLevel + 1));
@@ -1355,9 +1353,7 @@ expressions.nla.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
 	var states = [];
 	states.push(makeVarState([[posV, "$pos"], [objsLenV, "$objsLen"]], indentLevel));
-	states.push(indent + "$errorMask += 1;\n");
 	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
-	states.push(indent + "$errorMask -= 1;\n");
 	states.push(indent + "if ($pos === -1) {\n");
 	states.push(addIndent("$objsLen = " + objsLen + ";\n" +
 												"$pos = " + pos + ";\n", indentLevel + 1));
@@ -1571,7 +1567,6 @@ var $objs = [];\n\
 var $objsLen = 0;\n\
 var $memo = [];\n\
 var $matchTable = new Array($inputLength);\n\
-var $errorMask = 0;\n\
 var $failMatchs = [];\n\
 var $failPos = 0;\n\
 var $failureObj = {};\n\
@@ -1610,7 +1605,7 @@ var $failureObj = {};\n\
 	}
 
 	states.push(addIndent('function $matchingFail(match) {\n\
-	if ($errorMask === 0 && $failPos <= $pos) {\n\
+	if ($failPos <= $pos) {\n\
 		match = $matchTable[$pos] ? $matchTable[$pos] : match;\n\
 		if ($failPos === $pos) {\n\
 			if ($failMatchs.indexOf(match) === -1) {\n\
