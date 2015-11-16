@@ -90,8 +90,8 @@
             return $.op + "(" + $.a + ")";
         case "rep":
             return $.op + "(" + $.a + "," + ($.b === "min" ? $.a : $.b) + "," + $.c + ")";
-        case "pi":
-            return $.op + "(" + $.a + ")";
+        case "cv":
+            return $.op + "(" + JSON.stringify($.a) + ")";
         case "rul":
             if ($.b)
                 return $.op + "(" + JSON.stringify($.a) + ",[" + $.b + "])";
@@ -262,7 +262,7 @@ OtherExpression
             op:= ac
             '.'
         |
-            op:= pi
+            op:= cv
             '$'
             a: Identifier
         |

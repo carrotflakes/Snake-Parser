@@ -180,6 +180,11 @@ var Tokenize = function(e) {
 };
 extendsExpression(Tokenize, "tkn");
 
+var ContextVariable = function(variable) {
+	this.variable = variable;
+};
+extendsExpression(ContextVariable, "cv");
+
 var Literal = function(v) {
 	this.value = v;
 };
@@ -499,6 +504,10 @@ Literal.prototype.toString = function() {
 	return this._name + "(" + JSON.stringify(this.value) + ")";
 };
 
+ContextVariable.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.variable) + ")";
+};
+
 Modify.prototype.toString = function() {
 	if (this.code) {
 		return this._name + "(" + this.child.toString() + ",null," + JSON.stringify(this.code) + ")";
@@ -781,6 +790,9 @@ var tkn = function(a) {
 var ltr = function(a) {
 	return new expressions.ltr(a);
 };
+var cv = function(a) {
+	return new expressions.cv(a);
+};
 var pla = function(a) {
 	return new expressions.pla(a);
 };
@@ -832,7 +844,7 @@ var rules = {
 	},
 	"OtherExpression": {
 		ident: "OtherExpression",
-		body: oc([seq([str("("),rul("__"),oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)]),rul("__"),str(")")]),mod(obj(oc([seq([pr("op",ltr("str")),pr("a",rul("StringLiteral"))]),seq([pr("op",ltr("cc")),str("["),pr("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),pr("a",rul("CharacterClass")),str("]")]),seq([pr("op",ltr("ltr")),str("\\"),rul("__"),pr("a",rul("Literal"))]),seq([pr("op",ltr("arr")),str("@"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("obj")),str("{"),rul("__"),pr("a",oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)])),rul("__"),str("}")]),seq([pr("op",ltr("tkn")),str("`"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("mod")),str("~"),rul("__"),pr("a",mod(obj(seq([pr("op",ltr("arr")),pr("a",rul("OtherExpression"))])),"expr",null)),pr("b",ltr(null)),pr("c",ltr("return $.join(\"\")"))]),seq([pr("op",ltr("pla")),str("&"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("nla")),str("!"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("?"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",ltr(1))]),seq([pr("op",ltr("rep")),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",mod(ltr(0),null," return Infinity "))]),seq([pr("op",ltr("rep")),pr("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("b",ltr("min"))]),seq([pr("op",ltr("rep")),pr("a",mod(rep(0,1,rul("NaturalNumber")),"ensureMin",null)),rul("__"),str(","),rul("__"),pr("b",mod(rep(0,1,rul("NaturalNumber")),"ensureMax",null)),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("+"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(1)),pr("b",mod(ltr(0),null," return Infinity "))]),seq([pr("op",ltr("ac")),str(".")]),seq([pr("op",ltr("pi")),str("$"),pr("a",rul("Identifier"))]),seq([pr("op",ltr("rul")),nla(rul("Rule")),pr("a",rul("Identifier")),rep(0,1,seq([rul("__"),pr("b",rul("RuleArguments"))]))])])),"expr",null)]),
+		body: oc([seq([str("("),rul("__"),oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)]),rul("__"),str(")")]),mod(obj(oc([seq([pr("op",ltr("str")),pr("a",rul("StringLiteral"))]),seq([pr("op",ltr("cc")),str("["),pr("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),pr("a",rul("CharacterClass")),str("]")]),seq([pr("op",ltr("ltr")),str("\\"),rul("__"),pr("a",rul("Literal"))]),seq([pr("op",ltr("arr")),str("@"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("obj")),str("{"),rul("__"),pr("a",oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)])),rul("__"),str("}")]),seq([pr("op",ltr("tkn")),str("`"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("mod")),str("~"),rul("__"),pr("a",mod(obj(seq([pr("op",ltr("arr")),pr("a",rul("OtherExpression"))])),"expr",null)),pr("b",ltr(null)),pr("c",ltr("return $.join(\"\")"))]),seq([pr("op",ltr("pla")),str("&"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("nla")),str("!"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("?"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",ltr(1))]),seq([pr("op",ltr("rep")),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",mod(ltr(0),null," return Infinity "))]),seq([pr("op",ltr("rep")),pr("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("b",ltr("min"))]),seq([pr("op",ltr("rep")),pr("a",mod(rep(0,1,rul("NaturalNumber")),"ensureMin",null)),rul("__"),str(","),rul("__"),pr("b",mod(rep(0,1,rul("NaturalNumber")),"ensureMax",null)),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("+"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(1)),pr("b",mod(ltr(0),null," return Infinity "))]),seq([pr("op",ltr("ac")),str(".")]),seq([pr("op",ltr("cv")),str("$"),pr("a",rul("Identifier"))]),seq([pr("op",ltr("rul")),nla(rul("Rule")),pr("a",rul("Identifier")),rep(0,1,seq([rul("__"),pr("b",rul("RuleArguments"))]))])])),"expr",null)]),
 	},
 	"RuleArguments": {
 		ident: "RuleArguments",
@@ -1331,6 +1343,27 @@ expressions.ltr.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	return states.join("");
 };
 
+expressions.cv.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var states = [];
+	switch (this.variable) {
+	case "input":
+		states.push(indent + "$objs[$objsLen++] = $input;\n");
+		break;
+	case "pos":
+		states.push(indent + "$objs[$objsLen++] = $pos;\n");
+		break;
+	case "row":
+		states.push(indent + "$objs[$objsLen++] = ($input.slice(0, $pos).match(/\\r\\n|\\r|\\n/g) || []).length;\n");
+		break;
+	case "column":
+		states.push(indent + '$objs[$objsLen++] = $pos - Math.max($input.lastIndexOf("\\r", $pos - 1), $input.lastIndexOf("\\n", $pos - 1));\n');
+		break;
+	}
+
+	return states.join("");
+};
+
 expressions.pla.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var posV, objsLenV;
@@ -1657,8 +1690,8 @@ var $failureObj = {};\n\
 	$failMatchs = $failMatchs.filter(function (x, i, self) {\n\
 		return self.indexOf(x) === i;\n\
 	});\n\
-	var $line = ($input.slice(0, $failPos).match(/\\n/g) || []).length;\n\
-	var $column = $failPos - $input.lastIndexOf("\\n", $failPos - 1);\n\
+	var $line = ($input.slice(0, $failPos).match(/\\r\\n|\\r|\\n/g) || []).length;\n\
+	var $column = $failPos - Math.max($input.lastIndexOf("\\r", $failPos - 1), $input.lastIndexOf("\\n", $failPos - 1));\n\
 	var $errorMessage = "Line " + ($line + 1) + ", column " + $column + ": Expected " + $joinWithOr($failMatchs) + " but " + (JSON.stringify($input[$failPos]) || "end of input") + " found.";\n\
 	throw new Error($errorMessage);\n\
 }\n', 1));
@@ -1971,6 +2004,19 @@ expressions.ltr.prototype.optimize = function(disuseProduce) {
 		produce: 2,
 		success: 2,
 		constant: [this.value],
+		match: "",
+	};
+};
+
+expressions.cv.prototype.optimize = function(disuseProduce) {
+	if (disuseProduce) {
+		return new expressions.nop().optimize(disuseProduce);
+	}
+	return {
+		expression: this,
+		advance: 0,
+		produce: 2,
+		success: 2,
 		match: "",
 	};
 };

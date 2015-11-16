@@ -220,6 +220,18 @@ start = `*. -> mod -? assert';
 			var grammar = 'start = @(\\1-| \\2 \\3-|)';
 			var parse = eval(SnakeParser.buildParser(grammar));
 			assert.deepEqual(parse(""), [2]);
+
+			var grammar = 'start = *. $input';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.equal(parse("hello"), "hello");
+
+			var grammar = 'start = @($pos *. $pos)';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse("hello"), [0, 5]);
+
+			var grammar = 'start = @($row $column *. $row $column)';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse("abc\ndef\rghi"), [0, 1, 2, 4]);
 		});
 
 		it("Parameterized rule", function() {

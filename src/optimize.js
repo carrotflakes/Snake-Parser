@@ -280,6 +280,19 @@ expressions.ltr.prototype.optimize = function(disuseProduce) {
 	};
 };
 
+expressions.cv.prototype.optimize = function(disuseProduce) {
+	if (disuseProduce) {
+		return new expressions.nop().optimize(disuseProduce);
+	}
+	return {
+		expression: this,
+		advance: 0,
+		produce: 2,
+		success: 2,
+		match: "",
+	};
+};
+
 expressions.pla.prototype.optimize = function(disuseProduce) {
 	var res = this.child.optimize(true);
 	if (res.success === 0) {

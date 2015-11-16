@@ -360,6 +360,27 @@ expressions.ltr.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	return states.join("");
 };
 
+expressions.cv.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var states = [];
+	switch (this.variable) {
+	case "input":
+		states.push(indent + "$objs[$objsLen++] = $input;\n");
+		break;
+	case "pos":
+		states.push(indent + "$objs[$objsLen++] = $pos;\n");
+		break;
+	case "row":
+		states.push(indent + "$objs[$objsLen++] = ($input.slice(0, $pos).match(/\\r\\n|\\r|\\n/g) || []).length;\n");
+		break;
+	case "column":
+		states.push(indent + '$objs[$objsLen++] = $pos - Math.max($input.lastIndexOf("\\r", $pos - 1), $input.lastIndexOf("\\n", $pos - 1));\n');
+		break;
+	}
+
+	return states.join("");
+};
+
 expressions.pla.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var posV, objsLenV;
@@ -686,8 +707,8 @@ var $failureObj = {};\n\
 	$failMatchs = $failMatchs.filter(function (x, i, self) {\n\
 		return self.indexOf(x) === i;\n\
 	});\n\
-	var $line = ($input.slice(0, $failPos).match(/\\n/g) || []).length;\n\
-	var $column = $failPos - $input.lastIndexOf("\\n", $failPos - 1);\n\
+	var $line = ($input.slice(0, $failPos).match(/\\r\\n|\\r|\\n/g) || []).length;\n\
+	var $column = $failPos - Math.max($input.lastIndexOf("\\r", $failPos - 1), $input.lastIndexOf("\\n", $failPos - 1));\n\
 	var $errorMessage = "Line " + ($line + 1) + ", column " + $column + ": Expected " + $joinWithOr($failMatchs) + " but " + (JSON.stringify($input[$failPos]) || "end of input") + " found.";\n\
 	throw new Error($errorMessage);\n\
 }\n', 1));

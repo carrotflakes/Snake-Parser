@@ -87,6 +87,11 @@ var Tokenize = function(e) {
 };
 extendsExpression(Tokenize, "tkn");
 
+var ContextVariable = function(variable) {
+	this.variable = variable;
+};
+extendsExpression(ContextVariable, "cv");
+
 var Literal = function(v) {
 	this.value = v;
 };
@@ -404,6 +409,10 @@ Property.prototype.toString = function() {
 
 Literal.prototype.toString = function() {
 	return this._name + "(" + JSON.stringify(this.value) + ")";
+};
+
+ContextVariable.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.variable) + ")";
 };
 
 Modify.prototype.toString = function() {
