@@ -4,10 +4,10 @@
   "description": "Casual parser generator inspired by PEG.js",
   "main": "src/snakeParser.js",
   "bin": "bin/snakeparser.js",
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
-    "expose-loader": "^0.7.0"
+    "expose-loader": "^0.7.0",
+    "mocha": "^5.2.0"
   },
   "scripts": {
     "test": "mocha"
