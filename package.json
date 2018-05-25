@@ -7,9 +7,12 @@
   "dependencies": {},
   "devDependencies": {
     "expose-loader": "^0.7.0",
-    "mocha": "^5.2.0"
+    "mocha": "^5.2.0",
+    "webpack": "^4.8.3",
+    "webpack-cli": "^2.1.4"
   },
   "scripts": {
+    "build": "webpack",
     "test": "mocha"
   },
   "repository": {

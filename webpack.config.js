@@ -8,9 +8,8 @@ module.exports = {
     sourcePrefix: "",
   },
   module: {
-    loaders: [
-      { test: /snakeParser\.js/, loader: "expose?SnakeParser" }
+    rules: [
+      { test: /snakeParser\.js/, use: "expose-loader?SnakeParser" }
     ]
   }
 };
-
