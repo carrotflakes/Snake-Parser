@@ -1,3 +1,8 @@
+/*
+ * jsLiteralify convert a value of JavaScript to string.
+ * The difference from JSON.stringify is that jsLiteralify print undefined value.
+ */
+
 function stringLiteralify(string) {
 	return JSON.stringify(string)
 		.replace(/\u2028/g, "\\u2028")
@@ -35,3 +40,4 @@ function jsLiteralify(object) {
 }
 
 module.exports = jsLiteralify;
+

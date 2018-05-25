@@ -108,10 +108,13 @@ var extendsExpression = function(cls, name) {
 
 
 // Classes extends Expression
-var Nop = function(succeed) {
-	this.succeed = succeed === undefined ? true : succeed;
+var Nop = function() {
 };
 extendsExpression(Nop, "nop");
+
+var Fail = function() {
+};
+extendsExpression(Fail, "fl");
 
 var MatchString = function(s) {
 	this.string = s;
@@ -152,6 +155,7 @@ var Repeat = function(min, max, e) {
 	if (this.min < 0 || this.max < this.min)
 		throw new Error("Invalid repeat expression.");
 	this.child = e;
+	this.possibleInfiniteLoop = this.max === Infinity;
 };
 extendsExpression(Repeat, "rep");
 
@@ -175,6 +179,11 @@ var Tokenize = function(e) {
 	this.child = e;
 };
 extendsExpression(Tokenize, "tkn");
+
+var ContextVariable = function(variable) {
+	this.variable = variable;
+};
+extendsExpression(ContextVariable, "cv");
 
 var Literal = function(v) {
 	this.value = v;
@@ -270,28 +279,36 @@ Waste.prototype.prepare = Repeat.prototype.prepare;
 RuleReference.prototype.prepare = function(rules) {
 	var rule = rules[this.ruleIdent];
 	if (!rule)
-		throw new Error('Referenced identifier ' + this.ruleIdent + ' not found.');
+		throw new Error('Identifier ' + this.ruleIdent + ' is not defined.');
+
 	this.rule = rule;
-	if (rule === "argument") // これは引数の参照
+
+	if (rule === "argument") // 引数の参照の場合はここまで
 		return;
 
 	// 参照をカウント
 	rule.referenceCount = (rule.referenceCount || 0) + 1;
 
-	if (rule.parameters) { // 引数付きルールの参照
-		if (!this.arguments || rule.parameters.length !== this.arguments.length) {
+	if (rule.parameters instanceof Array) { // 引数付きルールの参照の場合
+		// アリティチェック
+		if (!(this.arguments instanceof Array) ||
+				rule.parameters.length !== this.arguments.length) {
 			throw new Error('Referenced rule ' + rule.ident +
-											' takes ' + rule.parameters.length + ' arguments.');
+											' takes ' + rule.parameters.length +
+											' arguments (' + this.arguments.length + ' given).');
 		}
 
+		// 引数を再帰的に prepare
 		for (var i in this.arguments)
 			this.arguments[i].prepare(rules);
-	} else { // 引数なしルールの参照
-		if (this.arguments)
+	} else { // 引数なしルールの参照の場合
+		// アリティチェック
+		if (this.arguments instanceof Array)
 			throw new Error('Referenced rule ' + rule.ident + ' takes no arguments.');
 		this.body = rule.body;
 	}
 };
+
 
 // expand 引数付きルールの呼び出しを展開する
 Expression.prototype.expand = function(env) {
@@ -319,22 +336,14 @@ Guard.prototype.expand = Repeat.prototype.expand;
 Waste.prototype.expand = Repeat.prototype.expand;
 
 RuleReference.prototype.expand = function(env) {
-	if (this.arguments) { // これは引数付きルールの参照
-		var e = this.reduce(env, 1);
-		if (e instanceof RuleReference) {
-			this.ruleIdent = e.ruleIdent;
-			this.arguments = e.arguments;
-			this.rule = e.rule;
-			this.body = e.body;
-		} else {
-			this.body = e;
-		}
-	} else { // これは引数付きでないルールの参照
-		this.body = this.rule.body; // 入れる必要無さそうだけどcanLeftRecursで使う
+	if (this.arguments instanceof Array) { // 引数付きルールの参照の場合
+		this.body = this.reduce(env, 1);
+	} else { // 引数付きでないルールの参照の場合
+		this.body = this.rule.body; // 入れる必要無さそうだけど canLeftRecurs で使う
 	}
 };
 
-// reduce
+// reduce 簡約
 Expression.prototype.reduce = function(env, depth) {
 	return this;
 };
@@ -390,12 +399,12 @@ Modify.prototype.reduce = function(env, depth) {
 Guard.prototype.reduce = Modify.prototype.reduce;
 
 RuleReference.prototype.reduce = function(env, depth) {
-	if (this.rule === "argument") { // これは引数の参照
+	if (this.rule === "argument") { // 引数の参照の場合
 		var body = env[this.ruleIdent];
 		if (!body)
 			throw new Error('Referenced argument ' + this.ruleIdent + ' not found.');
 		return body;
-	} else if (this.arguments) { // これは引数付きルールの参照
+	} else if (this.arguments instanceof Array) { // 引数付きルールの参照の場合
 		if (depth === 32)
 			throw new Error("Parameterized rule reference nested too deep.");
 
@@ -446,10 +455,11 @@ RuleReference.prototype.reduce = function(env, depth) {
 
 			return this.rule.body.reduce(env1, depth + 1);
 		}
-	} else { // これは引数付きでないルールの参照
+	} else { // 引数付きでないルールの参照の場合
 		return this;
 	}
 };
+
 
 // toString
 Expression.prototype.toString = function() {
@@ -494,6 +504,10 @@ Literal.prototype.toString = function() {
 	return this._name + "(" + JSON.stringify(this.value) + ")";
 };
 
+ContextVariable.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.variable) + ")";
+};
+
 Modify.prototype.toString = function() {
 	if (this.code) {
 		return this._name + "(" + this.child.toString() + ",null," + JSON.stringify(this.code) + ")";
@@ -518,7 +532,7 @@ RuleReference.prototype.toString = function() {
 };
 
 
-
+// traverse
 Expression.prototype.traverse = function(func) {
 	func(this);
 };
@@ -549,6 +563,7 @@ Waste.prototype.traverse = Repeat.prototype.traverse;
 RuleReference.prototype.traverse = function(func) {
 	func(this);
 };
+
 
 // isRecursive 引数付きルールに対して
 Expression.prototype.isRecursive = function(ruleIdent, passedRules) {
@@ -589,7 +604,7 @@ Modify.prototype.isRecursive = function(ruleIdent, passedRules) {
 Guard.prototype.isRecursive = Modify.prototype.isRecursive;
 
 RuleReference.prototype.isRecursive = function(ruleIdent, passedRules) {
-	if (this.arguments) { // これは引数付きルールの参照
+	if (this.arguments instanceof Array) { // 引数付きルールの参照の場合
 		if (this.ruleIdent === ruleIdent)
 			return true;
 
@@ -609,6 +624,10 @@ RuleReference.prototype.isRecursive = function(ruleIdent, passedRules) {
 // -1 必ず進む 0 進まない可能性がある　1 左再帰する可能性がある
 Expression.prototype.canLeftRecurs = function(rule, passedRules) {
 	return 0;
+};
+
+Nop.prototype.canLeftRecurs = function(rule, passedRules) {
+	return -1;
 };
 
 OrderedChoice.prototype.canLeftRecurs = function(rule, passedRules) {
@@ -676,135 +695,6 @@ RuleReference.prototype.canLeftRecurs = function(rule, passedRules) {
 
 	return ret;
 };
-
-// canAdvance
-Expression.prototype.canAdvance = function() {
-	return false;
-};
-
-OrderedChoice.prototype.canAdvance = function() {
-	var ret = false;
-	for (var i in this.children)
-		ret = ret || this.children[i].canAdvance();
-	return ret;
-};
-
-Sequence.prototype.canAdvance = OrderedChoice.prototype.canAdvance;
-
-MatchString.prototype.canAdvance = function() {
-	return this.string.length != 0;
-};
-
-MatchCharacterClass.prototype.canAdvance = function() {
-	return true;
-};
-
-Repeat.prototype.canAdvance = function() {
-	return 0 < this.max && this.child.canAdvance();
-};
-
-Objectize.prototype.canAdvance = function() {
-	return this.child.canAdvance();
-};
-
-Arraying.prototype.canAdvance = Objectize.prototype.canAdvance;
-Tokenize.prototype.canAdvance = Objectize.prototype.canAdvance;
-
-PositiveLookaheadAssertion.prototype.canAdvance = function() {
-	return false;
-};
-
-NegativeLookaheadAssertion.prototype.canAdvance = PositiveLookaheadAssertion.prototype.canAdvance;
-
-Property.prototype.canAdvance = function() {
-	return this.child.canAdvance();
-};
-
-Literal.prototype.canAdvance = function() {
-	return false;
-};
-
-Modify.prototype.canAdvance = function() {
-	return this.child.canAdvance();
-};
-Guard.prototype.canAdvance = Modify.prototype.canAdvance;
-Waste.prototype.canAdvance = Modify.prototype.canAdvance;
-
-RuleReference.prototype.canAdvance = function() {
-	if (this._passed) {
-		delete this._passed;
-		return false;
-	}
-	this._passed = true;
-	var ret = this.rule.canAdvance();
-	delete this._passed;
-	return ret;
-};
-
-// canProduce
-Expression.prototype.canProduce = function() {
-	return false;
-};
-
-OrderedChoice.prototype.canProduce = function() {
-	var ret = false;
-	for (var i in this.children)
-		ret = ret || this.children[i].canProduce();
-	return ret;
-};
-
-Sequence.prototype.canProduce = OrderedChoice.prototype.canProduce;
-
-MatchString.prototype.canProduce = function() {
-	return false;
-};
-
-MatchCharacterClass.prototype.canProduce = function() {
-	return false;
-};
-
-Repeat.prototype.canProduce = function() {
-	return 0 < this.max && this.child.canProduce();
-};
-
-Objectize.prototype.canProduce = function() {
-	return true;
-};
-
-Arraying.prototype.canProduce = Objectize.prototype.canProduce;
-Tokenize.prototype.canProduce = Objectize.prototype.canProduce;
-
-PositiveLookaheadAssertion.prototype.canProduce = function() {
-	return false;
-};
-
-NegativeLookaheadAssertion.prototype.canProduce = PositiveLookaheadAssertion.prototype.canProduce;
-
-Property.prototype.canProduce = function() {
-	return true;
-};
-
-Literal.prototype.canProduce = function() {
-	return true;
-};
-
-Modify.prototype.canProduce = function() {
-	return true;
-};
-Guard.prototype.canProduce = Modify.prototype.canProduce;
-Waste.prototype.canProduce = Modify.prototype.canProduce;
-
-RuleReference.prototype.canProduce = function() {
-	if (this._passed) {
-		delete this._passed;
-		return false;
-	}
-	this._passed = true;
-	var ret = this.rule.canProduce();
-	delete this._passed;
-	return ret;
-};
-
 
 module.exports = expressions;
 
@@ -900,6 +790,9 @@ var tkn = function(a) {
 var ltr = function(a) {
 	return new expressions.ltr(a);
 };
+var cv = function(a) {
+	return new expressions.cv(a);
+};
 var pla = function(a) {
 	return new expressions.pla(a);
 };
@@ -919,15 +812,6 @@ var rul = function(a, b) {
 	return new expressions.rul(a, b);
 };
 
-
-for (var s in rules) {
-	rules[s] = {
-		ident: s,
-		body: rules[s],
-		name: null,
-		parameters: null,
-	};
-}
 
 var rules = {
 	"start": {
@@ -952,15 +836,15 @@ var rules = {
 	},
 	"LabelExpression": {
 		ident: "LabelExpression",
-		body: oc([mod(obj(seq([pr("op",ltr("pr")),pr("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":="),rul("__"),pr("b",mod(obj(seq([pr("op",ltr("ltr")),pr("a",rul("IdentifierOrStringLiteral"))])),"expr",null))])),"expr",null),mod(obj(seq([pr("op",ltr("pr")),pr("a",rul("IdentifierOrStringLiteral")),rul("__"),str(":"),rul("__"),pr("b",rul("ModifyExpression"))])),"expr",null),rul("ModifyExpression")]),
+		body: oc([mod(obj(seq([pr("op",ltr("pr")),pr("a",rul("IdentifierOrStringLiteral")),rul("__"),oc([seq([str(":="),rul("__"),pr("b",mod(obj(seq([pr("op",ltr("ltr")),pr("a",rul("IdentifierOrStringLiteral"))])),"expr",null))]),seq([str(":"),rul("__"),pr("b",rul("PipeExpression"))])])])),"expr",null),rul("PipeExpression")]),
 	},
-	"ModifyExpression": {
-		ident: "ModifyExpression",
-		body: oc([mod(obj(seq([pr("a",rul("ModifyExpression")),rul("__"),oc([seq([str("->"),rul("__"),pr("op",ltr("mod")),oc([seq([pr("b",rul("Identifier")),pr("c",ltr(null))]),seq([pr("b",ltr(null)),pr("c",rul("CodeBlock"))])])]),seq([str("-?"),rul("__"),pr("op",ltr("grd")),oc([seq([pr("b",rul("Identifier")),pr("c",ltr(null))]),seq([pr("b",ltr(null)),pr("c",rul("CodeBlock"))])])]),seq([str("-|"),pr("op",ltr("wst"))])])])),"expr",null),rul("OtherExpression")]),
+	"PipeExpression": {
+		ident: "PipeExpression",
+		body: oc([mod(obj(oc([seq([pr("a",rul("PipeExpression")),rul("__"),str("->"),rul("__"),pr("op",ltr("mod")),oc([seq([pr("b",rul("Identifier")),pr("c",ltr(null))]),seq([pr("b",ltr(null)),pr("c",rul("CodeBlock"))])])]),seq([pr("a",rul("PipeExpression")),rul("__"),str("-?"),rul("__"),pr("op",ltr("grd")),oc([seq([pr("b",rul("Identifier")),pr("c",ltr(null))]),seq([pr("b",ltr(null)),pr("c",rul("CodeBlock"))])])]),seq([pr("a",rul("PipeExpression")),rul("__"),str("-|"),pr("op",ltr("wst"))])])),"expr",null),rul("OtherExpression")]),
 	},
 	"OtherExpression": {
 		ident: "OtherExpression",
-		body: oc([seq([str("("),rul("__"),oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)]),rul("__"),str(")")]),mod(obj(oc([seq([pr("op",ltr("str")),pr("a",rul("StringLiteral"))]),seq([pr("op",ltr("cc")),str("["),pr("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),pr("a",rul("CharacterClass")),str("]")]),seq([pr("op",ltr("ltr")),str("\\"),rul("__"),pr("a",oc([rul("StringLiteral"),rul("NumericLiteral"),rul("BooleanLiteral"),rul("NullLiteral")]))]),seq([pr("op",ltr("arr")),str("@"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("obj")),str("{"),rul("__"),pr("a",oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)])),rul("__"),str("}")]),seq([pr("op",ltr("tkn")),str("`"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("pla")),str("&"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("nla")),str("!"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("?"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",ltr(1))]),seq([pr("op",ltr("rep")),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",mod(ltr(0),null,"return Infinity"))]),seq([pr("op",ltr("rep")),pr("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("b",ltr("min"))]),seq([pr("op",ltr("rep")),pr("a",mod(rep(0,1,rul("NaturalNumber")),"ensureMin",null)),str(","),pr("b",mod(rep(0,1,rul("NaturalNumber")),"ensureMax",null)),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("+"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(1)),pr("b",mod(ltr(0),null,"return Infinity"))]),seq([pr("op",ltr("ac")),str(".")]),seq([pr("op",ltr("pi")),str("$"),pr("a",rul("Identifier"))]),seq([pr("op",ltr("rul")),nla(rul("Rule")),pr("a",rul("Identifier")),rep(0,1,seq([rul("__"),pr("b",rul("RuleArguments"))]))])])),"expr",null)]),
+		body: oc([seq([str("("),rul("__"),oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)]),rul("__"),str(")")]),mod(obj(oc([seq([pr("op",ltr("str")),pr("a",rul("StringLiteral"))]),seq([pr("op",ltr("cc")),str("["),pr("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),pr("a",rul("CharacterClass")),str("]")]),seq([pr("op",ltr("ltr")),str("\\"),rul("__"),pr("a",rul("Literal"))]),seq([pr("op",ltr("arr")),str("@"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("obj")),str("{"),rul("__"),pr("a",oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)])),rul("__"),str("}")]),seq([pr("op",ltr("tkn")),str("`"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("mod")),str("~"),rul("__"),pr("a",mod(obj(seq([pr("op",ltr("arr")),pr("a",rul("OtherExpression"))])),"expr",null)),pr("b",ltr(null)),pr("c",ltr("return $.join(\"\")"))]),seq([pr("op",ltr("pla")),str("&"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("nla")),str("!"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("?"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",ltr(1))]),seq([pr("op",ltr("rep")),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",mod(ltr(0),null," return Infinity "))]),seq([pr("op",ltr("rep")),pr("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("b",ltr("min"))]),seq([pr("op",ltr("rep")),pr("a",mod(rep(0,1,rul("NaturalNumber")),"ensureMin",null)),rul("__"),str(","),rul("__"),pr("b",mod(rep(0,1,rul("NaturalNumber")),"ensureMax",null)),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("+"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(1)),pr("b",mod(ltr(0),null," return Infinity "))]),seq([pr("op",ltr("ac")),str(".")]),seq([pr("op",ltr("cv")),str("$"),pr("a",rul("Identifier"))]),seq([pr("op",ltr("rul")),nla(rul("Rule")),pr("a",rul("Identifier")),rep(0,1,seq([rul("__"),pr("b",rul("RuleArguments"))]))])])),"expr",null)]),
 	},
 	"RuleArguments": {
 		ident: "RuleArguments",
@@ -1018,6 +902,24 @@ var rules = {
 		ident: "NaturalNumber",
 		name: "natural number",
 		body: mod(tkn(oc([seq([cc([{"type":"range","start":49,"end":57}],false),rep(0,Infinity,cc([{"type":"range","start":48,"end":57}],false))]),str("0")])),"nuturalNumber",null),
+	},
+	"Literal": {
+		ident: "Literal",
+		body: oc([rul("StringLiteral"),rul("NumericLiteral"),rul("BooleanLiteral"),rul("NullLiteral"),rul("ArrayLiteral"),rul("ObjectLiteral")]),
+	},
+	"ArrayLiteral": {
+		ident: "ArrayLiteral",
+		name: "array literal",
+		body: seq([str("["),rul("__"),arr(rep(0,1,seq([rul("Literal"),rep(0,Infinity,seq([rul("__"),str(","),rul("__"),rul("Literal")])),rul("__")]))),str("]")]),
+	},
+	"ObjectLiteral": {
+		ident: "ObjectLiteral",
+		name: "object literal",
+		body: seq([str("{"),rul("__"),mod(arr(rep(0,1,seq([rul("ObjectLiteralProperty"),rep(0,Infinity,seq([rul("__"),str(","),rul("__"),rul("ObjectLiteralProperty")])),rul("__")]))),null,"\n                var ret = {};\n                for (var i = 0; i < $.length; ++i)\n                    ret[$[i].key] = $[i].value;\n                return ret;\n            "),str("}")]),
+	},
+	"ObjectLiteralProperty": {
+		ident: "ObjectLiteralProperty",
+		body: obj(seq([pr("key",rul("IdentifierOrStringLiteral")),rul("__"),str(":"),rul("__"),pr("value",rul("Literal"))])),
 	},
 	"NullLiteral": {
 		ident: "NullLiteral",
@@ -1094,13 +996,6 @@ var addIndent = function(str, level) {
 		return str;
 	var indent = makeIndent(level);
 	return indent + str.replace(/\n(?!$)/g, "\n" + indent);
-};
-
-var getId = function(ids, name) {
-	if (name in ids)
-		return ids[name];
-	else
-		return (ids[name] = 0);
 };
 
 var newId = function(ids, name) {
@@ -1181,10 +1076,11 @@ var makeErrorLogging = function(match, indentLevel) {
 };
 
 expressions.nop.prototype.gen = function(ids, pos, objsLen, indentLevel) {
-	if (this.succeed)
-		return "";
-	else
-		return makeIndent(indentLevel) + "$pos = -1;\n";
+	return "";
+};
+
+expressions.fl.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	return makeIndent(indentLevel) + "$pos = -1;\n";
 };
 
 expressions.oc.prototype.gen = function(ids, pos, objsLen, indentLevel) {
@@ -1268,8 +1164,11 @@ expressions.rep.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 		}
 		states.push(this.child.gen(ids, pos, objsLen, indentLevel + 1));
 		states.push(indent + indentStr + "if ($pos !== -1) {\n");
-		if (this.max === Infinity)
-			states.push(indent + indentStr + indentStr + "if ($pos === " + pos + ") throw new Error(\"Infinite loop detected.\");\n");
+		if (this.possibleInfiniteLoop) {
+			states.push(indent + indentStr + indentStr + "if ($pos === " + pos + ") {\n");
+			states.push(indent + indentStr + indentStr + indentStr + "throw new Error(\"Infinite loop detected.\");\n");
+			states.push(indent + indentStr + indentStr + "}\n");
+		}
 		states.push(indent + indentStr + indentStr + pos + " = $pos;\n");
 		states.push(indent + indentStr + indentStr + objsLen + " = $objsLen;\n");
 		states.push(indent + indentStr + "} else {\n");
@@ -1278,8 +1177,11 @@ expressions.rep.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 		states.push(indent + "}\n");
 		states.push(indent + "$pos = " + pos + ";\n");
 		states.push(indent + "$objsLen = " + objsLen + ";\n");
-		if (0 < this.min)
-			states.push(indent + "if (" + i + " < " + this.min + ") $pos = -1;\n");
+		if (0 < this.min) {
+			states.push(indent + "if (" + i + " < " + this.min + ") {\n");
+			states.push(indent + indentStr + "$pos = -1;\n");
+			states.push(indent + "}\n");
+		}
 		return states.join("");
 	}
 };
@@ -1292,13 +1194,13 @@ expressions.str.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var states = [];
 	if (this.string.length !== 1)
-		states.push(indent + "if ($input.substr($pos, " + this.string.length + ") === " + jsLiteralify(this.string) + ")\n");
+		states.push(indent + "if ($input.substr($pos, " + this.string.length + ") === " + jsLiteralify(this.string) + ") {\n");
 	else
-		states.push(indent + "if ($input.charCodeAt($pos) === " + this.string.charCodeAt() + ")\n");
+		states.push(indent + "if ($input.charCodeAt($pos) === " + this.string.charCodeAt() + ") {\n");
 	states.push(indent + indentStr + "$pos += " + this.string.length + ";\n");
-	states.push(indent + "else\n");
+	states.push(indent + "} else {\n");
 	states.push(makeErrorLogging(jsLiteralify(this.string), indentLevel + 1));
-//	states.push(indent + "}\n");
+	states.push(indent + "}\n");
 	return states.join("");
 };
 
@@ -1308,14 +1210,14 @@ expressions.cc.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	if (this.characterClass.length < 4) { // 適当
 		var c = "c";
 		states.push(indent + "var " + c + " = $input.charCodeAt($pos);\n");
-		states.push(indent + "if (" + this.makeCondition(c) + ")\n");
+		states.push(indent + "if (" + this.makeCondition(c) + ") {\n");
 	} else {
-		states.push(indent + "if (/" + this.makeRegexp() + "/.test($input.charAt($pos)))\n");
+		states.push(indent + "if (/" + this.makeRegexp() + "/.test($input.charAt($pos))) {\n");
 	}
 	states.push(indent + indentStr + "$pos += 1;\n");
-	states.push(indent + "else\n");
+	states.push(indent + "} else {\n");
 	states.push(makeErrorLogging(this.makeRegexp(), indentLevel + 1));
-//	states.push(indent + "}\n");
+	states.push(indent + "}\n");
 	return states.join("");
 };
 
@@ -1355,11 +1257,11 @@ expressions.cc.prototype.makeRegexp = function() {
 expressions.ac.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var states = [];
-	states.push(indent + "if ($pos < $inputLength)\n");
+	states.push(indent + "if ($pos < $inputLength) {\n");
 	states.push(indent + indentStr + "$pos += 1;\n");
-	states.push(indent + "else\n");
+	states.push(indent + "} else {\n");
 	states.push(makeErrorLogging(".", indentLevel + 1));
-//	states.push(indent + "}\n");
+	states.push(indent + "}\n");
 	return states.join("");
 };
 
@@ -1426,7 +1328,10 @@ expressions.tkn.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	states.push(makeVarState([[posV, "$pos"]], indentLevel));
 	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
 	states.push(indent + "if ($pos !== -1) {\n");
-	states.push(indent + indentStr + "$objs[$objsLen++] = $input.substring(" + pos + ", $pos);\n");
+	if (this.product !== undefined)
+		states.push(indent + indentStr + "$objs[$objsLen++] = " + jsLiteralify(this.product) + ";\n");
+	else
+		states.push(indent + indentStr + "$objs[$objsLen++] = $input.substring(" + pos + ", $pos);\n");
 	states.push(indent + "}\n");
 	return states.join("");
 };
@@ -1438,6 +1343,27 @@ expressions.ltr.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	return states.join("");
 };
 
+expressions.cv.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var states = [];
+	switch (this.variable) {
+	case "input":
+		states.push(indent + "$objs[$objsLen++] = $input;\n");
+		break;
+	case "pos":
+		states.push(indent + "$objs[$objsLen++] = $pos;\n");
+		break;
+	case "row":
+		states.push(indent + "$objs[$objsLen++] = ($input.slice(0, $pos).match(/\\r\\n|\\r|\\n/g) || []).length;\n");
+		break;
+	case "column":
+		states.push(indent + '$objs[$objsLen++] = $pos - Math.max($input.lastIndexOf("\\r", $pos - 1), $input.lastIndexOf("\\n", $pos - 1));\n');
+		break;
+	}
+
+	return states.join("");
+};
+
 expressions.pla.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
 	var posV, objsLenV;
@@ -1445,9 +1371,7 @@ expressions.pla.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
 	var states = [];
 	states.push(makeVarState([[posV, "$pos"], [objsLenV, "$objsLen"]], indentLevel));
-	states.push(indent + "$errorMask += 1;\n");
 	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
-	states.push(indent + "$errorMask -= 1;\n");
 	states.push(indent + "if ($pos !== -1) {\n");
 	states.push(addIndent("$objsLen = " + objsLen + ";\n" +
 												"$pos = " + pos + ";\n", indentLevel + 1));
@@ -1462,9 +1386,7 @@ expressions.nla.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
 	var states = [];
 	states.push(makeVarState([[posV, "$pos"], [objsLenV, "$objsLen"]], indentLevel));
-	states.push(indent + "$errorMask += 1;\n");
 	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
-	states.push(indent + "$errorMask -= 1;\n");
 	states.push(indent + "if ($pos === -1) {\n");
 	states.push(addIndent("$objsLen = " + objsLen + ";\n" +
 												"$pos = " + pos + ";\n", indentLevel + 1));
@@ -1498,7 +1420,7 @@ expressions.grd.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
 	states.push(indent + "if ($pos !== -1 && !" + this.identifier + "($objs[" + objsLen + "])) {\n");
 	states.push(indent + indentStr + "$pos = " + pos + ";\n");
-	states.push(indent + indentStr + "$matchingFail(\"a guarded expression\");\n");
+	states.push(makeErrorLogging("a guarded expression", indentLevel + 1));
 	states.push(indent + "}\n");
 	return states.join("");
 };
@@ -1510,9 +1432,7 @@ expressions.wst.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var states = [];
 	states.push(makeVarState([[objsLenV, "$objsLen"]], indentLevel));
 	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
-//	states.push(indent + "if ($succeed) {\n");
 	states.push(indent + "$objsLen = " + objsLen + ";\n");
-//	states.push(indent + "}\n");
 	return states.join("");
 };
 
@@ -1538,10 +1458,12 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 	var setMatchTable = "";
 	var unsetMatchTable = "";
 	if (rule.name) {
-		setMatchTable = "if (!$matchTable[" + pos + "])\n" +
-			indentStr + "$matchTable[" + pos + "] = " + jsLiteralify(rule.name) + ";\n"
-		unsetMatchTable = "if ($matchTable[" + pos + "] === " + jsLiteralify(rule.name) + ")\n" +
-			indentStr + "$matchTable[" + pos + "] = null;\n";
+		setMatchTable = "if (!$matchTable[" + pos + "]) {\n" +
+			indentStr + "$matchTable[" + pos + "] = " + jsLiteralify(rule.name) + ";\n" +
+			"}\n";
+		unsetMatchTable = "if ($matchTable[" + pos + "] === " + jsLiteralify(rule.name) + ") {\n" +
+			indentStr + "$matchTable[" + pos + "] = null;\n" +
+			"}\n";
 	}
 
 	if (rule.leftRecurs) { // 左再帰対応
@@ -1550,7 +1472,9 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		var states = [];
 		states.push("function rule$" + rule.ident + "() {\n");
 		states.push(makeVarState([[key, keyValue]], indentLevel + 1));
-		states.push(indent + indentStr + "if ($readMemo(" + key + ")) return;\n");
+		states.push(indent + indentStr + "if ($readMemo(" + key + ")){\n");
+		states.push(indent + indentStr + indentStr + "return;\n");
+		states.push(indent + indentStr + "}\n");
 		states.push(addIndent(setMatchTable, indentLevel + 1));
 		states.push(indent + indentStr + "$objs.length = $objsLen;\n");
 		states.push(makeVarState([[pos, "$pos"], [objs, "$objs"], ["rpos", "-1"]], indentLevel + 1));
@@ -1561,8 +1485,9 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		states.push(indent + indentStr + indentStr + "$objs = [];\n");
 		states.push(indent + indentStr + indentStr + "$objsLen = 0;\n");
 		states.push(rule.body.gen(ids, pos, "0", indentLevel + 2));
-		states.push(indent + indentStr + indentStr + "if ($pos === -1 || $pos <= rpos)\n");
+		states.push(indent + indentStr + indentStr + "if ($pos === -1 || $pos <= rpos) {\n");
 		states.push(indent + indentStr + indentStr + indentStr + "break;\n");
+		states.push(indent + indentStr + indentStr + "}\n");
 		states.push(indent + indentStr + indentStr + "rpos = $pos;\n");
 		states.push(indent + indentStr + indentStr + "$objs.length = $objsLen;\n");
 		states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs);\n");
@@ -1570,8 +1495,9 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		states.push(indent + indentStr + "$objs = " + objs + ";\n");
 		states.push(indent + indentStr + "$objsLen = $objs.length;\n");
 		states.push(indent + indentStr + "$readMemo(" + key + ");\n");
-		states.push(indent + indentStr + "if (--$undet[" + pos + "])\n");
+		states.push(indent + indentStr + "if (--$undet[" + pos + "]) {\n");
 		states.push(indent + indentStr + indentStr + "delete $memo[" + key + "];\n");
+		states.push(indent + indentStr + "}\n");
 		states.push(addIndent(unsetMatchTable, indentLevel + 1));
 		states.push(indent + "}");
 		return states.join("");
@@ -1581,15 +1507,19 @@ var genRule = function(rule, memoRules, useUndet, indentLevel) {
 		var states = [];
 		states.push("function rule$" + rule.ident + "() {\n");
 		states.push(makeVarState([[key, keyValue], [pos, "$pos"], [objsLen, "$objsLen"]], indentLevel + 1));
-		if (key)
-			states.push(indent + indentStr + "if ($readMemo(" + key + ")) return;\n");
+		if (key) {
+			states.push(indent + indentStr + "if ($readMemo(" + key + ")) {\n");
+			states.push(indent + indentStr + indentStr + "return;\n");
+			states.push(indent + indentStr + "}\n");
+		}
 		states.push(addIndent(setMatchTable, indentLevel + 1));
 		states.push(rule.body.gen(ids, pos, objsLen, indentLevel + 1));
 		states.push(addIndent(unsetMatchTable, indentLevel + 1));
 		if (key) {
 			if (useUndet) {
-				states.push(indent + indentStr + "if (!$undet[" + pos + "])\n");
+				states.push(indent + indentStr + "if (!$undet[" + pos + "]) {\n");
 				states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs.slice(" + objsLen + ", $objsLen));\n");
+				states.push(indent + indentStr + "}\n");
 			} else {
 				states.push(indent + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs.slice(" + objsLen + ", $objsLen));\n");
 			}
@@ -1670,7 +1600,6 @@ var $objs = [];\n\
 var $objsLen = 0;\n\
 var $memo = [];\n\
 var $matchTable = new Array($inputLength);\n\
-var $errorMask = 0;\n\
 var $failMatchs = [];\n\
 var $failPos = 0;\n\
 var $failureObj = {};\n\
@@ -1682,18 +1611,18 @@ var $failureObj = {};\n\
 	states.push(initializer);
 	states.push("\n\n");
 
-	// modifiers?
-	var modifiers = {};
-	var modifierId = 0;
+	// modifiers and guards
+	var functions = {};
+	var functionId = 0;
 	for (var r in rules) {
 		rules[r].body.traverse(function(expr) {
 			if (expr instanceof expressions.mod || expr instanceof expressions.grd) {
 				if (!expr.identifier) {
-					if (!modifiers[expr.code]) {
-						modifiers[expr.code] = expr.identifier = "mod$" + modifierId++;
-						states.push(makeIndent(2) + "function " + expr.identifier + "($) {" + expr.code + "};" + "\n\n");
+					if (!functions[expr.code]) {
+						functions[expr.code] = expr.identifier = "func$" + functionId++;
+						states.push(makeIndent(2) + "function " + expr.identifier + "($) {" + expr.code + "}" + "\n\n");
 					} else {
-						expr.identifier = modifiers[expr.code];
+						expr.identifier = functions[expr.code];
 					}
 				}
 			}
@@ -1704,33 +1633,34 @@ var $failureObj = {};\n\
 	for (var key in rules) {
 		if (!rules[key].parameters) {
 			ruleOptimize(rules[key]);
-			states.push(makeIndent(2) + genRule(rules[key], memoRules, useUndet, 2) + ";\n\n");
+			states.push(makeIndent(2) + genRule(rules[key], memoRules, useUndet, 2) + "\n\n");
 		}
 	}
 
 	states.push(addIndent('function $matchingFail(match) {\n\
-	if ($errorMask === 0 && $failPos <= $pos) {\n\
+	if ($failPos <= $pos) {\n\
 		match = $matchTable[$pos] ? $matchTable[$pos] : match;\n\
 		if ($failPos === $pos) {\n\
-			if ($failMatchs.indexOf(match) === -1)\n\
-				$failMatchs.push(match);\n\
+			$failMatchs.push(match);\n\
 		} else {\n\
-			$failMatchs = [match];\n\
+			$failMatchs.length = 0;\n\
+			$failMatchs[0] = match;\n\
 			$failPos = $pos;\n\
 		}\n\
 	}\n\
 	$pos = -1;\n\
 }', 2) + "\n\n");
 
-	states.push(addIndent($joinByOr.toString() + ";", 2) + "\n\n");
+	states.push(addIndent($joinWithOr.toString(), 2) + "\n\n");
 
 	states.push(addIndent('function $readMemo(key) {\n\
 	var res = $memo[key];\n\
 	if (res !== undefined) {\n\
 		if (res !== $failureObj) {\n\
 			$pos = res.pos;\n\
-			for (var i = 0, il = res.objs.length; i < il; ++i)\n\
+			for (var i = 0, il = res.objs.length; i < il; ++i) {\n\
 				$objs[$objsLen++] = res.objs[i];\n\
+			}\n\
 		} else {\n\
 			$pos = -1;\n\
 		}\n\
@@ -1754,13 +1684,17 @@ var $failureObj = {};\n\
 		}\n\
 		$matchingFail("end of input");\n\
 	}\n\
-	if ($failMatchs.length === 0)\n\
+	if ($failMatchs.length === 0) {\n\
 		$failMatchs.push("something");\n\
-	var $line = ($input.slice(0, $failPos).match(/\\n/g) || []).length;\n\
-	var $column = $failPos - $input.lastIndexOf("\\n", $failPos - 1) - 1;\n\
-	var $errorMessage = "Line " + ($line + 1) + ", column " + $column + ": Expected " + $joinByOr($failMatchs) + " but " + (JSON.stringify($input[$failPos]) || "end of input") + " found.";\n\
+	}\n\
+	$failMatchs = $failMatchs.filter(function (x, i, self) {\n\
+		return self.indexOf(x) === i;\n\
+	});\n\
+	var $line = ($input.slice(0, $failPos).match(/\\r\\n|\\r|\\n/g) || []).length;\n\
+	var $column = $failPos - Math.max($input.lastIndexOf("\\r", $failPos - 1), $input.lastIndexOf("\\n", $failPos - 1));\n\
+	var $errorMessage = "Line " + ($line + 1) + ", column " + $column + ": Expected " + $joinWithOr($failMatchs) + " but " + (JSON.stringify($input[$failPos]) || "end of input") + " found.";\n\
 	throw new Error($errorMessage);\n\
-};\n', 1));
+}\n', 1));
 	states.push(indentStr + "return $parse;\n");
 	states.push("})()");
 
@@ -1772,13 +1706,15 @@ var $failureObj = {};\n\
 	return states.join("");
 };
 
-function $joinByOr(strs) {
-	if (strs.length === 0)
+function $joinWithOr(strs) {
+	if (strs.length === 0) {
 		return "";
-	if (strs.length === 1)
+	}
+	if (strs.length === 1) {
 		return strs[0];
+	}
 	return strs.slice(0, strs.length - 1).join(", ") + " or " + strs[strs.length - 1];
-};
+}
 
 var version = __webpack_require__(4);
 var sign = "/*\n * Generated by snake parser " + version + "\n */";
@@ -1797,45 +1733,45 @@ expressions.nop.prototype.optimize = function(disuseProduce) {
 		expression: this,
 		advance: 0,
 		produce: 0,
-		success: this.succeed ? 2 : 0,
-		constant: this.succeed ? [] : undefined,
+		success: 2,
+		constant: [],
+		match: "",
+	};
+};
+
+expressions.fl.prototype.optimize = function(disuseProduce) {
+	return {
+		expression: this,
+		advance: 0,
+		produce: 0,
+		success: 0,
 	};
 };
 
 expressions.str.prototype.optimize = function(disuseProduce) {
 	if (this.string.length === 0) {
-		return {
-			expression: new expressions.nop(),
-			advance: 0,
-			produce: 0,
-			success: 2,
-		};
+		return new expressions.nop().optimize(disuseProduce);
 	}
 	return {
 		expression: this,
 		advance: 2,
 		produce: 0,
 		success: 1,
+		match: this.string,
 	};
 };
 
 expressions.cc.prototype.optimize = function(disuseProduce) {
 	if (this.characterClass.length === 0) {
-		if (!this.invert) {
-			return { // 必ず失敗
-				expression: new expressions.nop(false),
-				advance: 0,
-				produce: 0,
-				success: 0,
-			};
-		} else {
-			return { // . と同じ
-				expression: new expressions.ac(),
-				advance: 2,
-				produce: 0,
-				success: 1,
-			};
+		if (!this.invert) { // 必ず失敗
+			return new expressions.fl().optimize(disuseProduce);
+		} else { // . と同じ
+			return new expressions.ac().optimize(disuseProduce);
 		}
+	} else if (this.characterClass.length === 1 && !this.invert &&
+						this.characterClass[0].type === "single") {
+		return new expressions.str(String.fromCharCode(this.characterClass[0].char))
+			.optimize(disuseProduce);
 	}
 	return {
 		expression: this,
@@ -1877,12 +1813,7 @@ expressions.oc.prototype.optimize = function(disuseProduce) {
 			break;
 	}
 	if (children.length === 0) {
-		return {
-			expression: new expressions.nop(false),
-			advance: 0,
-			produce: 0,
-			success: 0,
-		};
+		return new expressions.fl().optimize(disuseProduce);
 	} else if (children.length === 1) {
 		return {
 			expression: children[0],
@@ -1907,6 +1838,7 @@ expressions.seq.prototype.optimize = function(disuseProduce) {
 	var success = 2;
 	var children = [];
 	var constant = [];
+	var match = "";
 	for (var i = 0; i < this.children.length; ++i) {
 		var res = this.children[i].optimize(disuseProduce);
 		if (res.advance === 0 && res.produce === 0 && res.success === 2)
@@ -1926,14 +1858,13 @@ expressions.seq.prototype.optimize = function(disuseProduce) {
 			[].push.apply(constant, res.constant);
 		else
 			constant = undefined;
+		if (typeof match === "string" && typeof res.match === "string")
+			match += res.match;
+		else
+			match = undefined;
 	}
 	if (success === 0) { // 必ず失敗
-		return {
-			expression: new expressions.nop(false),
-			advance: 0,
-			produce: 0,
-			success: 0,
-		};
+		return new expressions.fl().optimize(disuseProduce);
 	}
 	this.children = children;
 	return {
@@ -1942,31 +1873,47 @@ expressions.seq.prototype.optimize = function(disuseProduce) {
 		produce: produce,
 		success: success,
 		constant: constant,
+		match: match,
 	};
 };
 
 expressions.rep.prototype.optimize = function(disuseProduce) {
 	if (this.max === 0) {
-		return {
-			expression: new expressions.nop(),
-			advance: 0,
-			produce: 0,
-			success: 2,
-		};
+		return new expressions.nop().optimize();
 	}
+
 	var res = this.child.optimize(disuseProduce);
 	this.child = res.expression;
+
 	if (this.max === Infinity && res.success === 2)
 		throw new Error("Infinite loop detected.");
-	if (this.min === 0)
-		res.success = Math.max(1, res.success);
-	res.expression = this;
+
+	if (res.advance === 2)
+		this.possibleInfiniteLoop = false;
+
+	if (this.min === 0) {
+		res.advance = Math.min(res.advance, 1);
+		res.success = Math.max(res.success, 1);
+	}
+
 	if (res.constant) { // 定数化
 		var newConstant = [];
 		for (var i = 0; i < this.max; ++i)
 			[].push.apply(newConstant, res.constant);
 		res.constant = newConstant;
 	}
+
+	if (typeof res.match === "string") {
+		if (this.min === this.max) {
+			var newMatch = "";
+			for (var i = 0; i < this.max; ++i)
+				newMatch += res.match;
+			res.match = newMatch;
+		}
+	}
+
+	res.expression = this;
+
 	return res;
 };
 
@@ -2028,23 +1975,28 @@ expressions.pr.prototype.optimize = function(disuseProduce) {
 
 expressions.tkn.prototype.optimize = function(disuseProduce) {
 	var res = this.child.optimize(disuseProduce);
+
 	if (disuseProduce)
 		return res;
+
 	this.child = res.expression;
 	res.produce = 2;
 	res.expression = this;
-	res.constant = undefined;
+
+	if (res.constant && typeof res.match === "string")
+		res.constant.push(res.match);
+	else
+		res.constant = undefined;
+
+	if (typeof res.match === "string" && res.match.length <= 20)
+		this.product = res.match;
+
 	return res;
 };
 
 expressions.ltr.prototype.optimize = function(disuseProduce) {
 	if (disuseProduce) {
-		return {
-			expression: new expressions.nop(),
-			advance: 0,
-			produce: 0,
-			success: 2,
-		};
+		return new expressions.nop().optimize(disuseProduce);
 	}
 	return {
 		expression: this,
@@ -2052,15 +2004,29 @@ expressions.ltr.prototype.optimize = function(disuseProduce) {
 		produce: 2,
 		success: 2,
 		constant: [this.value],
+		match: "",
+	};
+};
+
+expressions.cv.prototype.optimize = function(disuseProduce) {
+	if (disuseProduce) {
+		return new expressions.nop().optimize(disuseProduce);
+	}
+	return {
+		expression: this,
+		advance: 0,
+		produce: 2,
+		success: 2,
+		match: "",
 	};
 };
 
 expressions.pla.prototype.optimize = function(disuseProduce) {
 	var res = this.child.optimize(true);
 	if (res.success === 0) {
-		res.expression = new expressions.nop(false);
+		res.expression = new expressions.fl();
 	} else if (res.success === 2) {
-		res.expression = new expressions.nop(true);
+		res.expression = new expressions.nop();
 	} else {
 		this.child = res.expression;
 		res.expression = this;
@@ -2068,15 +2034,16 @@ expressions.pla.prototype.optimize = function(disuseProduce) {
 	res.advance = 0;
 	res.produce = 0;
 	res.constant = undefined;
+	res.match = "";
 	return res;
 };
 
 expressions.nla.prototype.optimize = function(disuseProduce) {
 	var res = this.child.optimize(true);
 	if (res.success === 0) {
-		res.expression = new expressions.nop(false);
+		res.expression = new expressions.fl();
 	} else if (res.success === 2) {
-		res.expression = new expressions.nop(true);
+		res.expression = new expressions.nop();
 	} else {
 		this.child = res.expression;
 		res.expression = this;
@@ -2085,6 +2052,7 @@ expressions.nla.prototype.optimize = function(disuseProduce) {
 	res.produce = 0;
 	res.success = 2 - res.success;
 	res.constant = undefined;
+	res.match = "";
 	return res;
 };
 
@@ -2136,6 +2104,11 @@ module.exports = ruleOptimize;
 /* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
+/*
+ * jsLiteralify convert a value of JavaScript to string.
+ * The difference from JSON.stringify is that jsLiteralify print undefined value.
+ */
+
 function stringLiteralify(string) {
 	return JSON.stringify(string)
 		.replace(/\u2028/g, "\\u2028")
@@ -2173,6 +2146,7 @@ function jsLiteralify(object) {
 }
 
 module.exports = jsLiteralify;
+
 
 
 /***/ }

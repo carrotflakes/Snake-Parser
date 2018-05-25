@@ -8,6 +8,7 @@
         lines.push("}");
         return lines.join("\n");
     }
+
     function rule(rule) {
         var lines = [];
         lines.push("\t" + JSON.stringify(rule.ident) + ": {");
@@ -20,18 +21,22 @@
         lines.push("\t}");
         return lines.join("\n");
     }
+
     function arrayToObject($) {
         var res = {};
         for (var i = 0, il = $.length; i < il; ++i)
             res[$[i].ident] = $[i];
         return res;
     }
+
     function ensureMin($) {
         return $ === undefined ? 0 : $;
     }
+
     function ensureMax($) {
         return $ === undefined ? Infinity : $;
     }
+
     function characterClassChar(str) {
         var len = str.length;
         if (len === 1)
@@ -52,9 +57,11 @@
             return 13;
         return str.charCodeAt(1);
     }
+
     function nuturalNumber($) {
         return +$;
     }
+
     function expr($) {
         switch ($.op) {
         case "nop":
@@ -83,12 +90,12 @@
             return $.op + "(" + $.a + ")";
         case "rep":
             return $.op + "(" + $.a + "," + ($.b === "min" ? $.a : $.b) + "," + $.c + ")";
-        case "pi":
-            return $.op + "(" + $.a + ")";
+        case "cv":
+            return $.op + "(" + JSON.stringify($.a) + ")";
         case "rul":
-						if ($.b)
+            if ($.b)
                 return $.op + "(" + JSON.stringify($.a) + ",[" + $.b + "])";
-						else
+            else
                 return $.op + "(" + JSON.stringify($.a) + ")";
         }
     }
@@ -96,193 +103,332 @@
 
 
 start
-    =   {
-            __
-            initializer:(CodeBlock __ | \"")
-            rules:@*Rule -> rules
-        }
+    = {
+        __
+        initializer: (CodeBlock __ | \"")
+        rules: @*Rule -> rules
+    }
 
 Rule
-    =   {
-            ident:Identifier __
-            ?(parameters:RuleParameters __)
-            ?(name:StringLiteral __)
-            '=' __
-            body:ChoiceExpression __
-        }
+    = {
+        ident: Identifier __
+        ?(parameters: RuleParameters __)
+        ?(name: StringLiteral __)
+        '=' __
+        body: ChoiceExpression __
+    }
 
 RuleParameters
     = @(
-            "<" __
-            ?(
-                Identifier __
-                *("," __ Identifier __)
-            )
-            ">"
+        "<" __
+        ?(
+            Identifier __
+            *("," __ Identifier __)
         )
+        ">"
+    )
 
 ChoiceExpression
-    = {op:=oc a:@(SequenceExpression __ +('|' __ SequenceExpression))} -> expr __
-    | SequenceExpression __
+    =   {
+            op:= oc
+            a: @(SequenceExpression __ +('|' __ SequenceExpression))
+        } -> expr
+        __
+    |   SequenceExpression
+        __
 
 SequenceExpression
-    = {op:=seq a:@(LabelExpression +(__ LabelExpression))} -> expr __
-    | LabelExpression __
+    =   {
+            op:= seq
+            a: @(LabelExpression +(__ LabelExpression))
+        } -> expr
+        __
+    |   LabelExpression
+        __
 
 LabelExpression
-    = {
-				op:=pr
-        a:IdentifierOrStringLiteral __
-        ':=' __
-        b:{ op:=ltr a:IdentifierOrStringLiteral } -> expr
-      } -> expr
-    | {op:=pr a:IdentifierOrStringLiteral __ ':'  __ b:ModifyExpression} -> expr
-    | ModifyExpression
-
-ModifyExpression
     =   {
+				    op:= pr
+            a: IdentifierOrStringLiteral __
             (
-                a:ModifyExpression __
-                (
-                    '->' __
-                    op:=mod
-                    (b:Identifier c:\null | b:\null c:CodeBlock)
-                |
-                    '-?' __
-                    op:=grd
-                    (b:Identifier c:\null | b:\null c:CodeBlock)
-                |
-                    '-|'
-                    op:=wst
-                )
+                ':=' __
+                b: {
+                    op:= ltr
+                    a: IdentifierOrStringLiteral
+                } -> expr
+            |
+                ':' __
+                b: PipeExpression
             )
+        }  -> expr
+    |   PipeExpression
+
+PipeExpression
+    =   {
+            a: PipeExpression __
+            '->' __
+            op:= mod
+            (b: Identifier c: \null | b: \null c: CodeBlock)
+        |
+            a: PipeExpression __
+            '-?' __
+            op:= grd
+            (b: Identifier c: \null | b: \null c: CodeBlock)
+        |
+            a: PipeExpression __
+            '-|'
+            op:=wst
         } -> expr
-    | OtherExpression
+    |   OtherExpression
 
 OtherExpression
-    = '(' __ (ChoiceExpression | {op:=nop} -> expr) __ ')'
-    |   { op:=str a:StringLiteral
-        | op:=cc  '[' b:('^' \true | \false) a:CharacterClass ']'
-        | op:=ltr '\\' __ a:(StringLiteral | NumericLiteral | BooleanLiteral | NullLiteral)
-        | op:=arr '@' __ a:OtherExpression
-        | op:=obj '{' __ a:(ChoiceExpression | {op:=nop} -> expr) __ '}'
-        | op:=tkn '`' __ a:OtherExpression
-        | op:=pla '&' __ a:OtherExpression
-        | op:=nla '!' __ a:OtherExpression
-        | op:=rep '?' __ c:OtherExpression a:\0 b:\1
-        | op:=rep '*' __ c:OtherExpression a:\0 b:\0 -> {return Infinity}
-        | op:=rep a:NaturalNumber __ '*' __ c:OtherExpression b:\"min"
-        | op:=rep a:?NaturalNumber->ensureMin ',' b:?NaturalNumber->ensureMax __ '*' __ c:OtherExpression
-        | op:=rep '+' __ c:OtherExpression a:\1 b:\0 -> {return Infinity}
-        | op:=ac  '.'
-        | op:=pi  '$' a:Identifier
-        | op:=rul !Rule a:Identifier ?(__ b:RuleArguments)
+    =   '(' __ (ChoiceExpression | {op:=nop} -> expr) __ ')'
+    |
+        {
+            op:= str
+            a: StringLiteral
+        |
+            op:= cc
+            '['
+            b: ('^' \true | \false)
+            a: CharacterClass
+            ']'
+        |
+            op:= ltr
+            '\\' __
+            a: Literal
+        |
+            op:= arr
+            '@' __
+            a: OtherExpression
+        |
+            op:= obj
+            '{' __
+            a: (ChoiceExpression | {op:=nop} -> expr) __
+            '}'
+        |
+            op:= tkn
+            '`' __
+            a: OtherExpression
+        |
+            op:= mod
+            '~' __
+            a: {
+                op:= arr
+                a: OtherExpression
+            } -> expr
+            b: \null
+            c: \'return $.join("")'
+        |
+            op:= pla
+            '&' __
+            a: OtherExpression
+        |
+            op:= nla
+            '!' __
+            a: OtherExpression
+        |
+            op:= rep
+            '?' __
+            c: OtherExpression
+            a: \0
+            b: \1
+        |
+            op:= rep
+            '*' __
+            c: OtherExpression
+            a: \0
+            b: \0 -> { return Infinity }
+        |
+            op:= rep
+            a: NaturalNumber __
+            '*' __
+            c: OtherExpression
+            b: \"min"
+        |
+            op:= rep
+            a: ?NaturalNumber -> ensureMin __
+            ',' __
+            b: ?NaturalNumber -> ensureMax __
+            '*' __
+            c: OtherExpression
+        |
+            op:= rep
+            '+' __
+            c: OtherExpression
+            a:\1
+            b:\0 -> { return Infinity }
+        |
+            op:= ac
+            '.'
+        |
+            op:= cv
+            '$'
+            a: Identifier
+        |
+            op:= rul
+            !Rule
+            a: Identifier
+            ?(__ b:RuleArguments)
         } -> expr
 
 RuleArguments
     = @(
-            "<" __
-            ?(
-                ChoiceExpression __
-                *("," __ ChoiceExpression __)
-            )
-            ">"
+        "<" __
+        ?(
+            ChoiceExpression __
+            *("," __ ChoiceExpression __)
         )
+        ">"
+    )
 
 __ "white space"
-    = *([ \t\r\n] | Comment)
+    =   *([ \t\r\n] | Comment)
 
 Comment
-    = '//' *[^\n] ('\n' | !.)
-    | '/*' *([^*] | '*' [^/]) '*/'
+    =   '//'
+        *[^\n]
+        ('\n' | !.)
+    |   '/*'
+        *([^*] | '*' [^/])
+        '*/'
 
 LineTerminator
-    = [\n\r\u2028\u2029]
+    =   [\n\r\u2028\u2029]
 
 Identifier "identifier"
-    = `([a-zA-Z_] *[a-zA-Z0-9_])
+    =   `([a-zA-Z_] *[a-zA-Z0-9_])
 
 IdentifierOrStringLiteral
-    = StringLiteral | Identifier
+    =   StringLiteral
+    |   Identifier
 
 StringLiteral "string literal"
-    = `StringLiteralRaw -> eval
+    =   `StringLiteralRaw -> eval
 
 StringLiteralRaw
-    =   (
-            '\''
-            *(!LineTerminator [^'\\] | '\\x' 2*HexDigit | '\\u' 4*HexDigit | '\\' [^ux])
-            '\''
+    =   '\''
+        *(
+            !LineTerminator [^'\\]
+        |
+            '\\x' 2*HexDigit
+        |
+            '\\u' 4*HexDigit
+        |
+            '\\' [^ux]
         )
-    |   (
-            '\"'
-            *(!LineTerminator [^"\\] | '\\x' 2*HexDigit | '\\u' 4*HexDigit | '\\' [^ux])
-            '\"'
+        '\''
+    |   '\"'
+        *(
+            !LineTerminator [^"\\]
+        |
+            '\\x' 2*HexDigit
+        |
+            '\\u' 4*HexDigit
+        |
+            '\\' [^ux]
         )
+        '\"'
 
 CharacterClass
     = @*{
-            type:\"range"
-            start:CharacterClassChar '-' end:CharacterClassChar
-        |   type:\"single"
-            char:CharacterClassChar
-        }
+        type:= range
+        start: CharacterClassChar '-'
+        end: CharacterClassChar
+    |
+        type:= single
+        char: CharacterClassChar
+    }
 
 CharacterClassChar
     = `(
         [^\]\\]
-      | '\\x' 2*HexDigit
-      | '\\u' 4*HexDigit
-      | '\\' [^ux]
-      ) -> characterClassChar
+    |
+        '\\x' 2*HexDigit
+    |
+        '\\u' 4*HexDigit
+    |
+        '\\' [^ux]
+    ) -> characterClassChar
 
 CodeBlock "code block"
-    = "{" `Code "}"
+    =   "{" `Code "}"
 
 Code
-    = *([^{}] | "{" Code "}")
+    =   *([^{}] | "{" Code "}")
 
 NaturalNumber "natural number"
-    = `([1-9] *[0-9] | "0") -> nuturalNumber
+    =   `([1-9] *[0-9] | "0") -> nuturalNumber
 
+
+Literal
+    =   StringLiteral
+    |   NumericLiteral
+    |   BooleanLiteral
+    |   NullLiteral
+    |   ArrayLiteral
+    |   ObjectLiteral
+
+ArrayLiteral "array literal"
+    =   "[" __
+        @?(Literal *(__ "," __ Literal) __)
+        "]"
+
+ObjectLiteral "object literal"
+    =   "{" __
+        @?(ObjectLiteralProperty *(__ "," __ ObjectLiteralProperty) __)
+            -> {
+                var ret = {};
+                for (var i = 0; i < $.length; ++i)
+                    ret[$[i].key] = $[i].value;
+                return ret;
+            }
+        "}"
+
+ObjectLiteralProperty
+    = {
+        key: IdentifierOrStringLiteral __
+        ":" __
+        value: Literal
+    }
 
 NullLiteral
-    = "null" \null
+    =   "null" \null
 
 BooleanLiteral
-    = "true"    \true
-    | "false" \false
+    =   "true"  \true
+    |   "false" \false
 
 NumericLiteral "numeric literal"
-    = `(?"-" (HexIntegerLiteral | DecimalLiteral)) -> eval
+    =   `(?"-" (HexIntegerLiteral | DecimalLiteral)) -> eval
 
 DecimalLiteral
-    = DecimalIntegerLiteral "." *DecimalDigit ?ExponentPart
-    | "." +DecimalDigit ?ExponentPart
-    | DecimalIntegerLiteral ?ExponentPart
+    =   DecimalIntegerLiteral "." *DecimalDigit ?ExponentPart
+    |   "." +DecimalDigit ?ExponentPart
+    |   DecimalIntegerLiteral ?ExponentPart
 
 DecimalIntegerLiteral
-    = "0"
-    | NonZeroDigit *DecimalDigit
+    =   "0"
+    |   NonZeroDigit *DecimalDigit
 
 DecimalDigit
-    = [0-9]
+    =   [0-9]
 
 NonZeroDigit
-    = [1-9]
+    =   [1-9]
 
 ExponentPart
-    = ExponentIndicator SignedInteger
+    =   ExponentIndicator SignedInteger
 
 ExponentIndicator
-    = [eE]
+    =   [eE]
 
 SignedInteger
-    = ?[+-] +DecimalDigit
+    =   ?[+-] +DecimalDigit
 
 HexIntegerLiteral
-    = ("0x" | "0X") +HexDigit
+    =   ("0x" | "0X") +HexDigit
 
 HexDigit
-    = [0-9a-fA-F]
+    =   [0-9a-fA-F]
 

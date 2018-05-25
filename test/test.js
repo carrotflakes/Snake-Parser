@@ -1,5 +1,5 @@
 var assert = require("assert");
-require("../dist/snakeParser");
+var SnakeParser = require("../src/snakeParser");
 
 describe("SnakeParser", function() {
 	describe("invalid grammar", function() {
@@ -187,6 +187,10 @@ describe("SnakeParser", function() {
 			var parse = eval(SnakeParser.buildParser(grammar));
 			assert.equal(parse(""), "yo");
 
+			var grammar = 'start = \\[1, "2", [], {}, {a:3, b:"4"}]';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse(""), [1, "2", [], {}, {a:3, b:"4"}]);
+
 			var grammar = 'start = @(`. `. `.)';
 			var parse = eval(SnakeParser.buildParser(grammar));
 			assert.deepEqual(parse("abc"), ["a", "b", "c"]);
@@ -204,6 +208,10 @@ describe("SnakeParser", function() {
 			assert.equal(parse("wow"), "wow");
 			assert.throws(parse.bind(null, "yeah"), Error);
 
+			var grammar = 'start = ~*`.';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.equal(parse("yeah"), "yeah");
+
 			var grammar = '{ function mod(x) { return x + "!"; } function assert(x) { return x === "yo!"; } }\n\
 start = `*. -> mod -? assert';
 			var parse = eval(SnakeParser.buildParser(grammar));
@@ -212,6 +220,18 @@ start = `*. -> mod -? assert';
 			var grammar = 'start = @(\\1-| \\2 \\3-|)';
 			var parse = eval(SnakeParser.buildParser(grammar));
 			assert.deepEqual(parse(""), [2]);
+
+			var grammar = 'start = *. $input';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.equal(parse("hello"), "hello");
+
+			var grammar = 'start = @($pos *. $pos)';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse("hello"), [0, 5]);
+
+			var grammar = 'start = @($row $column *. $row $column)';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse("abc\ndef\rghi"), [0, 1, 2, 4]);
 		});
 
 		it("Parameterized rule", function() {
@@ -266,6 +286,14 @@ start = `*. -> mod -? assert';
 			var grammar = 'start = {a:() b:@3*\\0}';
 			var parse = eval(SnakeParser.buildParser(grammar));
 			assert.deepEqual(parse(""), {a:undefined, b:[0, 0, 0]});
+		});
+	});
+
+	describe("infinite loop", function() {
+		it("Infinite loop", function() {
+			var grammar = 'start = *?"a"';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.throws(parse.bind(null, "a"), Error);
 		});
 	});
 });
