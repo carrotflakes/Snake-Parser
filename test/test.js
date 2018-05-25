@@ -246,6 +246,10 @@ start = `*. -> mod -? assert';
 			var grammar = 'start = a<"a"> a<a> = a';
 			var parse = eval(SnakeParser.buildParser(grammar));
 			assert.equal(parse("a"), undefined);
+
+			var grammar = 'start = a<\\"x"> a<x> = x->{return $}';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.equal(parse(""), "x");
 		});
 
 		it("Recursive parameterized rule", function() {

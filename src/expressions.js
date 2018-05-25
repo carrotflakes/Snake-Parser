@@ -107,17 +107,19 @@ var NegativeLookaheadAssertion = function(e) {
 };
 extendsExpression(NegativeLookaheadAssertion, "nla");
 
-var Modify = function(e, i, c) {
+var Modify = function(e, i, c, ip) {
 	this.child = e;
 	this.identifier = i;
 	this.code = c;
+  this.identifierPlaceholder = ip;
 };
 extendsExpression(Modify, "mod");
 
-var Guard = function(e, i, c) {
+var Guard = function(e, i, c, ip) {
 	this.child = e;
 	this.identifier = i;
 	this.code = c;
+  this.identifierPlaceholder = ip;
 };
 extendsExpression(Guard, "grd");
 
@@ -300,7 +302,7 @@ Modify.prototype.reduce = function(env, depth) {
 	var child = this.child.reduce(env, depth);
 	if (child === this.child)
 		return this;
-	return new this.constructor(child, this.identifier, this.code);
+	return new this.constructor(child, this.identifier, this.code, this);
 };
 
 Guard.prototype.reduce = Modify.prototype.reduce;

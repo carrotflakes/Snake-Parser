@@ -421,7 +421,7 @@ expressions.mod.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	states.push(makeVarState([[objsLenV, "$objsLen"]], indentLevel));
 	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
 	states.push(indent + "if ($pos !== -1) {\n");
-	states.push(indent + indentStr + "$objs[" + objsLen + "] = " + this.identifier + "($objs[" + objsLen + "]);\n");
+	states.push(indent + indentStr + "$objs[" + objsLen + "] = " + resolveIdentifier(this) + "($objs[" + objsLen + "]);\n");
 	states.push(indent + indentStr + "$objsLen = " + objsLen + " + 1;\n");
 	states.push(indent + "}\n");
 	return states.join("");
@@ -435,12 +435,20 @@ expressions.grd.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var states = [];
 	states.push(makeVarState([[objsLenV, "$objsLen"], [posV, "$pos"]], indentLevel));
 	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
-	states.push(indent + "if ($pos !== -1 && !" + this.identifier + "($objs[" + objsLen + "])) {\n");
+	states.push(indent + "if ($pos !== -1 && !" + resolveIdentifier(this) + "($objs[" + objsLen + "])) {\n");
 	states.push(indent + indentStr + "$pos = " + pos + ";\n");
 	states.push(makeErrorLogging("a guarded expression", indentLevel + 1));
 	states.push(indent + "}\n");
 	return states.join("");
 };
+
+function resolveIdentifier(exp) {
+  if (exp.identifier) {
+    return exp.identifier;
+  } else {
+    return resolveIdentifier(exp.identifierPlaceholder);
+  }
+}
 
 expressions.wst.prototype.gen = function(ids, pos, objsLen, indentLevel) {
 	var indent = makeIndent(indentLevel);
