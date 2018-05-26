@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/carrotflakes/Snake-Parser.git"
+    "url": "git+https://github.com/carrotflakes/snake-parser.git"
   },
   "keywords": [
     "parser",
@@ -28,9 +28,9 @@
   "author": "carrotflakes",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/carrotflakes/Snake-Parser/issues"
+    "url": "https://github.com/carrotflakes/snake-parser/issues"
   },
-  "homepage": "https://github.com/carrotflakes/Snake-Parser#readme",
+  "homepage": "https://github.com/carrotflakes/snake-parser#readme",
   "files": [
     "README.md",
     "LICENSE",
