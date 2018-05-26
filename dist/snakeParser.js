@@ -1,1 +1,2186 @@
-!function(e){var t={};function r(n){if(t[n])return t[n].exports;var s=t[n]={i:n,l:!1,exports:{}};return e[n].call(s.exports,s,s.exports,r),s.l=!0,s.exports}r.m=e,r.c=t,r.d=function(e,t,n){r.o(e,t)||Object.defineProperty(e,t,{configurable:!1,enumerable:!0,get:n})},r.r=function(e){Object.defineProperty(e,"__esModule",{value:!0})},r.n=function(e){var t=e&&e.__esModule?function(){return e.default}:function(){return e};return r.d(t,"a",t),t},r.o=function(e,t){return Object.prototype.hasOwnProperty.call(e,t)},r.p="",r(r.s=7)}([function(e,t){var r={},n=function(){};r.exp=n;var s=function(e,t){e.prototype=new n,e.prototype._name=t,e.prototype.constructor=e,r[t]=e},i=function(){};s(i,"nop");s(function(){},"fl");var o=function(e){this.string=e};s(o,"str");var p=function(e,t){this.characterClass=e,this.invert=!!t};s(p,"cc");var u=function(){};s(u,"ac");var a=function(e){e instanceof Array?this.children=e:this.children=[].slice.call(arguments,0,[].indexOf.call(arguments))};s(a,"oc");var c=function(e){e instanceof Array?this.children=e:this.children=[].slice.call(arguments,0,[].indexOf.call(arguments))};s(c,"seq");var l=function(e,t,r){if(this.min=void 0!==e?e:0,this.max=void 0!==t?"min"===t?e:t:1/0,this.min<0||this.max<this.min)throw new Error("Invalid repeat expression.");this.child=r,this.possibleInfiniteLoop=this.max===1/0};s(l,"rep");var h=function(e){this.child=e};s(h,"obj");var d=function(e){this.child=e};s(d,"arr");var f=function(e,t){this.key=e,this.child=t};s(f,"pr");var y=function(e){this.child=e};s(y,"tkn");var g=function(e){this.variable=e};s(g,"cv");var v=function(e){this.value=e};s(v,"ltr");var m=function(e){this.child=e};s(m,"pla");var b=function(e){this.child=e};s(b,"nla");var $=function(e,t,r,n){this.child=e,this.identifier=t,this.code=r,this.identifierPlaceholder=n};s($,"mod");var x=function(e,t,r,n){this.child=e,this.identifier=t,this.code=r,this.identifierPlaceholder=n};s(x,"grd");var _=function(e){this.child=e};s(_,"wst");var j=function(e,t,r,n){this.ruleIdent=e,this.arguments=t,this.rule=r,this.body=n};s(j,"rul"),j.prototype.getReference=function(){var e=this.rule;e.references||(e.references=[]);e:for(var t in e.references)if(e.references[t].parameters.length===this.arguments.length){for(var r=0;r<this.arguments.length;++r)if(e.references[t].arguments[r].body.toString()!==this.arguments[r].body.toString())continue e;return e.references[t]}var n={arguments:e.arguments,referenceCount:0,body:null};return e.references.push(n),n},n.prototype.prepare=function(e){},a.prototype.prepare=function(e){for(var t in this.children)this.children[t].prepare(e)},c.prototype.prepare=a.prototype.prepare,l.prototype.prepare=function(e){this.child.prepare(e)},h.prototype.prepare=l.prototype.prepare,d.prototype.prepare=l.prototype.prepare,y.prototype.prepare=l.prototype.prepare,f.prototype.prepare=l.prototype.prepare,m.prototype.prepare=l.prototype.prepare,b.prototype.prepare=l.prototype.prepare,$.prototype.prepare=l.prototype.prepare,x.prototype.prepare=l.prototype.prepare,_.prototype.prepare=l.prototype.prepare,j.prototype.prepare=function(e){var t=e[this.ruleIdent];if(!t)throw new Error("Identifier "+this.ruleIdent+" is not defined.");if(this.rule=t,"argument"!==t)if(t.referenceCount=(t.referenceCount||0)+1,t.parameters instanceof Array){if(!(this.arguments instanceof Array)||t.parameters.length!==this.arguments.length)throw new Error("Referenced rule "+t.ident+" takes "+t.parameters.length+" arguments ("+this.arguments.length+" given).");for(var r in this.arguments)this.arguments[r].prepare(e)}else{if(this.arguments instanceof Array)throw new Error("Referenced rule "+t.ident+" takes no arguments.");this.body=t.body}},n.prototype.expand=function(e){},a.prototype.expand=function(e){for(var t in this.children)this.children[t].expand(e)},c.prototype.expand=a.prototype.expand,l.prototype.expand=function(e){this.child.expand(e)},h.prototype.expand=l.prototype.expand,d.prototype.expand=l.prototype.expand,y.prototype.expand=l.prototype.expand,f.prototype.expand=l.prototype.expand,m.prototype.expand=l.prototype.expand,b.prototype.expand=l.prototype.expand,$.prototype.expand=l.prototype.expand,x.prototype.expand=l.prototype.expand,_.prototype.expand=l.prototype.expand,j.prototype.expand=function(e){this.arguments instanceof Array?this.body=this.reduce(e,1):this.body=this.rule.body},n.prototype.reduce=function(e,t){return this},a.prototype.reduce=function(e,t){var r=!1,n=[];for(var s in this.children)n[s]=this.children[s].reduce(e,t),r=r||this.children[s]!==n[s];return r?new this.constructor(n):this},c.prototype.reduce=a.prototype.reduce,l.prototype.reduce=function(e,t){var r=this.child.reduce(e,t);return r===this.child?this:new l(this.min,this.max,r)},h.prototype.reduce=function(e,t){var r=this.child.reduce(e,t);return r===this.child?this:new this.constructor(r)},d.prototype.reduce=h.prototype.reduce,y.prototype.reduce=h.prototype.reduce,m.prototype.reduce=h.prototype.reduce,b.prototype.reduce=h.prototype.reduce,_.prototype.reduce=h.prototype.reduce,f.prototype.reduce=function(e,t){var r=this.child.reduce(e,t);return r===this.child?this:new f(this.key,r)},$.prototype.reduce=function(e,t){var r=this.child.reduce(e,t);return r===this.child?this:new this.constructor(r,this.identifier,this.code,this)},x.prototype.reduce=$.prototype.reduce,j.prototype.reduce=function(e,t){if("argument"===this.rule){var r=e[this.ruleIdent];if(!r)throw new Error("Referenced argument "+this.ruleIdent+" not found.");return r}if(this.arguments instanceof Array){if(32===t)throw new Error("Parameterized rule reference nested too deep.");if(this.rule.recursive){var arguments=[];for(var n in this.arguments)arguments[n]=this.arguments[n].reduce(e,t+1);this.rule.reduceds=this.rule.reduceds||[];var s=null;e:for(var n in this.rule.reduceds){for(var i in(s=this.rule.reduceds[n]).arguments)if(s.arguments.toString(i)!==arguments.toString()){s=null;continue e}break}if(!s){s=new j(this.ruleIdent+"$"+this.rule.reduceds.length,arguments,null,null),this.rule.reduceds.push(s);var o={};for(var n in o.__proto__=e,arguments)o[this.rule.parameters[n]]=arguments[n];s.body=this.rule.body.reduce(o,t+1)}return this.reduced=s,s}o={};for(var n in o.__proto__=e,this.arguments)o[this.rule.parameters[n]]=this.arguments[n].reduce(e,t+1);return this.rule.body.reduce(o,t+1)}return this},n.prototype.toString=function(){return this._name+"()"},a.prototype.toString=function(){var e=[];for(var t in this.children)e.push(this.children[t].toString());return this._name+"("+e.join(",")+")"},c.prototype.toString=a.prototype.toString,o.prototype.toString=function(){return this._name+"("+JSON.stringify(this.string)+")"},p.prototype.toString=function(){return this._name+"("+JSON.stringify(this.characterClass)+","+ +this.invert+")"},l.prototype.toString=function(){return this._name+"("+this.min+","+this.max+","+this.child.toString()+")"},h.prototype.toString=function(){return this._name+"("+this.child.toString()+")"},d.prototype.toString=h.prototype.toString,y.prototype.toString=h.prototype.toString,m.prototype.toString=h.prototype.toString,b.prototype.toString=h.prototype.toString,f.prototype.toString=function(){return this._name+"("+JSON.stringify(this.key)+","+this.child.toString()+")"},v.prototype.toString=function(){return this._name+"("+JSON.stringify(this.value)+")"},g.prototype.toString=function(){return this._name+"("+JSON.stringify(this.variable)+")"},$.prototype.toString=function(){return this.code?this._name+"("+this.child.toString()+",null,"+JSON.stringify(this.code)+")":this._name+"("+this.child.toString()+","+JSON.stringify(this.identifier)+",null)"},x.prototype.toString=$.prototype.toString,_.prototype.toString=function(){return this._name+"("+this.child.toString()+")"},j.prototype.toString=function(){if(!this.parameters)return this._name+"("+JSON.stringify(this.ruleIdent)+")";var e=this.arguments.map(function(e){return e.toString()}).join(",");return this._name+"("+JSON.stringify(this.ruleIdent)+",["+e+"])"},n.prototype.traverse=function(e){e(this)},a.prototype.traverse=function(e){for(var t in e(this),this.children)this.children[t].traverse(e)},c.prototype.traverse=a.prototype.traverse,l.prototype.traverse=function(e){e(this),this.child.traverse(e)},h.prototype.traverse=l.prototype.traverse,d.prototype.traverse=l.prototype.traverse,y.prototype.traverse=l.prototype.traverse,f.prototype.traverse=l.prototype.traverse,m.prototype.traverse=l.prototype.traverse,b.prototype.traverse=l.prototype.traverse,$.prototype.traverse=l.prototype.traverse,x.prototype.traverse=l.prototype.traverse,_.prototype.traverse=l.prototype.traverse,j.prototype.traverse=function(e){e(this)},n.prototype.isRecursive=function(e,t){return!1},a.prototype.isRecursive=function(e,t){for(var r in this.children)if(this.children[r].isRecursive(e,t))return!0;return!1},c.prototype.isRecursive=a.prototype.isRecursive,l.prototype.isRecursive=function(e,t){return this.child.isRecursive(e,t)},h.prototype.isRecursive=function(e,t){return this.child.isRecursive(e,t)},d.prototype.isRecursive=h.prototype.isRecursive,y.prototype.isRecursive=h.prototype.isRecursive,m.prototype.isRecursive=h.prototype.isRecursive,b.prototype.isRecursive=h.prototype.isRecursive,_.prototype.isRecursive=h.prototype.isRecursive,f.prototype.isRecursive=function(e,t){return this.child.isRecursive(e,t)},$.prototype.isRecursive=function(e,t){return this.child.isRecursive(e,t)},x.prototype.isRecursive=$.prototype.isRecursive,j.prototype.isRecursive=function(e,t){if(this.arguments instanceof Array){if(this.ruleIdent===e)return!0;if(-1!==t.indexOf(this.ruleIdent))return!1;for(var r in this.arguments)if(this.arguments[r].isRecursive(e,t))return!0;return this.rule.body.isRecursive(e,t.concat([this.ruleIdent]))}},n.prototype.canLeftRecurs=function(e,t){return 0},i.prototype.canLeftRecurs=function(e,t){return-1},a.prototype.canLeftRecurs=function(e,t){var r=-1;for(var n in this.children)r=Math.max(r,this.children[n].canLeftRecurs(e,t));return r},c.prototype.canLeftRecurs=function(e,t){for(var r in this.children){var n=this.children[r].canLeftRecurs(e,t);if(-1===n)return-1;if(1===n)return 1}return 0},o.prototype.canLeftRecurs=function(e,t){return 0!==this.string.length?-1:0},p.prototype.canLeftRecurs=function(e,t){return-1},u.prototype.canLeftRecurs=p.prototype.canLeftRecurs,l.prototype.canLeftRecurs=function(e,t){return 0===this.min?Math.max(0,this.child.canLeftRecurs(e,t)):this.child.canLeftRecurs(e,t)},h.prototype.canLeftRecurs=function(e,t){return this.child.canLeftRecurs(e,t)},d.prototype.canLeftRecurs=h.prototype.canLeftRecurs,y.prototype.canLeftRecurs=h.prototype.canLeftRecurs,f.prototype.canLeftRecurs=h.prototype.canLeftRecurs,m.prototype.canLeftRecurs=h.prototype.canLeftRecurs,b.prototype.canLeftRecurs=h.prototype.canLeftRecurs,$.prototype.canLeftRecurs=h.prototype.canLeftRecurs,x.prototype.canLeftRecurs=h.prototype.canLeftRecurs,_.prototype.canLeftRecurs=h.prototype.canLeftRecurs,j.prototype.canLeftRecurs=function(e,t){if(e===this.ruleIdent)return 1;if(-1!==t.indexOf(this.ruleIdent))return 0;var r=this.leftRecurs;return void 0!==r?r:(-1===(r=this.body.canLeftRecurs(e,t.concat([this.ruleIdent])))&&(e.leftRecurs=r),r)},e.exports=r},function(e,t){e.exports="0.2.4.1"},function(e,t,r){var n=r(0),s=r(4),i=r(3),o=function(e){return new Array(e+1).join("\t")},p=function(e,t){if(""===e)return e;var r=o(t);return r+e.replace(/\n(?!$)/g,"\n"+r)},u=function(e,t){return t in e?t+ ++e[t]:t+(e[t]=0)},a=function(e,t){return(e=(e=e.filter(function(e){return e instanceof Object?e[0]:e})).map(function(e){return e instanceof Object?e[0]+(e[1]?" = "+e[1]:""):e})).length?o(t)+"var "+e.join(", ")+";\n":""},c=function(e){switch(e){case 92:case 47:case 93:case 94:case 45:return"\\"+String.fromCharCode(e);case 0:return"\\0";case 9:return"\\t";case 10:return"\\n";case 11:return"\\v";case 12:return"\\f";case 13:return"\\r"}return 0<=e&&e<=8||14===e||15===e||16<=e&&e<=31||128<=e&&e<=255?"\\x"+("0"+e.toString(16)).slice(-2):256<=e&&e<=65535?"\\u"+("000"+e.toString(16)).slice(-4):String.fromCharCode(e)},l=function(e,t){var r='"'+e.replace(/\\/g,"\\\\").replace(/"/g,'\\"').replace(/\x08/g,"\\b").replace(/\t/g,"\\t").replace(/\n/g,"\\n").replace(/\f/g,"\\f").replace(/\r/g,"\\r").replace(/[\x00-\x07\x0B\x0E\x0F\x10-\x1F\x80-\xFF]/g,function(e){return"\\x"+("0"+e.charCodeAt().toString(16)).slice(-2)}).replace(/[\u0100-\uFFFF]/g,function(e){return"\\u"+("000"+e.charCodeAt().toString(16)).slice(-4)})+'"';return o(t)+"$matchingFail("+r+");\n"};function h(e){return e.identifier?e.identifier:h(e.identifierPlaceholder)}n.nop.prototype.gen=function(e,t,r,n){return""},n.fl.prototype.gen=function(e,t,r,n){return o(n)+"$pos = -1;\n"},n.oc.prototype.gen=function(e,t,r,n){if(1===this.children.length)return this.children[0].gen(e,t,r,n);var s,i;o(n);t=t||(s=u(e,"pos")),r=r||(i=u(e,"objsLen"));var p=[];p.push(a([[s,"$pos"],[i,"$objsLen"]],n)),(h={}).__proto__=e,p.push(this.children[0].gen(h,t,r,n));for(var c=0,l=1;l<this.children.length;++l){var h;p.push(o(n+c++)+"if ($pos === -1) {\n"),p.push(o(n+c)+"$pos = "+t+";\n"),p.push(o(n+c)+"$objsLen = "+r+";\n"),(h={}).__proto__=e,p.push(this.children[l].gen(h,t,r,n+c))}for(;c;)p.push(o(n+--c)+"}\n");return p.join("")},n.seq.prototype.gen=function(e,t,r,n){if(1===this.children.length)return this.children[0].gen(e,t,r,n);o(n);var s=[];(a={}).__proto__=e;for(var i=!1,p=0,u=0;u<this.children.length;++u){var a;(a={}).__proto__=e,i&&s.push(o(n+p++)+"if ($pos !== -1) {\n"),s.push(this.children[u].gen(a,t,r,n+p)),this.children[u].neverAdvance||(t=null),this.children[u].neverProduce||(r=null),i=!this.children[u].alwaysSuccess}for(;p;)s.push(o(n+--p)+"}\n");return s.join("")},n.rep.prototype.gen=function(e,t,r,n){var s,i,p=o(n);if(0===this.min&&1===this.max)return t=t||(s=u(e,"pos")),r=r||(i=u(e,"objsLen")),(c=[]).push(a([[s,"$pos"],[i,"$objsLen"]],n)),c.push(this.child.gen(e,t,r,n)),c.push(p+"if ($pos === -1) {\n"),c.push(p+"\t$pos = "+t+";\n"),c.push(p+"\t$objsLen = "+r+";\n"),c.push(p+"}\n"),c.join("");t=u(e,"pos"),r=u(e,"objsLen");var c,l=u(e,"i");return(c=[]).push(a([[t,"$pos"],[r,"$objsLen"]],n)),this.max!=1/0?c.push(p+"for (var "+l+" = 0; "+l+" < "+this.max+"; "+l+"++) {\n"):0<this.min?c.push(p+"for (var "+l+" = 0; ; "+l+"++) {\n"):c.push(p+"while (true) {\n"),c.push(this.child.gen(e,t,r,n+1)),c.push(p+"\tif ($pos !== -1) {\n"),this.possibleInfiniteLoop&&(c.push(p+"\t\tif ($pos === "+t+") {\n"),c.push(p+'\t\t\tthrow new Error("Infinite loop detected.");\n'),c.push(p+"\t\t}\n")),c.push(p+"\t\t"+t+" = $pos;\n"),c.push(p+"\t\t"+r+" = $objsLen;\n"),c.push(p+"\t} else {\n"),c.push(p+"\t\tbreak;\n"),c.push(p+"\t}\n"),c.push(p+"}\n"),c.push(p+"$pos = "+t+";\n"),c.push(p+"$objsLen = "+r+";\n"),0<this.min&&(c.push(p+"if ("+l+" < "+this.min+") {\n"),c.push(p+"\t$pos = -1;\n"),c.push(p+"}\n")),c.join("")},n.str.prototype.gen=function(e,t,r,n){if(0===this.string.length)return"";var s=o(n),p=[];return 1!==this.string.length?p.push(s+"if ($input.substr($pos, "+this.string.length+") === "+i(this.string)+") {\n"):p.push(s+"if ($input.charCodeAt($pos) === "+this.string.charCodeAt()+") {\n"),p.push(s+"\t$pos += "+this.string.length+";\n"),p.push(s+"} else {\n"),p.push(l(i(this.string),n+1)),p.push(s+"}\n"),p.join("")},n.cc.prototype.gen=function(e,t,r,n){var s=o(n),i=[];if(this.characterClass.length<4){i.push(s+"var c = $input.charCodeAt($pos);\n"),i.push(s+"if ("+this.makeCondition("c")+") {\n")}else i.push(s+"if (/"+this.makeRegexp()+"/.test($input.charAt($pos))) {\n");return i.push(s+"\t$pos += 1;\n"),i.push(s+"} else {\n"),i.push(l(this.makeRegexp(),n+1)),i.push(s+"}\n"),i.join("")},n.cc.prototype.makeCondition=function(e){var t=[];if(this.invert){for(var r in this.characterClass){"range"===(n=this.characterClass[r]).type?t.push("("+e+" < "+n.start+" || "+n.end+" < "+e+")"):t.push(e+" !== "+n.char)}return 0===t.length||"!isNaN("+e+") && "+t.join(" && ")}for(var r in this.characterClass){var n;"range"===(n=this.characterClass[r]).type?t.push(n.start+" <= "+e+" && "+e+" <= "+n.end):t.push(e+" === "+n.char)}return 0===t.length?"false":t.join(" || ")},n.cc.prototype.makeRegexp=function(){return(this.invert?"[^":"[")+this.characterClass.map(function(e){return"range"==e.type?c(e.start)+"-"+c(e.end):c(e.char)}).join("")+"]"},n.ac.prototype.gen=function(e,t,r,n){var s=o(n),i=[];return i.push(s+"if ($pos < $inputLength) {\n"),i.push(s+"\t$pos += 1;\n"),i.push(s+"} else {\n"),i.push(l(".",n+1)),i.push(s+"}\n"),i.join("")},n.obj.prototype.gen=function(e,t,r,n){var s,i=o(n);r=r||(s=u(e,"objsLen"));var p=u(e,"obj"),c=[];return c.push(a([[s,"$objsLen"]],n)),c.push(this.child.gen(e,t,r,n)),c.push(i+"if ($pos !== -1) {\n"),c.push(i+"\tvar "+p+" = {};\n"),c.push(i+"\tfor (var i = "+r+"; i < $objsLen; i += 2)\n"),c.push(i+"\t\t"+p+"[$objs[i + 1]] = $objs[i];\n"),c.push(i+"\t$objsLen = "+r+" + 1;\n"),c.push(i+"\t$objs["+r+"] = "+p+";\n"),c.push(i+"}\n"),c.join("")},n.pr.prototype.gen=function(e,t,r,s){var p,c,l=o(s);return this.child instanceof n.ltr?((c=[]).push(l+"$objs[$objsLen++] = "+i(this.child.value)+";\n"),c.push(l+"$objs[$objsLen++] = "+i(this.key)+";\n"),c.join("")):(r=r||(p=u(e,"objsLen")),(c=[]).push(a([[p,"$objsLen"]],s)),c.push(this.child.gen(e,t,r,s)),c.push(l+"if ($pos !== -1) {\n"),c.push(l+"\tif ($objsLen === "+r+")\n"),c.push(l+"\t\t$objs["+r+"] = undefined;\n"),c.push(l+"\t$objs["+r+" + 1] = "+i(this.key)+";\n"),c.push(l+"\t$objsLen = "+r+" + 2;\n"),c.push(l+"}\n"),c.join(""))},n.arr.prototype.gen=function(e,t,r,n){var s,i=o(n);r=r||(s=u(e,"objsLen"));var p=[];return p.push(a([[s,"$objsLen"]],n)),p.push(this.child.gen(e,t,r,n)),p.push(i+"if ($pos !== -1) {\n"),p.push(i+"\t$objs["+r+"] = $objs.slice("+r+", $objsLen);\n"),p.push(i+"\t$objsLen = "+r+" + 1;\n"),p.push(i+"}\n"),p.join("")},n.tkn.prototype.gen=function(e,t,r,n){var s,p=o(n);t=t||(s=u(e,"pos"));var c=[];return c.push(a([[s,"$pos"]],n)),c.push(this.child.gen(e,t,r,n)),c.push(p+"if ($pos !== -1) {\n"),void 0!==this.product?c.push(p+"\t$objs[$objsLen++] = "+i(this.product)+";\n"):c.push(p+"\t$objs[$objsLen++] = $input.substring("+t+", $pos);\n"),c.push(p+"}\n"),c.join("")},n.ltr.prototype.gen=function(e,t,r,n){var s=o(n),p=[];return p.push(s+"$objs[$objsLen++] = "+i(this.value)+";\n"),p.join("")},n.cv.prototype.gen=function(e,t,r,n){var s=o(n),i=[];switch(this.variable){case"input":i.push(s+"$objs[$objsLen++] = $input;\n");break;case"pos":i.push(s+"$objs[$objsLen++] = $pos;\n");break;case"row":i.push(s+"$objs[$objsLen++] = ($input.slice(0, $pos).match(/\\r\\n|\\r|\\n/g) || []).length;\n");break;case"column":i.push(s+'$objs[$objsLen++] = $pos - Math.max($input.lastIndexOf("\\r", $pos - 1), $input.lastIndexOf("\\n", $pos - 1));\n')}return i.join("")},n.pla.prototype.gen=function(e,t,r,n){var s,i,c=o(n);t=t||(s=u(e,"pos")),r=r||(i=u(e,"objsLen"));var l=[];return l.push(a([[s,"$pos"],[i,"$objsLen"]],n)),l.push(this.child.gen(e,t,r,n)),l.push(c+"if ($pos !== -1) {\n"),l.push(p("$objsLen = "+r+";\n$pos = "+t+";\n",n+1)),l.push(c+"}\n"),l.join("")},n.nla.prototype.gen=function(e,t,r,n){var s,i,c=o(n);t=t||(s=u(e,"pos")),r=r||(i=u(e,"objsLen"));var l=[];return l.push(a([[s,"$pos"],[i,"$objsLen"]],n)),l.push(this.child.gen(e,t,r,n)),l.push(c+"if ($pos === -1) {\n"),l.push(p("$objsLen = "+r+";\n$pos = "+t+";\n",n+1)),l.push(c+"} else {\n"),l.push(c+"\t$pos = -1;\n"),l.push(c+"}\n"),l.join("")},n.mod.prototype.gen=function(e,t,r,n){var s,i=o(n);r=r||(s=u(e,"objsLen"));var p=[];return p.push(a([[s,"$objsLen"]],n)),p.push(this.child.gen(e,t,r,n)),p.push(i+"if ($pos !== -1) {\n"),p.push(i+"\t$objs["+r+"] = "+h(this)+"($objs["+r+"]);\n"),p.push(i+"\t$objsLen = "+r+" + 1;\n"),p.push(i+"}\n"),p.join("")},n.grd.prototype.gen=function(e,t,r,n){var s,i,p=o(n);t=t||(s=u(e,"pos")),r=r||(i=u(e,"objsLen"));var c=[];return c.push(a([[i,"$objsLen"],[s,"$pos"]],n)),c.push(this.child.gen(e,t,r,n)),c.push(p+"if ($pos !== -1 && !"+h(this)+"($objs["+r+"])) {\n"),c.push(p+"\t$pos = "+t+";\n"),c.push(l("a guarded expression",n+1)),c.push(p+"}\n"),c.join("")},n.wst.prototype.gen=function(e,t,r,n){var s,i=o(n);r=r||(s=u(e,"objsLen"));var p=[];return p.push(a([[s,"$objsLen"]],n)),p.push(this.child.gen(e,t,r,n)),p.push(i+"$objsLen = "+r+";\n"),p.join("")},n.rul.prototype.gen=function(e,t,r,n){if(this.arguments&&this.rule)return this.body.gen(e,t,r,n);var s=o(n),i=[];return i.push(s+"rule$"+this.ruleIdent+"();\n"),i.join("")};var d=function(e,t,r,n){var s=o(n),c={},l="key",h="$pos * "+t.length+" + "+t.indexOf(e.ident);-1===t.indexOf(e.ident)&&(l=null);var d=u(c,"pos"),f="",y="";if(e.name&&(f="if (!$matchTable["+d+"]) {\n\t$matchTable["+d+"] = "+i(e.name)+";\n}\n",y="if ($matchTable["+d+"] === "+i(e.name)+") {\n\t$matchTable["+d+"] = null;\n}\n"),e.leftRecurs){var g=u(c,"objs");return(v=[]).push("function rule$"+e.ident+"() {\n"),v.push(a([[l,h]],n+1)),v.push(s+"\tif ($readMemo("+l+")){\n"),v.push(s+"\t\treturn;\n"),v.push(s+"\t}\n"),v.push(p(f,n+1)),v.push(s+"\t$objs.length = $objsLen;\n"),v.push(a([[d,"$pos"],[g,"$objs"],["rpos","-1"]],n+1)),v.push(s+"\t$undet["+d+"] = ($undet["+d+"] || 0) + 1;\n"),v.push(s+"\t$memo["+l+"] = $failureObj;\n"),v.push(s+"\twhile (true) {\n"),v.push(s+"\t\t$pos = "+d+";\n"),v.push(s+"\t\t$objs = [];\n"),v.push(s+"\t\t$objsLen = 0;\n"),v.push(e.body.gen(c,d,"0",n+2)),v.push(s+"\t\tif ($pos === -1 || $pos <= rpos) {\n"),v.push(s+"\t\t\tbreak;\n"),v.push(s+"\t\t}\n"),v.push(s+"\t\trpos = $pos;\n"),v.push(s+"\t\t$objs.length = $objsLen;\n"),v.push(s+"\t\t$writeMemo("+l+", $pos !== -1 && $objs);\n"),v.push(s+"\t}\n"),v.push(s+"\t$objs = "+g+";\n"),v.push(s+"\t$objsLen = $objs.length;\n"),v.push(s+"\t$readMemo("+l+");\n"),v.push(s+"\tif (--$undet["+d+"]) {\n"),v.push(s+"\t\tdelete $memo["+l+"];\n"),v.push(s+"\t}\n"),v.push(p(y,n+1)),v.push(s+"}"),v.join("")}var v,m=u(c,"objsLen");return(v=[]).push("function rule$"+e.ident+"() {\n"),v.push(a([[l,h],[d,"$pos"],[m,"$objsLen"]],n+1)),l&&(v.push(s+"\tif ($readMemo("+l+")) {\n"),v.push(s+"\t\treturn;\n"),v.push(s+"\t}\n")),v.push(p(f,n+1)),v.push(e.body.gen(c,d,m,n+1)),v.push(p(y,n+1)),l&&(r?(v.push(s+"\tif (!$undet["+d+"]) {\n"),v.push(s+"\t\t$writeMemo("+l+", $pos !== -1 && $objs.slice("+m+", $objsLen));\n"),v.push(s+"\t}\n")):v.push(s+"\t$writeMemo("+l+", $pos !== -1 && $objs.slice("+m+", $objsLen));\n")),v.push(s+"}"),v.join("")};var f="/*\n * Generated by snake parser "+r(1)+"\n */";e.exports=function(e,t,r){for(var i in r=r||{},e)if(e[i].parameters){var u={};for(var a in u.__proto__=e,e[i].parameters)u[e[i].parameters[a]]="argument";e[i].body.prepare(u)}else e[i].body.prepare(e);for(var i in e)e[i].parameters&&e[i].body.isRecursive(i,[])&&(e[i].recursive=!0);for(var i in e)e[i].parameters||e[i].body.expand({});var c=[];for(var i in e)e[i].recursive&&[].push.apply(c,e[i].reduceds);for(var l in c)e[c[l].ruleIdent]={ident:c[l].ruleIdent,body:c[l].body,referenceCount:1};var h=!1;for(var i in e)if(!e[i].parameters){var y=1===e[i].body.canLeftRecurs(e[i].ident,[]);e[i].leftRecurs=y,h=h||y}var g=[];for(var i in e)e[i].parameters||e[i].referenceCount&&g.push(i);var v=[];v.push("(function() {\n"),v.push('\t"use strict";\n'),v.push(p(f,1)),v.push("\n"),v.push("\tfunction $parse($input, options) {\n"),v.push(p("options = options || {};\nvar $inputLength = $input.length;\nvar $pos = 0;\nvar $objs = [];\nvar $objsLen = 0;\nvar $memo = [];\nvar $matchTable = new Array($inputLength);\nvar $failMatchs = [];\nvar $failPos = 0;\nvar $failureObj = {};\n",2)),h&&v.push("\t\tvar $undet = new Array($inputLength);\n"),v.push(t),v.push("\n\n");var m={},b=0;for(var $ in e)e[$].body.traverse(function(e){(e instanceof n.mod||e instanceof n.grd)&&(e.identifier||(m[e.code]?e.identifier=m[e.code]:(m[e.code]=e.identifier="func$"+b++,v.push(o(2)+"function "+e.identifier+"($) {"+e.code+"}\n\n"))))});for(var x in e)e[x].parameters||(s(e[x]),v.push(o(2)+d(e[x],g,h,2)+"\n\n"));return v.push(p("function $matchingFail(match) {\n\tif ($failPos <= $pos) {\n\t\tmatch = $matchTable[$pos] ? $matchTable[$pos] : match;\n\t\tif ($failPos === $pos) {\n\t\t\t$failMatchs.push(match);\n\t\t} else {\n\t\t\t$failMatchs.length = 0;\n\t\t\t$failMatchs[0] = match;\n\t\t\t$failPos = $pos;\n\t\t}\n\t}\n\t$pos = -1;\n}",2)+"\n\n"),v.push(p(function(e){return 0===e.length?"":1===e.length?e[0]:e.slice(0,e.length-1).join(", ")+" or "+e[e.length-1]}.toString(),2)+"\n\n"),v.push(p("function $readMemo(key) {\n\tvar res = $memo[key];\n\tif (res !== undefined) {\n\t\tif (res !== $failureObj) {\n\t\t\t$pos = res.pos;\n\t\t\tfor (var i = 0, il = res.objs.length; i < il; ++i) {\n\t\t\t\t$objs[$objsLen++] = res.objs[i];\n\t\t\t}\n\t\t} else {\n\t\t\t$pos = -1;\n\t\t}\n\t\treturn true;\n\t}\n\treturn false;\n}",2)+"\n\n"),v.push(p("function $writeMemo(key, objs) {\n\t$memo[key] = objs ? {\n\t\tpos: $pos,\n\t\tobjs: objs\n\t} : $failureObj;\n}",2)+"\n\n"),v.push(p('\trule$start();\n\tif ($pos !== -1) {\n\t\tif ($pos === $inputLength) {\n\t\t\t$objs.length = $objsLen;\n\t\t\treturn $objs[0];\n\t\t}\n\t\t$matchingFail("end of input");\n\t}\n\tif ($failMatchs.length === 0) {\n\t\t$failMatchs.push("something");\n\t}\n\t$failMatchs = $failMatchs.filter(function (x, i, self) {\n\t\treturn self.indexOf(x) === i;\n\t});\n\tvar $line = ($input.slice(0, $failPos).match(/\\r\\n|\\r|\\n/g) || []).length;\n\tvar $column = $failPos - Math.max($input.lastIndexOf("\\r", $failPos - 1), $input.lastIndexOf("\\n", $failPos - 1));\n\tvar $errorMessage = "Line " + ($line + 1) + ", column " + $column + ": Expected " + $joinWithOr($failMatchs) + " but " + (JSON.stringify($input[$failPos]) || "end of input") + " found.";\n\tthrow new Error($errorMessage);\n}\n',1)),v.push("\treturn $parse;\n"),v.push("})()"),r.exportVariable&&(v.unshift(r.exportVariable+" = "),v.push(";\n")),v.join("")}},function(e,t){function r(e){return JSON.stringify(e).replace(/\u2028/g,"\\u2028").replace(/\u2029/g,"\\u2029")}var n=Object.prototype.toString;e.exports=function e(t){if(null===t)return"null";switch(typeof t){case"string":return r(t);case"number":case"boolean":return JSON.stringify(t);case"undefined":return"undefined"}switch(n.call(t)){case"[object Object]":return"{"+Object.keys(t).map(function(n){return r(n)+":"+e(t[n])}).join(",")+"}";case"[object Array]":return"["+t.map(e).join(",")+"]"}}},function(e,t,r){var n=r(0);n.nop.prototype.optimize=function(e){return{expression:this,advance:0,produce:0,success:2,constant:[],match:""}},n.fl.prototype.optimize=function(e){return{expression:this,advance:0,produce:0,success:0}},n.str.prototype.optimize=function(e){return 0===this.string.length?(new n.nop).optimize(e):{expression:this,advance:2,produce:0,success:1,match:this.string}},n.cc.prototype.optimize=function(e){return 0===this.characterClass.length?this.invert?(new n.ac).optimize(e):(new n.fl).optimize(e):1!==this.characterClass.length||this.invert||"single"!==this.characterClass[0].type?{expression:this,advance:2,produce:0,success:1}:new n.str(String.fromCharCode(this.characterClass[0].char)).optimize(e)},n.ac.prototype.optimize=function(e){return{expression:this,advance:2,produce:0,success:1}},n.oc.prototype.optimize=function(e){for(var t=null,r=null,s=0,i=[],o=0;o<this.children.length;++o){var p=this.children[o].optimize(e);if(0!==p.success&&(p.expression instanceof n.oc?[].push.apply(i,p.expression.children):i.push(p.expression),t!==p.advance&&(t=null===t?p.advance:1),r!==p.produce&&(r=null===r?p.produce:1),s=Math.max(s,p.success),2===p.success))break}return 0===i.length?(new n.fl).optimize(e):1===i.length?{expression:i[0],advance:t,produce:r,success:s}:(this.children=i,{expression:this,advance:t,produce:r,success:s})},n.seq.prototype.optimize=function(e){for(var t=0,r=0,s=2,i=[],o=[],p="",u=0;u<this.children.length;++u){var a=this.children[u].optimize(e);0===a.advance&&0===a.produce&&2===a.success||(a.expression instanceof n.seq?[].push.apply(i,a.expression.children):(a.expression.neverAdvance=0===a.advance,a.expression.neverProduce=0===a.produce,a.expression.alwaysSuccess=2===a.success,i.push(a.expression)),t=Math.max(t,a.advance),r=Math.max(r,a.produce),s=Math.min(s,a.success),o&&a.constant?[].push.apply(o,a.constant):o=void 0,"string"==typeof p&&"string"==typeof a.match?p+=a.match:p=void 0)}return 0===s?(new n.fl).optimize(e):(this.children=i,{expression:this,advance:t,produce:r,success:s,constant:o,match:p})},n.rep.prototype.optimize=function(e){if(0===this.max)return(new n.nop).optimize();var t=this.child.optimize(e);if(this.child=t.expression,this.max===1/0&&2===t.success)throw new Error("Infinite loop detected.");if(2===t.advance&&(this.possibleInfiniteLoop=!1),0===this.min&&(t.advance=Math.min(t.advance,1),t.success=Math.max(t.success,1)),t.constant){for(var r=[],s=0;s<this.max;++s)[].push.apply(r,t.constant);t.constant=r}if("string"==typeof t.match&&this.min===this.max){var i="";for(s=0;s<this.max;++s)i+=t.match;t.match=i}return t.expression=this,t},n.obj.prototype.optimize=function(e){var t=this.child.optimize(e);if(e)return t;if(t.constant){for(var r={},s=0;s<t.constant.length;s+=2)r[t.constant[s+1]]=t.constant[s];t.expression=new n.ltr(r),t.produce=2,t.constant=[r]}else this.child=t.expression,t.produce=2,t.expression=this,t.constant=void 0;return t},n.arr.prototype.optimize=function(e){var t=this.child.optimize(e);if(e)return t;if(t.constant){t.expression=new n.ltr(t.constant),t.produce=2,t.constant=[t.constant]}else this.child=t.expression,t.produce=2,t.expression=this;return t},n.pr.prototype.optimize=function(e){var t=this.child.optimize(e);return e?t:(this.child=t.expression,t.constant?(t.expression=this,t.advance=0,t.produce=2,t.success=2,t.constant=[t.constant[0],this.key]):(t.produce=2,t.expression=this,t.constant=void 0),t)},n.tkn.prototype.optimize=function(e){var t=this.child.optimize(e);return e?t:(this.child=t.expression,t.produce=2,t.expression=this,t.constant&&"string"==typeof t.match?t.constant.push(t.match):t.constant=void 0,"string"==typeof t.match&&t.match.length<=20&&(this.product=t.match),t)},n.ltr.prototype.optimize=function(e){return e?(new n.nop).optimize(e):{expression:this,advance:0,produce:2,success:2,constant:[this.value],match:""}},n.cv.prototype.optimize=function(e){return e?(new n.nop).optimize(e):{expression:this,advance:0,produce:2,success:2,match:""}},n.pla.prototype.optimize=function(e){var t=this.child.optimize(!0);return 0===t.success?t.expression=new n.fl:2===t.success?t.expression=new n.nop:(this.child=t.expression,t.expression=this),t.advance=0,t.produce=0,t.constant=void 0,t.match="",t},n.nla.prototype.optimize=function(e){var t=this.child.optimize(!0);return 0===t.success?t.expression=new n.fl:2===t.success?t.expression=new n.nop:(this.child=t.expression,t.expression=this),t.advance=0,t.produce=0,t.success=2-t.success,t.constant=void 0,t.match="",t},n.mod.prototype.optimize=function(e){var t=this.child.optimize(!1);return this.child=t.expression,t.produce=2,t.expression=this,t.constant=void 0,t},n.grd.prototype.optimize=function(e){var t=this.child.optimize(!1);return this.child=t.expression,t.produce=2,t.success=1,t.expression=this,t.constant=void 0,t},n.wst.prototype.optimize=function(e){var t=this.child.optimize(!0);return this.child=t.expression,t.produce=0,t.expression=this,t.constant=void 0,t},n.rul.prototype.optimize=function(e){return{expression:this,advance:1,produce:1,success:1}};e.exports=function(e){e.body=e.body.optimize(!1).expression}},function(module,exports,__webpack_require__){var expressions=__webpack_require__(0),genjs=__webpack_require__(2),initializer='\tfunction arrayToObject($) {\n\t\tvar res = {};\n\t\tfor (var i = 0, il = $.length; i < il; ++i)\n\t\t\tres[$[i].ident] = $[i];\n\t\treturn res;\n\t};\n\tfunction ensureMin($) {\n\t\treturn $ === undefined ? 0 : $;\n\t};\n\tfunction ensureMax($) {\n\t\treturn $ === undefined ? Infinity : $;\n\t};\n\tfunction characterClassChar(str) {\n\t\tvar len = str.length;\n\t\tif (len === 1)\n\t\t\treturn str.charCodeAt();\n\t\tif (len === 4 || len === 6)\n\t\t\treturn parseInt(str.substring(2), 16);\n\t\tif (str === "\\\\0")\n \t\t\treturn 0;\n \t\tif (str === "\\\\t")\n \t\t\treturn 9;\n \t\tif (str === "\\\\n")\n \t\t\treturn 10;\n \t\tif (str === "\\\\v")\n \t\t\treturn 11;\n \t\tif (str === "\\\\f")\n \t\t\treturn 12;\n \t\tif (str === "\\\\r")\n \t\t\treturn 13;\n \t\treturn str.charCodeAt(1);\n\t};\n\tfunction nuturalNumber($) {\n\t\treturn +$;\n\t};\n\tfunction expr($) {\n\t\treturn new (options.expressions[$.op])($.a, $.b, $.c);\n\t};',nop=function(){return new expressions.nop},str=function(e){return new expressions.str(e)},cc=function(e,t){return new expressions.cc(e,t)},ac=function(){return new expressions.ac},oc=function(e){return new expressions.oc(e)},seq=function(e){return new expressions.seq(e)},rep=function(e,t,r){return new expressions.rep(e,t,r)},obj=function(e){return new expressions.obj(e)},arr=function(e){return new expressions.arr(e)},pr=function(e,t){return new expressions.pr(e,t)},tkn=function(e){return new expressions.tkn(e)},ltr=function(e){return new expressions.ltr(e)},cv=function(e){return new expressions.cv(e)},pla=function(e){return new expressions.pla(e)},nla=function(e){return new expressions.nla(e)},mod=function(e,t,r){return new expressions.mod(e,t,r)},grd=function(e,t,r){return new expressions.grd(e,t,r)},wst=function(e){return new expressions.wst(e)},rul=function(e,t){return new expressions.rul(e,t)},rules={start:{ident:"start",body:obj(seq([rul("__"),pr("initializer",oc([seq([rul("CodeBlock"),rul("__")]),ltr("")])),pr("rules",mod(arr(rep(0,1/0,rul("Rule"))),"arrayToObject",null))]))},Rule:{ident:"Rule",body:obj(seq([pr("ident",rul("Identifier")),rul("__"),rep(0,1,seq([pr("parameters",rul("RuleParameters")),rul("__")])),rep(0,1,seq([pr("name",rul("StringLiteral")),rul("__")])),str("="),rul("__"),pr("body",rul("ChoiceExpression")),rul("__")]))},RuleParameters:{ident:"RuleParameters",body:arr(seq([str("<"),rul("__"),rep(0,1,seq([rul("Identifier"),rul("__"),rep(0,1/0,seq([str(","),rul("__"),rul("Identifier"),rul("__")]))])),str(">")]))},ChoiceExpression:{ident:"ChoiceExpression",body:oc([seq([mod(obj(seq([pr("op",ltr("oc")),pr("a",arr(seq([rul("SequenceExpression"),rul("__"),rep(1,1/0,seq([str("|"),rul("__"),rul("SequenceExpression")]))])))])),"expr",null),rul("__")]),seq([rul("SequenceExpression"),rul("__")])])},SequenceExpression:{ident:"SequenceExpression",body:oc([seq([mod(obj(seq([pr("op",ltr("seq")),pr("a",arr(seq([rul("LabelExpression"),rep(1,1/0,seq([rul("__"),rul("LabelExpression")]))])))])),"expr",null),rul("__")]),seq([rul("LabelExpression"),rul("__")])])},LabelExpression:{ident:"LabelExpression",body:oc([mod(obj(seq([pr("op",ltr("pr")),pr("a",rul("IdentifierOrStringLiteral")),rul("__"),oc([seq([str(":="),rul("__"),pr("b",mod(obj(seq([pr("op",ltr("ltr")),pr("a",rul("IdentifierOrStringLiteral"))])),"expr",null))]),seq([str(":"),rul("__"),pr("b",rul("PipeExpression"))])])])),"expr",null),rul("PipeExpression")])},PipeExpression:{ident:"PipeExpression",body:oc([mod(obj(oc([seq([pr("a",rul("PipeExpression")),rul("__"),str("->"),rul("__"),pr("op",ltr("mod")),oc([seq([pr("b",rul("Identifier")),pr("c",ltr(null))]),seq([pr("b",ltr(null)),pr("c",rul("CodeBlock"))])])]),seq([pr("a",rul("PipeExpression")),rul("__"),str("-?"),rul("__"),pr("op",ltr("grd")),oc([seq([pr("b",rul("Identifier")),pr("c",ltr(null))]),seq([pr("b",ltr(null)),pr("c",rul("CodeBlock"))])])]),seq([pr("a",rul("PipeExpression")),rul("__"),str("-|"),pr("op",ltr("wst"))])])),"expr",null),rul("OtherExpression")])},OtherExpression:{ident:"OtherExpression",body:oc([seq([str("("),rul("__"),oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)]),rul("__"),str(")")]),mod(obj(oc([seq([pr("op",ltr("str")),pr("a",rul("StringLiteral"))]),seq([pr("op",ltr("cc")),str("["),pr("b",oc([seq([str("^"),ltr(!0)]),ltr(!1)])),pr("a",rul("CharacterClass")),str("]")]),seq([pr("op",ltr("ltr")),str("\\"),rul("__"),pr("a",rul("Literal"))]),seq([pr("op",ltr("arr")),str("@"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("obj")),str("{"),rul("__"),pr("a",oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)])),rul("__"),str("}")]),seq([pr("op",ltr("tkn")),str("`"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("mod")),str("~"),rul("__"),pr("a",mod(obj(seq([pr("op",ltr("arr")),pr("a",rul("OtherExpression"))])),"expr",null)),pr("b",ltr(null)),pr("c",ltr('return $.join("")'))]),seq([pr("op",ltr("pla")),str("&"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("nla")),str("!"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("?"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",ltr(1))]),seq([pr("op",ltr("rep")),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",mod(ltr(0),null," return Infinity "))]),seq([pr("op",ltr("rep")),pr("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("b",ltr("min"))]),seq([pr("op",ltr("rep")),pr("a",mod(rep(0,1,rul("NaturalNumber")),"ensureMin",null)),rul("__"),str(","),rul("__"),pr("b",mod(rep(0,1,rul("NaturalNumber")),"ensureMax",null)),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("+"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(1)),pr("b",mod(ltr(0),null," return Infinity "))]),seq([pr("op",ltr("ac")),str(".")]),seq([pr("op",ltr("cv")),str("$"),pr("a",rul("Identifier"))]),seq([pr("op",ltr("rul")),nla(rul("Rule")),pr("a",rul("Identifier")),rep(0,1,seq([rul("__"),pr("b",rul("RuleArguments"))]))])])),"expr",null)])},RuleArguments:{ident:"RuleArguments",body:arr(seq([str("<"),rul("__"),rep(0,1,seq([rul("ChoiceExpression"),rul("__"),rep(0,1/0,seq([str(","),rul("__"),rul("ChoiceExpression"),rul("__")]))])),str(">")]))},__:{ident:"__",name:"white space",body:rep(0,1/0,oc([cc([{type:"single",char:32},{type:"single",char:9},{type:"single",char:13},{type:"single",char:10}],!1),rul("Comment")]))},Comment:{ident:"Comment",body:oc([seq([str("//"),rep(0,1/0,cc([{type:"single",char:10}],!0)),oc([str("\n"),nla(ac())])]),seq([str("/*"),rep(0,1/0,oc([cc([{type:"single",char:42}],!0),seq([str("*"),cc([{type:"single",char:47}],!0)])])),str("*/")])])},LineTerminator:{ident:"LineTerminator",body:cc([{type:"single",char:10},{type:"single",char:13},{type:"single",char:8232},{type:"single",char:8233}],!1)},Identifier:{ident:"Identifier",name:"identifier",body:tkn(seq([cc([{type:"range",start:97,end:122},{type:"range",start:65,end:90},{type:"single",char:95}],!1),rep(0,1/0,cc([{type:"range",start:97,end:122},{type:"range",start:65,end:90},{type:"range",start:48,end:57},{type:"single",char:95}],!1))]))},IdentifierOrStringLiteral:{ident:"IdentifierOrStringLiteral",body:oc([rul("StringLiteral"),rul("Identifier")])},StringLiteral:{ident:"StringLiteral",name:"string literal",body:mod(tkn(rul("StringLiteralRaw")),"eval",null)},StringLiteralRaw:{ident:"StringLiteralRaw",body:oc([seq([str("'"),rep(0,1/0,oc([seq([nla(rul("LineTerminator")),cc([{type:"single",char:39},{type:"single",char:92}],!0)]),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{type:"single",char:117},{type:"single",char:120}],!0)])])),str("'")]),seq([str('"'),rep(0,1/0,oc([seq([nla(rul("LineTerminator")),cc([{type:"single",char:34},{type:"single",char:92}],!0)]),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{type:"single",char:117},{type:"single",char:120}],!0)])])),str('"')])])},CharacterClass:{ident:"CharacterClass",body:arr(rep(0,1/0,obj(oc([seq([pr("type",ltr("range")),pr("start",rul("CharacterClassChar")),str("-"),pr("end",rul("CharacterClassChar"))]),seq([pr("type",ltr("single")),pr("char",rul("CharacterClassChar"))])]))))},CharacterClassChar:{ident:"CharacterClassChar",body:mod(tkn(oc([cc([{type:"single",char:93},{type:"single",char:92}],!0),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{type:"single",char:117},{type:"single",char:120}],!0)])])),"characterClassChar",null)},CodeBlock:{ident:"CodeBlock",name:"code block",body:seq([str("{"),tkn(rul("Code")),str("}")])},Code:{ident:"Code",body:rep(0,1/0,oc([cc([{type:"single",char:123},{type:"single",char:125}],!0),seq([str("{"),rul("Code"),str("}")])]))},NaturalNumber:{ident:"NaturalNumber",name:"natural number",body:mod(tkn(oc([seq([cc([{type:"range",start:49,end:57}],!1),rep(0,1/0,cc([{type:"range",start:48,end:57}],!1))]),str("0")])),"nuturalNumber",null)},Literal:{ident:"Literal",body:oc([rul("StringLiteral"),rul("NumericLiteral"),rul("BooleanLiteral"),rul("NullLiteral"),rul("ArrayLiteral"),rul("ObjectLiteral")])},ArrayLiteral:{ident:"ArrayLiteral",name:"array literal",body:seq([str("["),rul("__"),arr(rep(0,1,seq([rul("Literal"),rep(0,1/0,seq([rul("__"),str(","),rul("__"),rul("Literal")])),rul("__")]))),str("]")])},ObjectLiteral:{ident:"ObjectLiteral",name:"object literal",body:seq([str("{"),rul("__"),mod(arr(rep(0,1,seq([rul("ObjectLiteralProperty"),rep(0,1/0,seq([rul("__"),str(","),rul("__"),rul("ObjectLiteralProperty")])),rul("__")]))),null,"\n                var ret = {};\n                for (var i = 0; i < $.length; ++i)\n                    ret[$[i].key] = $[i].value;\n                return ret;\n            "),str("}")])},ObjectLiteralProperty:{ident:"ObjectLiteralProperty",body:obj(seq([pr("key",rul("IdentifierOrStringLiteral")),rul("__"),str(":"),rul("__"),pr("value",rul("Literal"))]))},NullLiteral:{ident:"NullLiteral",body:seq([str("null"),ltr(null)])},BooleanLiteral:{ident:"BooleanLiteral",body:oc([seq([str("true"),ltr(!0)]),seq([str("false"),ltr(!1)])])},NumericLiteral:{ident:"NumericLiteral",name:"numeric literal",body:mod(tkn(seq([rep(0,1,str("-")),oc([rul("HexIntegerLiteral"),rul("DecimalLiteral")])])),"eval",null)},DecimalLiteral:{ident:"DecimalLiteral",body:oc([seq([rul("DecimalIntegerLiteral"),str("."),rep(0,1/0,rul("DecimalDigit")),rep(0,1,rul("ExponentPart"))]),seq([str("."),rep(1,1/0,rul("DecimalDigit")),rep(0,1,rul("ExponentPart"))]),seq([rul("DecimalIntegerLiteral"),rep(0,1,rul("ExponentPart"))])])},DecimalIntegerLiteral:{ident:"DecimalIntegerLiteral",body:oc([str("0"),seq([rul("NonZeroDigit"),rep(0,1/0,rul("DecimalDigit"))])])},DecimalDigit:{ident:"DecimalDigit",body:cc([{type:"range",start:48,end:57}],!1)},NonZeroDigit:{ident:"NonZeroDigit",body:cc([{type:"range",start:49,end:57}],!1)},ExponentPart:{ident:"ExponentPart",body:seq([rul("ExponentIndicator"),rul("SignedInteger")])},ExponentIndicator:{ident:"ExponentIndicator",body:cc([{type:"single",char:101},{type:"single",char:69}],!1)},SignedInteger:{ident:"SignedInteger",body:seq([rep(0,1,cc([{type:"single",char:43},{type:"single",char:45}],!1)),rep(1,1/0,rul("DecimalDigit"))])},HexIntegerLiteral:{ident:"HexIntegerLiteral",body:seq([oc([str("0x"),str("0X")]),rep(1,1/0,rul("HexDigit"))])},HexDigit:{ident:"HexDigit",body:cc([{type:"range",start:48,end:57},{type:"range",start:97,end:102},{type:"range",start:65,end:70}],!1)}},code=genjs(rules,initializer);module.exports=eval(code)},function(e,t,r){var n=r(5),s=r(0),i=r(2);e.exports=function(e,t){t=t||{};var r=n(e,{expressions:s}),o=r.rules,p=r.initializer||"";if(void 0===o.start)throw new Error("Undefined rule 'start'.");return i(o,p,t)}},function(e,t,r){var n=r(6),s=r(0);e.exports={buildParser:n,expressions:s,VERSION:r(1)}}]);
+module.exports =
+/******/ (function(modules) { // webpackBootstrap
+/******/ 	// The module cache
+/******/ 	var installedModules = {};
+/******/
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/
+/******/ 		// Check if module is in cache
+/******/ 		if(installedModules[moduleId]) {
+/******/ 			return installedModules[moduleId].exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = installedModules[moduleId] = {
+/******/ 			i: moduleId,
+/******/ 			l: false,
+/******/ 			exports: {}
+/******/ 		};
+/******/
+/******/ 		// Execute the module function
+/******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/
+/******/ 		// Flag the module as loaded
+/******/ 		module.l = true;
+/******/
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/
+/******/
+/******/ 	// expose the modules object (__webpack_modules__)
+/******/ 	__webpack_require__.m = modules;
+/******/
+/******/ 	// expose the module cache
+/******/ 	__webpack_require__.c = installedModules;
+/******/
+/******/ 	// define getter function for harmony exports
+/******/ 	__webpack_require__.d = function(exports, name, getter) {
+/******/ 		if(!__webpack_require__.o(exports, name)) {
+/******/ 			Object.defineProperty(exports, name, {
+/******/ 				configurable: false,
+/******/ 				enumerable: true,
+/******/ 				get: getter
+/******/ 			});
+/******/ 		}
+/******/ 	};
+/******/
+/******/ 	// define __esModule on exports
+/******/ 	__webpack_require__.r = function(exports) {
+/******/ 		Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 	};
+/******/
+/******/ 	// getDefaultExport function for compatibility with non-harmony modules
+/******/ 	__webpack_require__.n = function(module) {
+/******/ 		var getter = module && module.__esModule ?
+/******/ 			function getDefault() { return module['default']; } :
+/******/ 			function getModuleExports() { return module; };
+/******/ 		__webpack_require__.d(getter, 'a', getter);
+/******/ 		return getter;
+/******/ 	};
+/******/
+/******/ 	// Object.prototype.hasOwnProperty.call
+/******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
+/******/
+/******/ 	// __webpack_public_path__
+/******/ 	__webpack_require__.p = "";
+/******/
+/******/
+/******/ 	// Load entry module and return exports
+/******/ 	return __webpack_require__(__webpack_require__.s = 7);
+/******/ })
+/************************************************************************/
+/******/ ([
+/* 0 */
+/***/ (function(module, exports) {
+
+var expressions = {};
+
+// Expression Class
+var Expression = function() {
+};
+expressions["exp"] = Expression;
+
+
+var extendsExpression = function(cls, name) {
+	cls.prototype = new Expression();
+	cls.prototype._name = name;
+	cls.prototype.constructor = cls;
+	expressions[name] = cls;
+};
+
+
+// Classes extends Expression
+var Nop = function() {
+};
+extendsExpression(Nop, "nop");
+
+var Fail = function() {
+};
+extendsExpression(Fail, "fl");
+
+var MatchString = function(s) {
+	this.string = s;
+};
+extendsExpression(MatchString, "str");
+
+var MatchCharacterClass = function(cc, i) {
+	this.characterClass = cc;
+	this.invert = !!i;
+};
+extendsExpression(MatchCharacterClass, "cc");
+
+var MatchAnyCharacter = function() {
+};
+extendsExpression(MatchAnyCharacter, "ac");
+
+var OrderedChoice = function(es) {
+	if (es instanceof Array)
+		this.children = es;
+	else {
+		this.children = [].slice.call(arguments, 0, [].indexOf.call(arguments));
+	}
+};
+extendsExpression(OrderedChoice, "oc");
+
+var Sequence = function(es) {
+	if (es instanceof Array)
+		this.children = es;
+	else {
+		this.children = [].slice.call(arguments, 0, [].indexOf.call(arguments));
+	}
+};
+extendsExpression(Sequence, "seq");
+
+var Repeat = function(min, max, e) {
+	this.min = min !== undefined ? min : 0;
+	this.max = max !== undefined ? (max === "min" ? min : max) : Infinity;
+	if (this.min < 0 || this.max < this.min)
+		throw new Error("Invalid repeat expression.");
+	this.child = e;
+	this.possibleInfiniteLoop = this.max === Infinity;
+};
+extendsExpression(Repeat, "rep");
+
+var Objectize = function(e) {
+	this.child = e;
+};
+extendsExpression(Objectize, "obj");
+
+var Arraying = function(e) {
+	this.child = e;
+};
+extendsExpression(Arraying, "arr");
+
+var Property = function(k, e) {
+	this.key = k;
+	this.child = e;
+};
+extendsExpression(Property, "pr");
+
+var Tokenize = function(e) {
+	this.child = e;
+};
+extendsExpression(Tokenize, "tkn");
+
+var ContextVariable = function(variable) {
+	this.variable = variable;
+};
+extendsExpression(ContextVariable, "cv");
+
+var Literal = function(v) {
+	this.value = v;
+};
+extendsExpression(Literal, "ltr");
+
+var PositiveLookaheadAssertion = function(e) {
+	this.child = e;
+};
+extendsExpression(PositiveLookaheadAssertion, "pla");
+
+var NegativeLookaheadAssertion = function(e) {
+	this.child = e;
+};
+extendsExpression(NegativeLookaheadAssertion, "nla");
+
+var Modify = function(e, i, c, ip) {
+	this.child = e;
+	this.identifier = i;
+	this.code = c;
+  this.identifierPlaceholder = ip;
+};
+extendsExpression(Modify, "mod");
+
+var Guard = function(e, i, c, ip) {
+	this.child = e;
+	this.identifier = i;
+	this.code = c;
+  this.identifierPlaceholder = ip;
+};
+extendsExpression(Guard, "grd");
+
+var Waste = function(e) {
+	this.child = e;
+};
+extendsExpression(Waste, "wst");
+
+var RuleReference = function(r, a, rule, body) {
+	this.ruleIdent = r;
+	this.arguments = a;
+	this.rule = rule;
+	this.body = body;
+};
+extendsExpression(RuleReference, "rul");
+
+RuleReference.prototype.getReference = function() {
+	var rule = this.rule;
+	if (!rule.references)
+		rule.references = [];
+
+	findReference:
+	for (var i in rule.references) {
+		if (rule.references[i].parameters.length !== this.arguments.length)
+			continue findReference;
+		for (var j = 0; j < this.arguments.length; ++j)
+			if (rule.references[i].arguments[j].body.toString() !== this.arguments[j].body.toString())
+				continue findReference;
+		return rule.references[i];
+	}
+	var reference = {
+		arguments: rule.arguments,
+		referenceCount: 0,
+		body: null,
+	};
+	rule.references.push(reference);
+	return reference;
+};
+
+
+// prepare 名前付きでないルールの結びつけ
+Expression.prototype.prepare = function(rules) {
+};
+
+OrderedChoice.prototype.prepare = function(rules) {
+	for (var i in this.children)
+		this.children[i].prepare(rules);
+};
+
+Sequence.prototype.prepare = OrderedChoice.prototype.prepare;
+
+Repeat.prototype.prepare = function(rules) {
+	this.child.prepare(rules);
+};
+
+Objectize.prototype.prepare = Repeat.prototype.prepare;
+Arraying.prototype.prepare = Repeat.prototype.prepare;
+Tokenize.prototype.prepare = Repeat.prototype.prepare;
+Property.prototype.prepare = Repeat.prototype.prepare;
+PositiveLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
+NegativeLookaheadAssertion.prototype.prepare = Repeat.prototype.prepare;
+Modify.prototype.prepare = Repeat.prototype.prepare;
+Guard.prototype.prepare = Repeat.prototype.prepare;
+Waste.prototype.prepare = Repeat.prototype.prepare;
+
+RuleReference.prototype.prepare = function(rules) {
+	var rule = rules[this.ruleIdent];
+	if (!rule)
+		throw new Error('Identifier ' + this.ruleIdent + ' is not defined.');
+
+	this.rule = rule;
+
+	if (rule === "argument") // 引数の参照の場合はここまで
+		return;
+
+	// 参照をカウント
+	rule.referenceCount = (rule.referenceCount || 0) + 1;
+
+	if (rule.parameters instanceof Array) { // 引数付きルールの参照の場合
+		// アリティチェック
+		if (!(this.arguments instanceof Array) ||
+				rule.parameters.length !== this.arguments.length) {
+			throw new Error('Referenced rule ' + rule.ident +
+											' takes ' + rule.parameters.length +
+											' arguments (' + this.arguments.length + ' given).');
+		}
+
+		// 引数を再帰的に prepare
+		for (var i in this.arguments)
+			this.arguments[i].prepare(rules);
+	} else { // 引数なしルールの参照の場合
+		// アリティチェック
+		if (this.arguments instanceof Array)
+			throw new Error('Referenced rule ' + rule.ident + ' takes no arguments.');
+		this.body = rule.body;
+	}
+};
+
+
+// expand 引数付きルールの呼び出しを展開する
+Expression.prototype.expand = function(env) {
+};
+
+OrderedChoice.prototype.expand = function(env) {
+	for (var i in this.children)
+		this.children[i].expand(env);
+};
+
+Sequence.prototype.expand = OrderedChoice.prototype.expand;
+
+Repeat.prototype.expand = function(env) {
+	this.child.expand(env);
+};
+
+Objectize.prototype.expand = Repeat.prototype.expand;
+Arraying.prototype.expand = Repeat.prototype.expand;
+Tokenize.prototype.expand = Repeat.prototype.expand;
+Property.prototype.expand = Repeat.prototype.expand;
+PositiveLookaheadAssertion.prototype.expand = Repeat.prototype.expand;
+NegativeLookaheadAssertion.prototype.expand = Repeat.prototype.expand;
+Modify.prototype.expand = Repeat.prototype.expand;
+Guard.prototype.expand = Repeat.prototype.expand;
+Waste.prototype.expand = Repeat.prototype.expand;
+
+RuleReference.prototype.expand = function(env) {
+	if (this.arguments instanceof Array) { // 引数付きルールの参照の場合
+		this.body = this.reduce(env, 1);
+	} else { // 引数付きでないルールの参照の場合
+		this.body = this.rule.body; // 入れる必要無さそうだけど canLeftRecurs で使う
+	}
+};
+
+// reduce 簡約
+Expression.prototype.reduce = function(env, depth) {
+	return this;
+};
+
+OrderedChoice.prototype.reduce = function(env, depth) {
+	var changed = false;
+	var children = [];
+	for (var i in this.children) {
+		children[i] = this.children[i].reduce(env, depth);
+		changed = changed || this.children[i] !== children[i];
+	}
+	if (!changed)
+		return this;
+	return new this.constructor(children);
+};
+
+Sequence.prototype.reduce = OrderedChoice.prototype.reduce;
+
+Repeat.prototype.reduce = function(env, depth) {
+	var child = this.child.reduce(env, depth);
+	if (child === this.child)
+		return this;
+	return new Repeat(this.min, this.max, child);
+};
+
+Objectize.prototype.reduce = function(env, depth) {
+	var child = this.child.reduce(env, depth);
+	if (child === this.child)
+		return this;
+	return new this.constructor(child);
+};
+
+Arraying.prototype.reduce = Objectize.prototype.reduce;
+Tokenize.prototype.reduce = Objectize.prototype.reduce;
+PositiveLookaheadAssertion.prototype.reduce = Objectize.prototype.reduce;
+NegativeLookaheadAssertion.prototype.reduce = Objectize.prototype.reduce;
+Waste.prototype.reduce = Objectize.prototype.reduce;
+
+Property.prototype.reduce = function(env, depth) {
+	var child = this.child.reduce(env, depth);
+	if (child === this.child)
+		return this;
+	return new Property(this.key, child);
+};
+
+Modify.prototype.reduce = function(env, depth) {
+	var child = this.child.reduce(env, depth);
+	if (child === this.child)
+		return this;
+	return new this.constructor(child, this.identifier, this.code, this);
+};
+
+Guard.prototype.reduce = Modify.prototype.reduce;
+
+RuleReference.prototype.reduce = function(env, depth) {
+	if (this.rule === "argument") { // 引数の参照の場合
+		var body = env[this.ruleIdent];
+		if (!body)
+			throw new Error('Referenced argument ' + this.ruleIdent + ' not found.');
+		return body;
+	} else if (this.arguments instanceof Array) { // 引数付きルールの参照の場合
+		if (depth === 32)
+			throw new Error("Parameterized rule reference nested too deep.");
+
+		if (this.rule.recursive) { // 再帰
+			var arguments = [];
+			for (var i in this.arguments) {
+				arguments[i] = this.arguments[i].reduce(env, depth + 1);
+			}
+
+			// すでに簡約されていないかチェック
+			this.rule.reduceds = this.rule.reduceds || [];
+			var reduced = null;
+			findReduced:
+			for (var i in this.rule.reduceds) {
+				reduced = this.rule.reduceds[i];
+				for (var j in reduced.arguments) {
+					if (reduced.arguments.toString(j) !== arguments.toString()) {
+						reduced = null;
+						continue findReduced;
+					}
+				}
+				break;
+			}
+
+			if (!reduced) { // 簡約されていなかったので簡約する
+				reduced = new RuleReference(
+					this.ruleIdent + "$" + this.rule.reduceds.length,
+					arguments,
+					null,
+					null
+				);
+				this.rule.reduceds.push(reduced);
+
+				var env1 = {};
+				env1.__proto__ = env;
+				for (var i in arguments)
+					env1[this.rule.parameters[i]] = arguments[i];
+				reduced.body = this.rule.body.reduce(env1, depth + 1);
+			}
+			this.reduced = reduced;
+			return reduced;
+		} else { // 展開
+			var env1 = {};
+			env1.__proto__ = env;
+			for (var i in this.arguments) {
+				env1[this.rule.parameters[i]] = this.arguments[i].reduce(env, depth + 1);
+			}
+
+			return this.rule.body.reduce(env1, depth + 1);
+		}
+	} else { // 引数付きでないルールの参照の場合
+		return this;
+	}
+};
+
+
+// toString
+Expression.prototype.toString = function() {
+	return this._name + "()";
+};
+
+OrderedChoice.prototype.toString = function() {
+	var ss = [];
+	for (var i in this.children)
+		ss.push(this.children[i].toString());
+	return this._name + "(" + ss.join(",") + ")";
+};
+
+Sequence.prototype.toString = OrderedChoice.prototype.toString;
+
+MatchString.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.string) + ")";
+};
+
+MatchCharacterClass.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.characterClass) + "," + +this.invert + ")";
+};
+
+Repeat.prototype.toString = function() {
+	return this._name + "(" + this.min + "," + this.max + "," + this.child.toString() + ")";
+};
+
+Objectize.prototype.toString = function() {
+	return this._name + "(" + this.child.toString() + ")";
+};
+
+Arraying.prototype.toString = Objectize.prototype.toString;
+Tokenize.prototype.toString = Objectize.prototype.toString;
+PositiveLookaheadAssertion.prototype.toString = Objectize.prototype.toString;
+NegativeLookaheadAssertion.prototype.toString = Objectize.prototype.toString;
+
+Property.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.key) + "," + this.child.toString() + ")";
+};
+
+Literal.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.value) + ")";
+};
+
+ContextVariable.prototype.toString = function() {
+	return this._name + "(" + JSON.stringify(this.variable) + ")";
+};
+
+Modify.prototype.toString = function() {
+	if (this.code) {
+		return this._name + "(" + this.child.toString() + ",null," + JSON.stringify(this.code) + ")";
+	} else {
+		return this._name + "(" + this.child.toString() + "," + JSON.stringify(this.identifier) + ",null)";
+	}
+};
+Guard.prototype.toString = Modify.prototype.toString;
+
+Waste.prototype.toString = function() {
+	return this._name + "(" + this.child.toString() + ")";
+};
+
+RuleReference.prototype.toString = function() {
+	if (!this.parameters)
+		return this._name + "(" + JSON.stringify(this.ruleIdent) + ")";
+
+	var args = this.arguments.map(function(e) {
+		return e.toString();
+	}).join(",");
+	return this._name + "(" + JSON.stringify(this.ruleIdent) + ",[" + args + "])";
+};
+
+
+// traverse
+Expression.prototype.traverse = function(func) {
+	func(this);
+};
+
+OrderedChoice.prototype.traverse = function(func) {
+	func(this);
+	for (var i in this.children)
+		this.children[i].traverse(func);
+};
+
+Sequence.prototype.traverse = OrderedChoice.prototype.traverse;
+
+Repeat.prototype.traverse = function(func) {
+	func(this);
+	this.child.traverse(func);
+};
+
+Objectize.prototype.traverse = Repeat.prototype.traverse;
+Arraying.prototype.traverse = Repeat.prototype.traverse;
+Tokenize.prototype.traverse = Repeat.prototype.traverse;
+Property.prototype.traverse = Repeat.prototype.traverse;
+PositiveLookaheadAssertion.prototype.traverse = Repeat.prototype.traverse;
+NegativeLookaheadAssertion.prototype.traverse = Repeat.prototype.traverse;
+Modify.prototype.traverse = Repeat.prototype.traverse;
+Guard.prototype.traverse = Repeat.prototype.traverse;
+Waste.prototype.traverse = Repeat.prototype.traverse;
+
+RuleReference.prototype.traverse = function(func) {
+	func(this);
+};
+
+
+// isRecursive 引数付きルールに対して
+Expression.prototype.isRecursive = function(ruleIdent, passedRules) {
+	return false;
+};
+
+OrderedChoice.prototype.isRecursive = function(ruleIdent, passedRules) {
+	for (var i in this.children)
+		if (this.children[i].isRecursive(ruleIdent, passedRules))
+			return true;
+	return false;
+};
+
+Sequence.prototype.isRecursive = OrderedChoice.prototype.isRecursive;
+
+Repeat.prototype.isRecursive = function(ruleIdent, passedRules) {
+	return this.child.isRecursive(ruleIdent, passedRules);
+};
+
+Objectize.prototype.isRecursive = function(ruleIdent, passedRules) {
+	return this.child.isRecursive(ruleIdent, passedRules);
+};
+
+Arraying.prototype.isRecursive = Objectize.prototype.isRecursive;
+Tokenize.prototype.isRecursive = Objectize.prototype.isRecursive;
+PositiveLookaheadAssertion.prototype.isRecursive = Objectize.prototype.isRecursive;
+NegativeLookaheadAssertion.prototype.isRecursive = Objectize.prototype.isRecursive;
+Waste.prototype.isRecursive = Objectize.prototype.isRecursive;
+
+Property.prototype.isRecursive = function(ruleIdent, passedRules) {
+	return this.child.isRecursive(ruleIdent, passedRules);
+};
+
+Modify.prototype.isRecursive = function(ruleIdent, passedRules) {
+	return this.child.isRecursive(ruleIdent, passedRules);
+};
+
+Guard.prototype.isRecursive = Modify.prototype.isRecursive;
+
+RuleReference.prototype.isRecursive = function(ruleIdent, passedRules) {
+	if (this.arguments instanceof Array) { // 引数付きルールの参照の場合
+		if (this.ruleIdent === ruleIdent)
+			return true;
+
+		if (passedRules.indexOf(this.ruleIdent) !== -1)
+			return false;
+
+		for (var i in this.arguments)
+			if (this.arguments[i].isRecursive(ruleIdent, passedRules))
+				return true;
+
+		return this.rule.body.isRecursive(ruleIdent, passedRules.concat([this.ruleIdent]));
+	}
+};
+
+
+//////////////////////////////////////////////////////////
+// -1 必ず進む 0 進まない可能性がある　1 左再帰する可能性がある
+Expression.prototype.canLeftRecurs = function(rule, passedRules) {
+	return 0;
+};
+
+Nop.prototype.canLeftRecurs = function(rule, passedRules) {
+	return -1;
+};
+
+OrderedChoice.prototype.canLeftRecurs = function(rule, passedRules) {
+	var res = -1;
+	for (var i in this.children)
+		res = Math.max(res, this.children[i].canLeftRecurs(rule, passedRules));
+	return res;
+};
+
+Sequence.prototype.canLeftRecurs = function(rule, passedRules) {
+	for (var i in this.children) {
+		var r = this.children[i].canLeftRecurs(rule, passedRules);
+		if (r === -1)
+			return -1;
+		else if (r === 1)
+			return 1;
+	}
+	return 0;
+};
+
+MatchString.prototype.canLeftRecurs = function(rule, passedRules) {
+	return this.string.length !== 0 ? -1 : 0;
+};
+
+MatchCharacterClass.prototype.canLeftRecurs = function(rule, passedRules) {
+	return -1;
+};
+MatchAnyCharacter.prototype.canLeftRecurs = MatchCharacterClass.prototype.canLeftRecurs;
+
+Repeat.prototype.canLeftRecurs = function(rule, passedRules) {
+	if (this.min === 0) {
+		return Math.max(0, this.child.canLeftRecurs(rule, passedRules));
+	} else {
+		return this.child.canLeftRecurs(rule, passedRules);
+	}
+};
+
+Objectize.prototype.canLeftRecurs = function(rule, passedRules) {
+	return this.child.canLeftRecurs(rule, passedRules);
+};
+
+Arraying.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+Tokenize.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+Property.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+PositiveLookaheadAssertion.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+NegativeLookaheadAssertion.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+Modify.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+Guard.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+Waste.prototype.canLeftRecurs = Objectize.prototype.canLeftRecurs;
+
+RuleReference.prototype.canLeftRecurs = function(rule, passedRules) {
+	if (rule === this.ruleIdent)
+		return 1;
+
+	if (passedRules.indexOf(this.ruleIdent) !== -1)
+		return 0; // 別ルールの左再帰を検出した
+
+	var ret = this.leftRecurs;
+	if (ret !== undefined)
+		return ret;
+
+	ret = this.body.canLeftRecurs(rule, passedRules.concat([this.ruleIdent]));
+	if (ret === -1)
+		rule.leftRecurs = ret;
+
+	return ret;
+};
+
+module.exports = expressions;
+
+
+/***/ }),
+/* 1 */
+/***/ (function(module, exports) {
+
+module.exports = "0.2.5";
+
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var expressions = __webpack_require__(0);
+var ruleOptimize = __webpack_require__(4);
+var jsLiteralify = __webpack_require__(3);
+
+var indentStr = "\t";
+
+var makeIndent = function(level) {
+	return new Array(level + 1).join(indentStr);
+};
+
+var addIndent = function(str, level) {
+	if (str === "")
+		return str;
+	var indent = makeIndent(level);
+	return indent + str.replace(/\n(?!$)/g, "\n" + indent);
+};
+
+var newId = function(ids, name) {
+	if (name in ids)
+		return name + ++ids[name];
+	else
+		return name + (ids[name] = 0);
+};
+
+var makeVarState = function(vs, indentLevel) {
+	vs = vs.filter(function(v) {
+		if (v instanceof Object)
+			return v[0];
+		else
+			return v;
+	});
+	vs = vs.map(function(v) {
+		if (v instanceof Object)
+			return v[0] + (v[1] ? " = " + v[1] : "");
+		else
+			return v;
+	});
+	if (vs.length)
+		return makeIndent(indentLevel) + "var " + vs.join(", ") + ";\n";
+	else
+		return "";
+};
+
+var stringEscape = function(str) {
+	return str
+		.replace(/\\/g,		"\\\\")
+		.replace(/"/g,		"\\\"")
+		.replace(/\x08/g, "\\b")
+		.replace(/\t/g,		"\\t")
+		.replace(/\n/g,		"\\n")
+		.replace(/\f/g,		"\\f")
+		.replace(/\r/g,		"\\r")
+    .replace(/[\x00-\x07\x0B\x0E\x0F\x10-\x1F\x80-\xFF]/g, function(c) {
+			return "\\x" + ("0" + c.charCodeAt().toString(16)).slice(-2);
+		})
+    .replace(/[\u0100-\uFFFF]/g, function(c) {
+			return "\\u" + ("000" + c.charCodeAt().toString(16)).slice(-4);
+		});
+};
+
+var charCodeToRegexpClassChar = function(cc) {
+	switch (cc) {
+	case 92: // backslash
+	case 47: // slash
+	case 93: // closing bracket
+	case 94: // caret
+	case 45: // dash
+		return "\\" + String.fromCharCode(cc);
+	case 0: // null
+		return "\\0";
+	case 9: // horizontal tab
+		return "\\t";
+	case 10: // line feed
+		return "\\n";
+	case 11: // vertical tab
+		return "\\v";
+	case 12: // form feed
+		return "\\f";
+	case 13: // carriage return
+		return "\\r";
+	}
+	if (0x00 <= cc && cc <= 0x08 || cc === 0x0e || cc === 0x0f || 0x10 <= cc && cc <= 0x1f || 0x80 <= cc && cc <= 0xFF)
+		return "\\x" + ("0" + cc.toString(16)).slice(-2);
+	if (0x100 <= cc && cc <= 0xffff)
+		return "\\u" + ("000" + cc.toString(16)).slice(-4);
+	return String.fromCharCode(cc);
+};
+
+var makeErrorLogging = function(match, indentLevel) {
+	var matchStr = '"' + stringEscape(match) + '"';
+	var indent = makeIndent(indentLevel);
+	return indent + "$matchingFail(" + matchStr + ");\n";
+};
+
+expressions.nop.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	return "";
+};
+
+expressions.fl.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	return makeIndent(indentLevel) + "$pos = -1;\n";
+};
+
+expressions.oc.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	if (this.children.length === 1)
+		return this.children[0].gen(ids, pos, objsLen, indentLevel);
+	var indent = makeIndent(indentLevel);
+	var posV, objsLenV;
+	pos = pos || (posV = newId(ids, "pos"));
+	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
+
+	var states = [];
+	states.push(makeVarState([[posV, "$pos"], [objsLenV, "$objsLen"]], indentLevel));
+	var ids1 = {}; ids1.__proto__ = ids;
+	states.push(this.children[0].gen(ids1, pos, objsLen, indentLevel));
+	var nest = 0;
+	for (var i = 1; i < this.children.length; ++i) {
+		states.push(makeIndent(indentLevel + nest++) + "if ($pos === -1) {\n");
+		states.push(makeIndent(indentLevel + nest) + "$pos = " + pos + ";\n");
+		states.push(makeIndent(indentLevel + nest) + "$objsLen = " + objsLen + ";\n");
+		var ids1 = {}; ids1.__proto__ = ids;
+		states.push(this.children[i].gen(ids1, pos, objsLen, indentLevel + nest));
+	}
+	while (nest)
+		states.push(makeIndent(indentLevel + --nest) + "}\n");
+	return states.join("");
+};
+
+
+expressions.seq.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	if (this.children.length === 1)
+		return this.children[0].gen(ids, pos, objsLen, indentLevel);
+	var indent = makeIndent(indentLevel);
+	var states = [];
+	var ids1 = {}; ids1.__proto__ = ids;
+	var checkSuccess = false;
+	var nest = 0;
+	for (var i = 0; i < this.children.length; ++i) {
+		var ids1 = {}; ids1.__proto__ = ids;
+		if (checkSuccess)
+			states.push(makeIndent(indentLevel + nest++) + "if ($pos !== -1) {\n");
+		states.push(this.children[i].gen(ids1, pos, objsLen, indentLevel + nest));
+		if (!this.children[i].neverAdvance)
+			pos = null;
+		if (!this.children[i].neverProduce)
+			objsLen = null;
+		checkSuccess = !this.children[i].alwaysSuccess;
+	}
+	while (nest)
+		states.push(makeIndent(indentLevel + --nest) + "}\n");
+	return states.join("");
+};
+
+expressions.rep.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	if (this.min === 0 && this.max === 1) {
+		var posV, objsLenV;
+		pos = pos || (posV = newId(ids, "pos"));
+		objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
+
+		var states = [];
+		states.push(makeVarState([[posV, "$pos"], [objsLenV, "$objsLen"]], indentLevel));
+		states.push(this.child.gen(ids, pos, objsLen, indentLevel));
+		states.push(indent + "if ($pos === -1) {\n");
+		states.push(indent + indentStr + "$pos = " + pos + ";\n");
+		states.push(indent + indentStr + "$objsLen = " + objsLen + ";\n");
+		states.push(indent + "}\n");
+		return states.join("");
+	} else {
+		pos = newId(ids, "pos");
+		objsLen = newId(ids, "objsLen");
+		var i = newId(ids, "i");
+
+		var states = [];
+		states.push(makeVarState([[pos, "$pos"], [objsLen, "$objsLen"]], indentLevel));
+		if (this.max != Infinity) {
+			states.push(indent + "for (var " + i + " = 0; " + i + " < " + this.max + "; " + i + "++) {\n");
+		} else if (0 < this.min) {
+			states.push(indent + "for (var " + i + " = 0; ; " + i + "++) {\n");
+		} else {
+			states.push(indent + "while (true) {\n");
+		}
+		states.push(this.child.gen(ids, pos, objsLen, indentLevel + 1));
+		states.push(indent + indentStr + "if ($pos !== -1) {\n");
+		if (this.possibleInfiniteLoop) {
+			states.push(indent + indentStr + indentStr + "if ($pos === " + pos + ") {\n");
+			states.push(indent + indentStr + indentStr + indentStr + "throw new Error(\"Infinite loop detected.\");\n");
+			states.push(indent + indentStr + indentStr + "}\n");
+		}
+		states.push(indent + indentStr + indentStr + pos + " = $pos;\n");
+		states.push(indent + indentStr + indentStr + objsLen + " = $objsLen;\n");
+		states.push(indent + indentStr + "} else {\n");
+		states.push(indent + indentStr + indentStr + "break;\n");
+		states.push(indent + indentStr + "}\n");
+		states.push(indent + "}\n");
+		states.push(indent + "$pos = " + pos + ";\n");
+		states.push(indent + "$objsLen = " + objsLen + ";\n");
+		if (0 < this.min) {
+			states.push(indent + "if (" + i + " < " + this.min + ") {\n");
+			states.push(indent + indentStr + "$pos = -1;\n");
+			states.push(indent + "}\n");
+		}
+		return states.join("");
+	}
+};
+
+
+expressions.str.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	if (this.string.length === 0)
+		return "";
+
+	var indent = makeIndent(indentLevel);
+	var states = [];
+	if (this.string.length !== 1)
+		states.push(indent + "if ($input.substr($pos, " + this.string.length + ") === " + jsLiteralify(this.string) + ") {\n");
+	else
+		states.push(indent + "if ($input.charCodeAt($pos) === " + this.string.charCodeAt() + ") {\n");
+	states.push(indent + indentStr + "$pos += " + this.string.length + ";\n");
+	states.push(indent + "} else {\n");
+	states.push(makeErrorLogging(jsLiteralify(this.string), indentLevel + 1));
+	states.push(indent + "}\n");
+	return states.join("");
+};
+
+expressions.cc.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var states = [];
+	if (this.characterClass.length < 4) { // 適当
+		var c = "c";
+		states.push(indent + "var " + c + " = $input.charCodeAt($pos);\n");
+		states.push(indent + "if (" + this.makeCondition(c) + ") {\n");
+	} else {
+		states.push(indent + "if (/" + this.makeRegexp() + "/.test($input.charAt($pos))) {\n");
+	}
+	states.push(indent + indentStr + "$pos += 1;\n");
+	states.push(indent + "} else {\n");
+	states.push(makeErrorLogging(this.makeRegexp(), indentLevel + 1));
+	states.push(indent + "}\n");
+	return states.join("");
+};
+
+expressions.cc.prototype.makeCondition = function(c) {
+	var conds = [];
+	if (!this.invert) {
+		for (var i in this.characterClass) {
+			var cc = this.characterClass[i];
+			if (cc.type === "range")
+				conds.push(cc.start + " <= " + c + " && " + c + " <= " + cc.end);
+			else
+				conds.push(c + " === " + cc.char);
+		}
+		return conds.length === 0 ? "false" : conds.join(" || ");
+	} else {
+		for (var i in this.characterClass) {
+			var cc = this.characterClass[i];
+			if (cc.type === "range")
+				conds.push("(" + c + " < " + cc.start + " || " + cc.end + " < " + c + ")");
+			else
+				conds.push(c + " !== " + cc.char);
+		}
+		return conds.length === 0 ? true : "!isNaN(" + c + ") && " + conds.join(" && ");
+	}
+};
+
+expressions.cc.prototype.makeRegexp = function() {
+	return (this.invert ? "[^" : "[") + this.characterClass.map(
+		function(x) {
+			if (x.type == "range")
+				return charCodeToRegexpClassChar(x.start) + "-" + charCodeToRegexpClassChar(x.end);
+			else
+				return charCodeToRegexpClassChar(x.char);
+		}).join("") + "]";
+};
+
+expressions.ac.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var states = [];
+	states.push(indent + "if ($pos < $inputLength) {\n");
+	states.push(indent + indentStr + "$pos += 1;\n");
+	states.push(indent + "} else {\n");
+	states.push(makeErrorLogging(".", indentLevel + 1));
+	states.push(indent + "}\n");
+	return states.join("");
+};
+
+expressions.obj.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var objsLenV;
+	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
+	var obj = newId(ids, "obj");
+	var states = [];
+	states.push(makeVarState([[objsLenV, "$objsLen"]], indentLevel));
+	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
+	states.push(indent + "if ($pos !== -1) {\n");
+	states.push(indent + indentStr + "var " + obj + " = {};\n");
+	states.push(indent + indentStr + "for (var i = " + objsLen + "; i < $objsLen; i += 2)\n");
+	states.push(indent + indentStr + indentStr + obj + "[$objs[i + 1]] = $objs[i];\n");
+	states.push(indent + indentStr + "$objsLen = " + objsLen + " + 1;\n");
+	states.push(indent + indentStr + "$objs[" + objsLen + "] = " + obj + ";\n");
+	states.push(indent + "}\n");
+	return states.join("");
+};
+
+expressions.pr.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	if (this.child instanceof expressions.ltr) {
+		var states = [];
+		states.push(indent + "$objs[$objsLen++] = " + jsLiteralify(this.child.value) + ";\n");
+		states.push(indent + "$objs[$objsLen++] = " + jsLiteralify(this.key) + ";\n");
+		return states.join("");
+	} else {
+		var objsLenV;
+		objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
+		var states = [];
+		states.push(makeVarState([[objsLenV, "$objsLen"]], indentLevel));
+		states.push(this.child.gen(ids, pos, objsLen, indentLevel));
+		states.push(indent + "if ($pos !== -1) {\n");
+		states.push(indent + indentStr + "if ($objsLen === " + objsLen + ")\n");
+		states.push(indent + indentStr + indentStr + "$objs[" + objsLen + "] = undefined;\n");
+		states.push(indent + indentStr + "$objs[" + objsLen + " + 1] = " + jsLiteralify(this.key) + ";\n");
+		states.push(indent + indentStr + "$objsLen = " + objsLen + " + 2;\n");
+		states.push(indent + "}\n");
+		return states.join("");
+	}
+};
+
+expressions.arr.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var objsLenV;
+	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
+	var states = [];
+	states.push(makeVarState([[objsLenV, "$objsLen"]], indentLevel));
+	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
+	states.push(indent + "if ($pos !== -1) {\n");
+	states.push(indent + indentStr + "$objs[" + objsLen + "] = $objs.slice(" + objsLen + ", $objsLen);\n");
+	states.push(indent + indentStr + "$objsLen = " + objsLen + " + 1;\n");
+	states.push(indent + "}\n");
+	return states.join("");
+};
+
+expressions.tkn.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var posV;
+	pos = pos || (posV = newId(ids, "pos"));
+	var states = [];
+	states.push(makeVarState([[posV, "$pos"]], indentLevel));
+	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
+	states.push(indent + "if ($pos !== -1) {\n");
+	if (this.product !== undefined)
+		states.push(indent + indentStr + "$objs[$objsLen++] = " + jsLiteralify(this.product) + ";\n");
+	else
+		states.push(indent + indentStr + "$objs[$objsLen++] = $input.substring(" + pos + ", $pos);\n");
+	states.push(indent + "}\n");
+	return states.join("");
+};
+
+expressions.ltr.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var states = [];
+	states.push(indent + "$objs[$objsLen++] = " + jsLiteralify(this.value) + ";\n");
+	return states.join("");
+};
+
+expressions.cv.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var states = [];
+	switch (this.variable) {
+	case "input":
+		states.push(indent + "$objs[$objsLen++] = $input;\n");
+		break;
+	case "pos":
+		states.push(indent + "$objs[$objsLen++] = $pos;\n");
+		break;
+	case "row":
+		states.push(indent + "$objs[$objsLen++] = ($input.slice(0, $pos).match(/\\r\\n|\\r|\\n/g) || []).length;\n");
+		break;
+	case "column":
+		states.push(indent + '$objs[$objsLen++] = $pos - Math.max($input.lastIndexOf("\\r", $pos - 1), $input.lastIndexOf("\\n", $pos - 1));\n');
+		break;
+	}
+
+	return states.join("");
+};
+
+expressions.pla.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var posV, objsLenV;
+	pos = pos || (posV = newId(ids, "pos"));
+	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
+	var states = [];
+	states.push(makeVarState([[posV, "$pos"], [objsLenV, "$objsLen"]], indentLevel));
+	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
+	states.push(indent + "if ($pos !== -1) {\n");
+	states.push(addIndent("$objsLen = " + objsLen + ";\n" +
+												"$pos = " + pos + ";\n", indentLevel + 1));
+	states.push(indent + "}\n");
+	return states.join("");
+};
+
+expressions.nla.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var posV, objsLenV;
+	pos = pos || (posV = newId(ids, "pos"));
+	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
+	var states = [];
+	states.push(makeVarState([[posV, "$pos"], [objsLenV, "$objsLen"]], indentLevel));
+	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
+	states.push(indent + "if ($pos === -1) {\n");
+	states.push(addIndent("$objsLen = " + objsLen + ";\n" +
+												"$pos = " + pos + ";\n", indentLevel + 1));
+	states.push(indent + "} else {\n");
+	states.push(indent + indentStr + "$pos = -1;\n");
+	states.push(indent + "}\n");
+	return states.join("");
+}; // エラーロギング !
+
+expressions.mod.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var objsLenV;
+	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
+	var states = [];
+	states.push(makeVarState([[objsLenV, "$objsLen"]], indentLevel));
+	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
+	states.push(indent + "if ($pos !== -1) {\n");
+	states.push(indent + indentStr + "$objs[" + objsLen + "] = " + resolveIdentifier(this) + "($objs[" + objsLen + "]);\n");
+	states.push(indent + indentStr + "$objsLen = " + objsLen + " + 1;\n");
+	states.push(indent + "}\n");
+	return states.join("");
+};
+
+expressions.grd.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var posV, objsLenV;
+	pos = pos || (posV = newId(ids, "pos"));
+	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
+	var states = [];
+	states.push(makeVarState([[objsLenV, "$objsLen"], [posV, "$pos"]], indentLevel));
+	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
+	states.push(indent + "if ($pos !== -1 && !" + resolveIdentifier(this) + "($objs[" + objsLen + "])) {\n");
+	states.push(indent + indentStr + "$pos = " + pos + ";\n");
+	states.push(makeErrorLogging("a guarded expression", indentLevel + 1));
+	states.push(indent + "}\n");
+	return states.join("");
+};
+
+function resolveIdentifier(exp) {
+  if (exp.identifier) {
+    return exp.identifier;
+  } else {
+    return resolveIdentifier(exp.identifierPlaceholder);
+  }
+}
+
+expressions.wst.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var objsLenV;
+	objsLen = objsLen || (objsLenV = newId(ids, "objsLen"));
+	var states = [];
+	states.push(makeVarState([[objsLenV, "$objsLen"]], indentLevel));
+	states.push(this.child.gen(ids, pos, objsLen, indentLevel));
+	states.push(indent + "$objsLen = " + objsLen + ";\n");
+	return states.join("");
+};
+
+expressions.rul.prototype.gen = function(ids, pos, objsLen, indentLevel) {
+	if (this.arguments && this.rule) { // 引数付きルールの呼び出し
+		return this.body.gen(ids, pos, objsLen, indentLevel);
+	}
+	var indent = makeIndent(indentLevel);
+	var states = [];
+	states.push(indent + "rule$" + this.ruleIdent + "();\n");
+	return states.join("");
+};
+
+var genRule = function(rule, memoRules, useUndet, indentLevel) {
+	var indent = makeIndent(indentLevel);
+	var ids = {};
+	var key = "key";
+	var keyValue = "$pos * " + memoRules.length + " + " + memoRules.indexOf(rule.ident);
+	if (memoRules.indexOf(rule.ident) === -1)
+		key = null;
+	var pos = newId(ids, "pos");
+
+	var setMatchTable = "";
+	var unsetMatchTable = "";
+	if (rule.name) {
+		setMatchTable = "if (!$matchTable[" + pos + "]) {\n" +
+			indentStr + "$matchTable[" + pos + "] = " + jsLiteralify(rule.name) + ";\n" +
+			"}\n";
+		unsetMatchTable = "if ($matchTable[" + pos + "] === " + jsLiteralify(rule.name) + ") {\n" +
+			indentStr + "$matchTable[" + pos + "] = null;\n" +
+			"}\n";
+	}
+
+	if (rule.leftRecurs) { // 左再帰対応
+		var objs = newId(ids, "objs");
+
+		var states = [];
+		states.push("function rule$" + rule.ident + "() {\n");
+		states.push(makeVarState([[key, keyValue]], indentLevel + 1));
+		states.push(indent + indentStr + "if ($readMemo(" + key + ")){\n");
+		states.push(indent + indentStr + indentStr + "return;\n");
+		states.push(indent + indentStr + "}\n");
+		states.push(addIndent(setMatchTable, indentLevel + 1));
+		states.push(indent + indentStr + "$objs.length = $objsLen;\n");
+		states.push(makeVarState([[pos, "$pos"], [objs, "$objs"], ["rpos", "-1"]], indentLevel + 1));
+		states.push(indent + indentStr + "$undet[" + pos + "] = ($undet[" + pos + "] || 0) + 1;\n");
+		states.push(indent + indentStr + "$memo[" + key + "] = $failureObj;\n");
+		states.push(indent + indentStr + "while (true) {\n");
+		states.push(indent + indentStr + indentStr + "$pos = " + pos + ";\n");
+		states.push(indent + indentStr + indentStr + "$objs = [];\n");
+		states.push(indent + indentStr + indentStr + "$objsLen = 0;\n");
+		states.push(rule.body.gen(ids, pos, "0", indentLevel + 2));
+		states.push(indent + indentStr + indentStr + "if ($pos === -1 || $pos <= rpos) {\n");
+		states.push(indent + indentStr + indentStr + indentStr + "break;\n");
+		states.push(indent + indentStr + indentStr + "}\n");
+		states.push(indent + indentStr + indentStr + "rpos = $pos;\n");
+		states.push(indent + indentStr + indentStr + "$objs.length = $objsLen;\n");
+		states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs);\n");
+		states.push(indent + indentStr + "}\n");
+		states.push(indent + indentStr + "$objs = " + objs + ";\n");
+		states.push(indent + indentStr + "$objsLen = $objs.length;\n");
+		states.push(indent + indentStr + "$readMemo(" + key + ");\n");
+		states.push(indent + indentStr + "if (--$undet[" + pos + "]) {\n");
+		states.push(indent + indentStr + indentStr + "delete $memo[" + key + "];\n");
+		states.push(indent + indentStr + "}\n");
+		states.push(addIndent(unsetMatchTable, indentLevel + 1));
+		states.push(indent + "}");
+		return states.join("");
+	} else { // 左再帰非対応
+		var objsLen = newId(ids, "objsLen");
+
+		var states = [];
+		states.push("function rule$" + rule.ident + "() {\n");
+		states.push(makeVarState([[key, keyValue], [pos, "$pos"], [objsLen, "$objsLen"]], indentLevel + 1));
+		if (key) {
+			states.push(indent + indentStr + "if ($readMemo(" + key + ")) {\n");
+			states.push(indent + indentStr + indentStr + "return;\n");
+			states.push(indent + indentStr + "}\n");
+		}
+		states.push(addIndent(setMatchTable, indentLevel + 1));
+		states.push(rule.body.gen(ids, pos, objsLen, indentLevel + 1));
+		states.push(addIndent(unsetMatchTable, indentLevel + 1));
+		if (key) {
+			if (useUndet) {
+				states.push(indent + indentStr + "if (!$undet[" + pos + "]) {\n");
+				states.push(indent + indentStr + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs.slice(" + objsLen + ", $objsLen));\n");
+				states.push(indent + indentStr + "}\n");
+			} else {
+				states.push(indent + indentStr + "$writeMemo(" + key + ", $pos !== -1 && $objs.slice(" + objsLen + ", $objsLen));\n");
+			}
+		}
+		states.push(indent + "}");
+		return states.join("");
+	}
+};
+
+var genjs = function(rules, initializer, options) {
+	options = options || {};
+
+	for (var s in rules) {
+		if (rules[s].parameters) { // 引数付きルール
+			var shadowedRules = {};
+			shadowedRules.__proto__ = rules;
+			for (var j in rules[s].parameters)
+				shadowedRules[rules[s].parameters[j]] = "argument";
+
+			rules[s].body.prepare(shadowedRules);
+		} else {
+			rules[s].body.prepare(rules);
+		}
+	}
+
+	// 再帰している引数付きルールを見つける
+	for (var s in rules) {
+		if (rules[s].parameters && rules[s].body.isRecursive(s, []))
+			rules[s].recursive = true;
+	}
+
+	// 引数付きでないルールの展開
+	for (var s in rules) {
+		if (!rules[s].parameters)
+			rules[s].body.expand({});
+	}
+
+	// 再帰している引数付きルールの特殊化
+	var reduceds = [];
+	for (var s in rules)
+		if (rules[s].recursive)
+			[].push.apply(reduceds, rules[s].reduceds);
+	for (var i in reduceds) {
+		rules[reduceds[i].ruleIdent] = {
+			ident: reduceds[i].ruleIdent,
+			body: reduceds[i].body,
+			referenceCount: 1, //?
+		};
+	}
+
+	var useUndet = false;
+	for (var s in rules) {
+		if (!rules[s].parameters) { // 引数なしルール
+			var b = rules[s].body.canLeftRecurs(rules[s].ident, []) === 1;
+			rules[s].leftRecurs = b;
+			useUndet = useUndet || b;
+		}
+	}
+
+	var memoRules = [];
+	for (var s in rules) {
+		if (!rules[s].parameters) { // 引数なしルール
+			if (rules[s].referenceCount)
+				memoRules.push(s);
+		}
+	}
+
+	var states = [];
+	states.push("(function() {\n");
+	states.push(indentStr + "\"use strict\";\n");
+	states.push(addIndent(sign, 1));
+	states.push("\n");
+	states.push(indentStr + 'function $parse($input, options) {\n');
+	states.push(addIndent('options = options || {};\n\
+var $inputLength = $input.length;\n\
+var $pos = 0;\n\
+var $objs = [];\n\
+var $objsLen = 0;\n\
+var $memo = [];\n\
+var $matchTable = new Array($inputLength);\n\
+var $failMatchs = [];\n\
+var $failPos = 0;\n\
+var $failureObj = {};\n\
+', 2));
+	if (useUndet)
+		states.push(indentStr + indentStr + "var $undet = new Array($inputLength);\n");
+
+	// initializer
+	states.push(initializer);
+	states.push("\n\n");
+
+	// modifiers and guards
+	var functions = {};
+	var functionId = 0;
+	for (var r in rules) {
+		rules[r].body.traverse(function(expr) {
+			if (expr instanceof expressions.mod || expr instanceof expressions.grd) {
+				if (!expr.identifier) {
+					if (!functions[expr.code]) {
+						functions[expr.code] = expr.identifier = "func$" + functionId++;
+						states.push(makeIndent(2) + "function " + expr.identifier + "($) {" + expr.code + "}" + "\n\n");
+					} else {
+						expr.identifier = functions[expr.code];
+					}
+				}
+			}
+		});
+	}
+
+	// rules
+	for (var key in rules) {
+		if (!rules[key].parameters) {
+			ruleOptimize(rules[key]);
+			states.push(makeIndent(2) + genRule(rules[key], memoRules, useUndet, 2) + "\n\n");
+		}
+	}
+
+	states.push(addIndent('function $matchingFail(match) {\n\
+	if ($failPos <= $pos) {\n\
+		match = $matchTable[$pos] ? $matchTable[$pos] : match;\n\
+		if ($failPos === $pos) {\n\
+			$failMatchs.push(match);\n\
+		} else {\n\
+			$failMatchs.length = 0;\n\
+			$failMatchs[0] = match;\n\
+			$failPos = $pos;\n\
+		}\n\
+	}\n\
+	$pos = -1;\n\
+}', 2) + "\n\n");
+
+	states.push(addIndent($joinWithOr.toString(), 2) + "\n\n");
+
+	states.push(addIndent('function $readMemo(key) {\n\
+	var res = $memo[key];\n\
+	if (res !== undefined) {\n\
+		if (res !== $failureObj) {\n\
+			$pos = res.pos;\n\
+			for (var i = 0, il = res.objs.length; i < il; ++i) {\n\
+				$objs[$objsLen++] = res.objs[i];\n\
+			}\n\
+		} else {\n\
+			$pos = -1;\n\
+		}\n\
+		return true;\n\
+	}\n\
+	return false;\n\
+}', 2) + "\n\n");
+
+	states.push(addIndent('function $writeMemo(key, objs) {\n\
+	$memo[key] = objs ? {\n\
+		pos: $pos,\n\
+		objs: objs\n\
+	} : $failureObj;\n\
+}', 2) + "\n\n");
+
+	states.push(addIndent('	rule$start();\n\
+	if ($pos !== -1) {\n\
+		if ($pos === $inputLength) {\n\
+			$objs.length = $objsLen;\n\
+			return $objs[0];\n\
+		}\n\
+		$matchingFail("end of input");\n\
+	}\n\
+	if ($failMatchs.length === 0) {\n\
+		$failMatchs.push("something");\n\
+	}\n\
+	$failMatchs = $failMatchs.filter(function (x, i, self) {\n\
+		return self.indexOf(x) === i;\n\
+	});\n\
+	var $line = ($input.slice(0, $failPos).match(/\\r\\n|\\r|\\n/g) || []).length;\n\
+	var $column = $failPos - Math.max($input.lastIndexOf("\\r", $failPos - 1), $input.lastIndexOf("\\n", $failPos - 1));\n\
+	var $errorMessage = "Line " + ($line + 1) + ", column " + $column + ": Expected " + $joinWithOr($failMatchs) + " but " + (JSON.stringify($input[$failPos]) || "end of input") + " found.";\n\
+	throw new Error($errorMessage);\n\
+}\n', 1));
+	states.push(indentStr + "return $parse;\n");
+	states.push("})()");
+
+	if (options.exportVariable) {
+		states.unshift(options.exportVariable + " = ");
+		states.push(";\n");
+	}
+
+	return states.join("");
+};
+
+function $joinWithOr(strs) {
+	if (strs.length === 0) {
+		return "";
+	}
+	if (strs.length === 1) {
+		return strs[0];
+	}
+	return strs.slice(0, strs.length - 1).join(", ") + " or " + strs[strs.length - 1];
+}
+
+var version = __webpack_require__(1);
+var sign = "/*\n * Generated by snake parser " + version + "\n */";
+
+module.exports = genjs;
+
+
+/***/ }),
+/* 3 */
+/***/ (function(module, exports) {
+
+/*
+ * jsLiteralify convert a value of JavaScript to string.
+ * The difference from JSON.stringify is that jsLiteralify print undefined value.
+ */
+
+function stringLiteralify(string) {
+	return JSON.stringify(string)
+		.replace(/\u2028/g, "\\u2028")
+		.replace(/\u2029/g, "\\u2029");
+}
+
+var objectToString = Object.prototype.toString;
+
+function jsLiteralify(object) {
+	if (object === null)
+		return "null";
+
+	switch (typeof object) {
+	case "string":
+		return stringLiteralify(object);
+
+	case "number":
+	case "boolean":
+		return JSON.stringify(object);
+
+	case "undefined":
+		return "undefined";
+	}
+
+	switch (objectToString.call(object)) {
+	case "[object Object]":
+		var members = Object.keys(object).map(function (key) {
+			return stringLiteralify(key) + ":" + jsLiteralify(object[key]);
+		});
+		return "{" + members.join(",") + "}";
+
+	case "[object Array]":
+		return "[" + object.map(jsLiteralify).join(",") + "]";
+	}
+}
+
+module.exports = jsLiteralify;
+
+
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var expressions = __webpack_require__(0);
+
+expressions.nop.prototype.optimize = function(disuseProduce) {
+	return {
+		expression: this,
+		advance: 0,
+		produce: 0,
+		success: 2,
+		constant: [],
+		match: "",
+	};
+};
+
+expressions.fl.prototype.optimize = function(disuseProduce) {
+	return {
+		expression: this,
+		advance: 0,
+		produce: 0,
+		success: 0,
+	};
+};
+
+expressions.str.prototype.optimize = function(disuseProduce) {
+	if (this.string.length === 0) {
+		return new expressions.nop().optimize(disuseProduce);
+	}
+	return {
+		expression: this,
+		advance: 2,
+		produce: 0,
+		success: 1,
+		match: this.string,
+	};
+};
+
+expressions.cc.prototype.optimize = function(disuseProduce) {
+	if (this.characterClass.length === 0) {
+		if (!this.invert) { // 必ず失敗
+			return new expressions.fl().optimize(disuseProduce);
+		} else { // . と同じ
+			return new expressions.ac().optimize(disuseProduce);
+		}
+	} else if (this.characterClass.length === 1 && !this.invert &&
+						this.characterClass[0].type === "single") {
+		return new expressions.str(String.fromCharCode(this.characterClass[0].char))
+			.optimize(disuseProduce);
+	}
+	return {
+		expression: this,
+		advance: 2,
+		produce: 0,
+		success: 1,
+	};
+};
+
+expressions.ac.prototype.optimize = function(disuseProduce) {
+	return {
+		expression: this,
+		advance: 2,
+		produce: 0,
+		success: 1,
+	};
+};
+
+expressions.oc.prototype.optimize = function(disuseProduce) {
+	var advance = null;
+	var produce = null;
+	var success = 0;
+	var children = [];
+	for (var i = 0; i < this.children.length; ++i) {
+		var res = this.children[i].optimize(disuseProduce);
+		if (res.success === 0)
+			continue;
+		if (res.expression instanceof expressions.oc) { // 子供がocなら展開する
+			[].push.apply(children, res.expression.children);
+		} else {
+			children.push(res.expression);
+		}
+		if (advance !== res.advance)
+			advance = advance === null ? res.advance : 1;
+		if (produce !== res.produce)
+			produce = produce === null ? res.produce : 1;
+		success = Math.max(success, res.success);
+		if (res.success === 2)
+			break;
+	}
+	if (children.length === 0) {
+		return new expressions.fl().optimize(disuseProduce);
+	} else if (children.length === 1) {
+		return {
+			expression: children[0],
+			advance: advance,
+			produce: produce,
+			success: success,
+		};
+	} else {
+		this.children = children;
+		return {
+			expression: this,
+			advance: advance,
+			produce: produce,
+			success: success,
+		};
+	}
+};
+
+expressions.seq.prototype.optimize = function(disuseProduce) {
+	var advance = 0;
+	var produce = 0;
+	var success = 2;
+	var children = [];
+	var constant = [];
+	var match = "";
+	for (var i = 0; i < this.children.length; ++i) {
+		var res = this.children[i].optimize(disuseProduce);
+		if (res.advance === 0 && res.produce === 0 && res.success === 2)
+			continue;
+		if (res.expression instanceof expressions.seq) { // 子供がseqなら展開する
+			[].push.apply(children, res.expression.children);
+		} else {
+			res.expression.neverAdvance = res.advance === 0;
+			res.expression.neverProduce = res.produce === 0;
+			res.expression.alwaysSuccess = res.success === 2;
+			children.push(res.expression);
+		}
+		advance = Math.max(advance, res.advance);
+		produce = Math.max(produce, res.produce);
+		success = Math.min(success, res.success);
+		if (constant && res.constant)
+			[].push.apply(constant, res.constant);
+		else
+			constant = undefined;
+		if (typeof match === "string" && typeof res.match === "string")
+			match += res.match;
+		else
+			match = undefined;
+	}
+	if (success === 0) { // 必ず失敗
+		return new expressions.fl().optimize(disuseProduce);
+	}
+	this.children = children;
+	return {
+		expression: this,
+		advance: advance,
+		produce: produce,
+		success: success,
+		constant: constant,
+		match: match,
+	};
+};
+
+expressions.rep.prototype.optimize = function(disuseProduce) {
+	if (this.max === 0) {
+		return new expressions.nop().optimize();
+	}
+
+	var res = this.child.optimize(disuseProduce);
+	this.child = res.expression;
+
+	if (this.max === Infinity && res.success === 2)
+		throw new Error("Infinite loop detected.");
+
+	if (res.advance === 2)
+		this.possibleInfiniteLoop = false;
+
+	if (this.min === 0) {
+		res.advance = Math.min(res.advance, 1);
+		res.success = Math.max(res.success, 1);
+	}
+
+	if (res.constant) { // 定数化
+		var newConstant = [];
+		for (var i = 0; i < this.max; ++i)
+			[].push.apply(newConstant, res.constant);
+		res.constant = newConstant;
+	}
+
+	if (typeof res.match === "string") {
+		if (this.min === this.max) {
+			var newMatch = "";
+			for (var i = 0; i < this.max; ++i)
+				newMatch += res.match;
+			res.match = newMatch;
+		}
+	}
+
+	res.expression = this;
+
+	return res;
+};
+
+expressions.obj.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(disuseProduce);
+	if (disuseProduce)
+		return res;
+	if (res.constant) { // 定数化
+		var value = {};
+		for (var i = 0; i < res.constant.length; i += 2)
+			value[res.constant[i + 1]] = res.constant[i];
+		res.expression = new expressions.ltr(value);
+		res.produce = 2;
+		res.constant = [value];
+	} else {
+		this.child = res.expression;
+		res.produce = 2;
+		res.expression = this;
+		res.constant = undefined;
+	}
+	return res;
+};
+
+expressions.arr.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(disuseProduce);
+	if (disuseProduce)
+		return res;
+	if (res.constant) { // 定数化
+		var value = {};
+		res.expression = new expressions.ltr(res.constant);
+		res.produce = 2;
+		res.constant = [res.constant];
+	} else {
+		this.child = res.expression;
+		res.produce = 2;
+		res.expression = this;
+	}
+	return res;
+};
+
+expressions.pr.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(disuseProduce);
+	if (disuseProduce)
+		return res;
+	this.child = res.expression;
+	if (res.constant) { // 定数化
+		res.expression = this;
+		res.advance = 0;
+		res.produce = 2;
+		res.success = 2;
+		res.constant = [res.constant[0], this.key];
+	} else {
+		res.produce = 2;
+		res.expression = this;
+		res.constant = undefined;
+	}
+	return res;
+};
+
+expressions.tkn.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(disuseProduce);
+
+	if (disuseProduce)
+		return res;
+
+	this.child = res.expression;
+	res.produce = 2;
+	res.expression = this;
+
+	if (res.constant && typeof res.match === "string")
+		res.constant.push(res.match);
+	else
+		res.constant = undefined;
+
+	if (typeof res.match === "string" && res.match.length <= 20)
+		this.product = res.match;
+
+	return res;
+};
+
+expressions.ltr.prototype.optimize = function(disuseProduce) {
+	if (disuseProduce) {
+		return new expressions.nop().optimize(disuseProduce);
+	}
+	return {
+		expression: this,
+		advance: 0,
+		produce: 2,
+		success: 2,
+		constant: [this.value],
+		match: "",
+	};
+};
+
+expressions.cv.prototype.optimize = function(disuseProduce) {
+	if (disuseProduce) {
+		return new expressions.nop().optimize(disuseProduce);
+	}
+	return {
+		expression: this,
+		advance: 0,
+		produce: 2,
+		success: 2,
+		match: "",
+	};
+};
+
+expressions.pla.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(true);
+	if (res.success === 0) {
+		res.expression = new expressions.fl();
+	} else if (res.success === 2) {
+		res.expression = new expressions.nop();
+	} else {
+		this.child = res.expression;
+		res.expression = this;
+	}
+	res.advance = 0;
+	res.produce = 0;
+	res.constant = undefined;
+	res.match = "";
+	return res;
+};
+
+expressions.nla.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(true);
+	if (res.success === 0) {
+		res.expression = new expressions.fl();
+	} else if (res.success === 2) {
+		res.expression = new expressions.nop();
+	} else {
+		this.child = res.expression;
+		res.expression = this;
+	}
+	res.advance = 0;
+	res.produce = 0;
+	res.success = 2 - res.success;
+	res.constant = undefined;
+	res.match = "";
+	return res;
+};
+
+expressions.mod.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(false);
+	this.child = res.expression;
+	res.produce = 2;
+	res.expression = this;
+	res.constant = undefined;
+	return res;
+};
+
+expressions.grd.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(false);
+	this.child = res.expression;
+	res.produce = 2;
+	res.success = 1;
+	res.expression = this;
+	res.constant = undefined;
+	return res;
+};
+
+expressions.wst.prototype.optimize = function(disuseProduce) {
+	var res = this.child.optimize(true);
+	this.child = res.expression;
+	res.produce = 0;
+	res.expression = this;
+	res.constant = undefined;
+	return res;
+};
+
+expressions.rul.prototype.optimize = function(disuseProduce) {
+	return {
+		expression: this,
+		advance: 1,
+		produce: 1,
+		success: 1,
+	};
+};
+
+var ruleOptimize = function(rule) {
+	rule.body = rule.body.optimize(false).expression;
+};
+
+module.exports = ruleOptimize;
+
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var expressions = __webpack_require__(0);
+var genjs = __webpack_require__(2);
+
+var initializer = '\
+	function arrayToObject($) {\n\
+		var res = {};\n\
+		for (var i = 0, il = $.length; i < il; ++i)\n\
+			res[$[i].ident] = $[i];\n\
+		return res;\n\
+	};\n\
+	function ensureMin($) {\n\
+		return $ === undefined ? 0 : $;\n\
+	};\n\
+	function ensureMax($) {\n\
+		return $ === undefined ? Infinity : $;\n\
+	};\n\
+	function characterClassChar(str) {\n\
+		var len = str.length;\n\
+		if (len === 1)\n\
+			return str.charCodeAt();\n\
+		if (len === 4 || len === 6)\n\
+			return parseInt(str.substring(2), 16);\n\
+		if (str === "\\\\0")\n\
+ 			return 0;\n\
+ 		if (str === "\\\\t")\n\
+ 			return 9;\n\
+ 		if (str === "\\\\n")\n\
+ 			return 10;\n\
+ 		if (str === "\\\\v")\n\
+ 			return 11;\n\
+ 		if (str === "\\\\f")\n\
+ 			return 12;\n\
+ 		if (str === "\\\\r")\n\
+ 			return 13;\n\
+ 		return str.charCodeAt(1);\n\
+	};\n\
+	function nuturalNumber($) {\n\
+		return +$;\n\
+	};\n\
+	function expr($) {\n\
+		return new (options.expressions[$.op])($.a, $.b, $.c);\n\
+	};';
+
+
+var nop = function() {
+	return new expressions.nop();
+};
+var str = function(a) {
+	return new expressions.str(a);
+};
+var cc = function(a, b) {
+	return new expressions.cc(a, b);
+};
+var ac = function() {
+	return new expressions.ac();
+};
+var oc = function(a) {
+	return new expressions.oc(a);
+};
+var seq = function(a) {
+	return new expressions.seq(a);
+};
+var rep = function(a, b, c) {
+	return new expressions.rep(a, b, c);
+};
+var obj = function(a) {
+	return new expressions.obj(a);
+};
+var arr = function(a) {
+	return new expressions.arr(a);
+};
+var pr = function(a, b) {
+	return new expressions.pr(a, b);
+};
+var tkn = function(a) {
+	return new expressions.tkn(a);
+};
+var ltr = function(a) {
+	return new expressions.ltr(a);
+};
+var cv = function(a) {
+	return new expressions.cv(a);
+};
+var pla = function(a) {
+	return new expressions.pla(a);
+};
+var nla = function(a) {
+	return new expressions.nla(a);
+};
+var mod = function(a, b, c) {
+	return new expressions.mod(a, b, c);
+};
+var grd = function(a, b, c) {
+	return new expressions.grd(a, b, c);
+};
+var wst = function(a) {
+	return new expressions.wst(a);
+};
+var rul = function(a, b) {
+	return new expressions.rul(a, b);
+};
+
+
+var rules = {
+	"start": {
+		ident: "start",
+		body: obj(seq([rul("__"),pr("initializer",oc([seq([rul("CodeBlock"),rul("__")]),ltr("")])),pr("rules",mod(arr(rep(0,Infinity,rul("Rule"))),"arrayToObject",null))])),
+	},
+	"Rule": {
+		ident: "Rule",
+		body: obj(seq([pr("ident",rul("Identifier")),rul("__"),rep(0,1,seq([pr("parameters",rul("RuleParameters")),rul("__")])),rep(0,1,seq([pr("name",rul("StringLiteral")),rul("__")])),str("="),rul("__"),pr("body",rul("ChoiceExpression")),rul("__")])),
+	},
+	"RuleParameters": {
+		ident: "RuleParameters",
+		body: arr(seq([str("<"),rul("__"),rep(0,1,seq([rul("Identifier"),rul("__"),rep(0,Infinity,seq([str(","),rul("__"),rul("Identifier"),rul("__")]))])),str(">")])),
+	},
+	"ChoiceExpression": {
+		ident: "ChoiceExpression",
+		body: oc([seq([mod(obj(seq([pr("op",ltr("oc")),pr("a",arr(seq([rul("SequenceExpression"),rul("__"),rep(1,Infinity,seq([str("|"),rul("__"),rul("SequenceExpression")]))])))])),"expr",null),rul("__")]),seq([rul("SequenceExpression"),rul("__")])]),
+	},
+	"SequenceExpression": {
+		ident: "SequenceExpression",
+		body: oc([seq([mod(obj(seq([pr("op",ltr("seq")),pr("a",arr(seq([rul("LabelExpression"),rep(1,Infinity,seq([rul("__"),rul("LabelExpression")]))])))])),"expr",null),rul("__")]),seq([rul("LabelExpression"),rul("__")])]),
+	},
+	"LabelExpression": {
+		ident: "LabelExpression",
+		body: oc([mod(obj(seq([pr("op",ltr("pr")),pr("a",rul("IdentifierOrStringLiteral")),rul("__"),oc([seq([str(":="),rul("__"),pr("b",mod(obj(seq([pr("op",ltr("ltr")),pr("a",rul("IdentifierOrStringLiteral"))])),"expr",null))]),seq([str(":"),rul("__"),pr("b",rul("PipeExpression"))])])])),"expr",null),rul("PipeExpression")]),
+	},
+	"PipeExpression": {
+		ident: "PipeExpression",
+		body: oc([mod(obj(oc([seq([pr("a",rul("PipeExpression")),rul("__"),str("->"),rul("__"),pr("op",ltr("mod")),oc([seq([pr("b",rul("Identifier")),pr("c",ltr(null))]),seq([pr("b",ltr(null)),pr("c",rul("CodeBlock"))])])]),seq([pr("a",rul("PipeExpression")),rul("__"),str("-?"),rul("__"),pr("op",ltr("grd")),oc([seq([pr("b",rul("Identifier")),pr("c",ltr(null))]),seq([pr("b",ltr(null)),pr("c",rul("CodeBlock"))])])]),seq([pr("a",rul("PipeExpression")),rul("__"),str("-|"),pr("op",ltr("wst"))])])),"expr",null),rul("OtherExpression")]),
+	},
+	"OtherExpression": {
+		ident: "OtherExpression",
+		body: oc([seq([str("("),rul("__"),oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)]),rul("__"),str(")")]),mod(obj(oc([seq([pr("op",ltr("str")),pr("a",rul("StringLiteral"))]),seq([pr("op",ltr("cc")),str("["),pr("b",oc([seq([str("^"),ltr(true)]),ltr(false)])),pr("a",rul("CharacterClass")),str("]")]),seq([pr("op",ltr("ltr")),str("\\"),rul("__"),pr("a",rul("Literal"))]),seq([pr("op",ltr("arr")),str("@"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("obj")),str("{"),rul("__"),pr("a",oc([rul("ChoiceExpression"),mod(obj(pr("op",ltr("nop"))),"expr",null)])),rul("__"),str("}")]),seq([pr("op",ltr("tkn")),str("`"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("mod")),str("~"),rul("__"),pr("a",mod(obj(seq([pr("op",ltr("arr")),pr("a",rul("OtherExpression"))])),"expr",null)),pr("b",ltr(null)),pr("c",ltr("return $.join(\"\")"))]),seq([pr("op",ltr("pla")),str("&"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("nla")),str("!"),rul("__"),pr("a",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("?"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",ltr(1))]),seq([pr("op",ltr("rep")),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(0)),pr("b",mod(ltr(0),null," return Infinity "))]),seq([pr("op",ltr("rep")),pr("a",rul("NaturalNumber")),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression")),pr("b",ltr("min"))]),seq([pr("op",ltr("rep")),pr("a",mod(rep(0,1,rul("NaturalNumber")),"ensureMin",null)),rul("__"),str(","),rul("__"),pr("b",mod(rep(0,1,rul("NaturalNumber")),"ensureMax",null)),rul("__"),str("*"),rul("__"),pr("c",rul("OtherExpression"))]),seq([pr("op",ltr("rep")),str("+"),rul("__"),pr("c",rul("OtherExpression")),pr("a",ltr(1)),pr("b",mod(ltr(0),null," return Infinity "))]),seq([pr("op",ltr("ac")),str(".")]),seq([pr("op",ltr("cv")),str("$"),pr("a",rul("Identifier"))]),seq([pr("op",ltr("rul")),nla(rul("Rule")),pr("a",rul("Identifier")),rep(0,1,seq([rul("__"),pr("b",rul("RuleArguments"))]))])])),"expr",null)]),
+	},
+	"RuleArguments": {
+		ident: "RuleArguments",
+		body: arr(seq([str("<"),rul("__"),rep(0,1,seq([rul("ChoiceExpression"),rul("__"),rep(0,Infinity,seq([str(","),rul("__"),rul("ChoiceExpression"),rul("__")]))])),str(">")])),
+	},
+	"__": {
+		ident: "__",
+		name: "white space",
+		body: rep(0,Infinity,oc([cc([{"type":"single","char":32},{"type":"single","char":9},{"type":"single","char":13},{"type":"single","char":10}],false),rul("Comment")])),
+	},
+	"Comment": {
+		ident: "Comment",
+		body: oc([seq([str("//"),rep(0,Infinity,cc([{"type":"single","char":10}],true)),oc([str("\n"),nla(ac())])]),seq([str("/*"),rep(0,Infinity,oc([cc([{"type":"single","char":42}],true),seq([str("*"),cc([{"type":"single","char":47}],true)])])),str("*/")])]),
+	},
+	"LineTerminator": {
+		ident: "LineTerminator",
+		body: cc([{"type":"single","char":10},{"type":"single","char":13},{"type":"single","char":8232},{"type":"single","char":8233}],false),
+	},
+	"Identifier": {
+		ident: "Identifier",
+		name: "identifier",
+		body: tkn(seq([cc([{"type":"range","start":97,"end":122},{"type":"range","start":65,"end":90},{"type":"single","char":95}],false),rep(0,Infinity,cc([{"type":"range","start":97,"end":122},{"type":"range","start":65,"end":90},{"type":"range","start":48,"end":57},{"type":"single","char":95}],false))])),
+	},
+	"IdentifierOrStringLiteral": {
+		ident: "IdentifierOrStringLiteral",
+		body: oc([rul("StringLiteral"),rul("Identifier")]),
+	},
+	"StringLiteral": {
+		ident: "StringLiteral",
+		name: "string literal",
+		body: mod(tkn(rul("StringLiteralRaw")),"eval",null),
+	},
+	"StringLiteralRaw": {
+		ident: "StringLiteralRaw",
+		body: oc([seq([str("'"),rep(0,Infinity,oc([seq([nla(rul("LineTerminator")),cc([{"type":"single","char":39},{"type":"single","char":92}],true)]),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])])),str("'")]),seq([str("\""),rep(0,Infinity,oc([seq([nla(rul("LineTerminator")),cc([{"type":"single","char":34},{"type":"single","char":92}],true)]),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])])),str("\"")])]),
+	},
+	"CharacterClass": {
+		ident: "CharacterClass",
+		body: arr(rep(0,Infinity,obj(oc([seq([pr("type",ltr("range")),pr("start",rul("CharacterClassChar")),str("-"),pr("end",rul("CharacterClassChar"))]),seq([pr("type",ltr("single")),pr("char",rul("CharacterClassChar"))])])))),
+	},
+	"CharacterClassChar": {
+		ident: "CharacterClassChar",
+		body: mod(tkn(oc([cc([{"type":"single","char":93},{"type":"single","char":92}],true),seq([str("\\x"),rep(2,2,rul("HexDigit"))]),seq([str("\\u"),rep(4,4,rul("HexDigit"))]),seq([str("\\"),cc([{"type":"single","char":117},{"type":"single","char":120}],true)])])),"characterClassChar",null),
+	},
+	"CodeBlock": {
+		ident: "CodeBlock",
+		name: "code block",
+		body: seq([str("{"),tkn(rul("Code")),str("}")]),
+	},
+	"Code": {
+		ident: "Code",
+		body: rep(0,Infinity,oc([cc([{"type":"single","char":123},{"type":"single","char":125}],true),seq([str("{"),rul("Code"),str("}")])])),
+	},
+	"NaturalNumber": {
+		ident: "NaturalNumber",
+		name: "natural number",
+		body: mod(tkn(oc([seq([cc([{"type":"range","start":49,"end":57}],false),rep(0,Infinity,cc([{"type":"range","start":48,"end":57}],false))]),str("0")])),"nuturalNumber",null),
+	},
+	"Literal": {
+		ident: "Literal",
+		body: oc([rul("StringLiteral"),rul("NumericLiteral"),rul("BooleanLiteral"),rul("NullLiteral"),rul("ArrayLiteral"),rul("ObjectLiteral")]),
+	},
+	"ArrayLiteral": {
+		ident: "ArrayLiteral",
+		name: "array literal",
+		body: seq([str("["),rul("__"),arr(rep(0,1,seq([rul("Literal"),rep(0,Infinity,seq([rul("__"),str(","),rul("__"),rul("Literal")])),rul("__")]))),str("]")]),
+	},
+	"ObjectLiteral": {
+		ident: "ObjectLiteral",
+		name: "object literal",
+		body: seq([str("{"),rul("__"),mod(arr(rep(0,1,seq([rul("ObjectLiteralProperty"),rep(0,Infinity,seq([rul("__"),str(","),rul("__"),rul("ObjectLiteralProperty")])),rul("__")]))),null,"\n                var ret = {};\n                for (var i = 0; i < $.length; ++i)\n                    ret[$[i].key] = $[i].value;\n                return ret;\n            "),str("}")]),
+	},
+	"ObjectLiteralProperty": {
+		ident: "ObjectLiteralProperty",
+		body: obj(seq([pr("key",rul("IdentifierOrStringLiteral")),rul("__"),str(":"),rul("__"),pr("value",rul("Literal"))])),
+	},
+	"NullLiteral": {
+		ident: "NullLiteral",
+		body: seq([str("null"),ltr(null)]),
+	},
+	"BooleanLiteral": {
+		ident: "BooleanLiteral",
+		body: oc([seq([str("true"),ltr(true)]),seq([str("false"),ltr(false)])]),
+	},
+	"NumericLiteral": {
+		ident: "NumericLiteral",
+		name: "numeric literal",
+		body: mod(tkn(seq([rep(0,1,str("-")),oc([rul("HexIntegerLiteral"),rul("DecimalLiteral")])])),"eval",null),
+	},
+	"DecimalLiteral": {
+		ident: "DecimalLiteral",
+		body: oc([seq([rul("DecimalIntegerLiteral"),str("."),rep(0,Infinity,rul("DecimalDigit")),rep(0,1,rul("ExponentPart"))]),seq([str("."),rep(1,Infinity,rul("DecimalDigit")),rep(0,1,rul("ExponentPart"))]),seq([rul("DecimalIntegerLiteral"),rep(0,1,rul("ExponentPart"))])]),
+	},
+	"DecimalIntegerLiteral": {
+		ident: "DecimalIntegerLiteral",
+		body: oc([str("0"),seq([rul("NonZeroDigit"),rep(0,Infinity,rul("DecimalDigit"))])]),
+	},
+	"DecimalDigit": {
+		ident: "DecimalDigit",
+		body: cc([{"type":"range","start":48,"end":57}],false),
+	},
+	"NonZeroDigit": {
+		ident: "NonZeroDigit",
+		body: cc([{"type":"range","start":49,"end":57}],false),
+	},
+	"ExponentPart": {
+		ident: "ExponentPart",
+		body: seq([rul("ExponentIndicator"),rul("SignedInteger")]),
+	},
+	"ExponentIndicator": {
+		ident: "ExponentIndicator",
+		body: cc([{"type":"single","char":101},{"type":"single","char":69}],false),
+	},
+	"SignedInteger": {
+		ident: "SignedInteger",
+		body: seq([rep(0,1,cc([{"type":"single","char":43},{"type":"single","char":45}],false)),rep(1,Infinity,rul("DecimalDigit"))]),
+	},
+	"HexIntegerLiteral": {
+		ident: "HexIntegerLiteral",
+		body: seq([oc([str("0x"),str("0X")]),rep(1,Infinity,rul("HexDigit"))]),
+	},
+	"HexDigit": {
+		ident: "HexDigit",
+		body: cc([{"type":"range","start":48,"end":57},{"type":"range","start":97,"end":102},{"type":"range","start":65,"end":70}],false),
+	},
+};
+
+var code = genjs(rules, initializer);
+
+module.exports = eval(code);
+
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var grammarParse = __webpack_require__(5);
+var expressions = __webpack_require__(0);
+var genjs = __webpack_require__(2);
+
+var buildParser = function(grammarSource, options) {
+	options = options || {};
+
+	var result = grammarParse(grammarSource, {expressions: expressions});
+
+	var rules = result.rules;
+	var initializer = result.initializer || "";
+
+	if (rules.start === undefined)
+		throw new Error("Undefined rule 'start'.");
+
+	return genjs(rules, initializer, options);
+};
+
+
+module.exports = buildParser;
+
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var buildParser = __webpack_require__(6);
+var expressions = __webpack_require__(0);
+
+module.exports = {
+	buildParser: buildParser,
+	expressions: expressions,
+	VERSION: __webpack_require__(1),
+};
+
+
+/***/ })
+/******/ ]);

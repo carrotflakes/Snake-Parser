@@ -5,8 +5,12 @@ module.exports = {
   output: {
     path: __dirname + "/dist",
     filename: "snakeParser.js",
-    sourcePrefix: "",
+    library: 'snakeparser',
+    libraryTarget: 'commonjs2',
+  },
+  optimization: {
+    minimize: false,
   },
   module: {
-  }
+  },
 };
