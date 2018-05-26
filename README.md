@@ -8,7 +8,7 @@ snake parser は文法を入力として、パースするための JavaScript �
 パーサはjsファイルに書き出して使用できます。
 
 ブラウザ上で試すことができます。  
-https://carrotflakes.github.io/snake-parser/
+https://carrotflakes.github.io/snake-parser/playground/index.html
 
 
 ## 特徴
