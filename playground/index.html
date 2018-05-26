@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>snake parser</title>
+	<meta charset="UTF-8">
+
+<style>
+
+	textarea {
+		font-family: Consolas, 'Courier New', Courier, Monaco, monospace;
+		font-size: small;
+	}
+
+	h4 {
+		margin: 4px 0px;
+	}
+
+	#syntaxMessage, #resultMessage {
+		background-color: #FE8;
+		font-size: small;
+		width: 550px
+	}
+
+	p {
+		margin: 2px 0px;
+	}
+
+	.group {
+		display:inline-block;
+		vertical-align: top;
+	}
+
+</style>
+
+</head>
+<body>
+
+	<div>
+	Examples :
+	<select id="examples">
+	<option value="0">calculator</option>
+	<option value="1">snake grammar</option>
+	</select>
+	</div>
+
+	<div class="group">
+	<h4>Grammar :</h4>
+	<div id="grammar" style="width: 550px; height: 500px;"></div>
+
+	<p id="syntaxMessage"></p>
+	</div>
+
+	<div class="group">
+	<h4>Input text :</h4>
+	<div id="input_text" style="width: 550px; height: 200px;"></div>
+
+	<p id="resultMessage"></p>
+
+	<h4>Output :</h4>
+	<textarea id="result" style="width: 550px; height: 200px"></textarea>
+	<br>
+	<button onclick="toJS();">Generate</button>
+	</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="js/bundle.js"></script>
+<script>
+
+
+</script>
+</html>

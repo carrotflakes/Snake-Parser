@@ -13,6 +13,7 @@
   },
   "scripts": {
     "build": "webpack",
+    "playground:build": "webpack --config playground/webpack.config.js",
     "test": "mocha"
   },
   "repository": {
