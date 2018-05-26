@@ -1,0 +1,44 @@
+{
+  function integer(o) {
+    return +o;
+  }
+}
+
+start
+  = ws additive ws
+
+additive
+  = @(multiplicative *(ws `("+"|"-") ws multiplicative)) -> {
+    var x = $[0];
+    for (var i = 1; i < $.length; i+=2) {
+      if ($[i] == "+")
+        x += $[i+1];
+      else
+        x -= $[i+1];
+    }
+    return x;
+  }
+
+multiplicative
+  = @(primary *(ws `("*"|"/"|"%") ws primary)) -> {
+    var x = $[0];
+    for (var i = 1; i < $.length; i+=2) {
+      if ($[i] == "*")
+        x *= $[i+1];
+      else if ($[i] == "/")
+        x /= $[i+1];
+      else
+        x %= $[i+1];
+    }
+    return x;
+  }
+
+primary
+  = integer
+  | "(" ws additive ws ")"
+
+integer "integer"
+  = `(?'-' +[0-9]) -> integer
+
+ws "whitespace"
+  = *[ \t\r\n]
