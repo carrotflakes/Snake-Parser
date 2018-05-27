@@ -94,6 +94,7 @@ function toJS() {
 
 	resultElem.value = code;
 };
+document.getElementById("generate").onclick = toJS;
 
 
 function stringify(object, indent) {
