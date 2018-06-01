@@ -170,3 +170,7 @@ examplesElm.onchange = function(e) {
 };
 
 example(0);
+
+window.onbeforeunload = function(e) {
+  return true;
+};
