@@ -276,6 +276,10 @@ start = `*. -> mod -? assert';
 			var grammar = 'start = a a = ?@(a b "!") b = ?@(b `[a-z])';
 			var parse = eval(SnakeParser.buildParser(grammar));
 			assert.deepEqual(parse("a!bc!d!"), [[[["a"]],[["b"],"c"]],["d"]]);
+
+			var grammar = 'start = @a a = a `"+" | b | "1" b = b `"-" | a | "1"';
+			var parse = eval(SnakeParser.buildParser(grammar));
+			assert.deepEqual(parse("1++--+-"), ["+", "+", "-", "-", "+", "-"]);
 		});
 	});
 
